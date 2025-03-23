@@ -6,6 +6,7 @@ pub mod resources;
 pub mod gui;
 pub mod animation;
 pub mod camera;
+pub mod audio;
 
 pub use configs::*;
 pub use resources::*;

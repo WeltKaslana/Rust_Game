@@ -76,47 +76,47 @@ fn handle_gun_fire(
     time: Res<Time>,
     mut gun_query: Query<(&Transform, &mut GunTimer), With<Gun>>,
     mouse_button_input: Res<ButtonInput<MouseButton>>,
-    handle: Res<GlobalTextureAtlas>,
+    // handle: Res<GlobalTextureAtlas>,
 ) {
     if gun_query.is_empty() {
         return;
     }
 
-    let (gun_transform, mut gun_timer) = gun_query.single_mut();
-    let gun_pos = gun_transform.translation.truncate();
-    gun_timer.0.tick(time.delta());
+    // let (gun_transform, mut gun_timer) = gun_query.single_mut();
+    // let gun_pos = gun_transform.translation.truncate();
+    // gun_timer.0.tick(time.delta());
 
-    if !mouse_button_input.pressed(MouseButton::Left) {
-        return;
-    }
+    // if !mouse_button_input.pressed(MouseButton::Left) {
+    //     return;
+    // }
     
-    let mut rng = rand::rng();
-    let bullet_direction = gun_transform.local_x();
-    if gun_timer.0.elapsed_secs() >= BULLET_SPAWN_INTERVAL {
-        gun_timer.0.reset();
-        for _ in 0..NUM_BULLETS_PER_SHOT {
-            //子弹散布
-            let dir = vec3(
-                bullet_direction.x + rng.random_range(-0.1..0.1),
-                bullet_direction.y + rng.random_range(-0.1..0.1),
-                bullet_direction.z,
-            );
-            commands.spawn((
-                Sprite {
-                    // image:asset_server.load("assets/Shiroko_Projectile.png"),
-                    ..default()
-                },
-                Transform {
-                    translation: vec3(gun_pos.x, gun_pos.y, 1.0),
-                    rotation: Quat::from_rotation_z(dir.y.atan2(dir.x)),
-                    scale: Vec3::splat(SPRITE_SCALE_FACTOR),
-                },
-                Bullet,
-                BulletDirection(dir),
-                SpawnInstant(Instant::now()),
-            ));
-        }
-    }
+    // let mut rng = rand::rng();
+    // let bullet_direction = gun_transform.local_x();
+    // if gun_timer.0.elapsed_secs() >= BULLET_SPAWN_INTERVAL {
+    //     gun_timer.0.reset();
+    //     for _ in 0..NUM_BULLETS_PER_SHOT {
+    //         //子弹散布
+    //         let dir = vec3(
+    //             bullet_direction.x + rng.random_range(-0.1..0.1),
+    //             bullet_direction.y + rng.random_range(-0.1..0.1),
+    //             bullet_direction.z,
+    //         );
+    //         commands.spawn((
+    //             Sprite {
+    //                 // image:asset_server.load("assets/Shiroko_Projectile.png"),
+    //                 ..default()
+    //             },
+    //             Transform {
+    //                 translation: vec3(gun_pos.x, gun_pos.y, 1.0),
+    //                 rotation: Quat::from_rotation_z(dir.y.atan2(dir.x)),
+    //                 scale: Vec3::splat(SPRITE_SCALE_FACTOR),
+    //             },
+    //             Bullet,
+    //             BulletDirection(dir),
+    //             SpawnInstant(Instant::now()),
+    //         ));
+    //     }
+    // }
 }
 
 fn handle_bullet_spawn(

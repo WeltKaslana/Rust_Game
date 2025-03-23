@@ -41,8 +41,13 @@ impl Plugin for AnimationPlugin {
                 flip_player_sprite_x,
                 flip_enemy_sprite_x,
                 flip_boss_sprite_x,
-            ).run_if(in_state(GameState::InGame))
-            .run_if(in_state(GameState::Home)),
+            ).run_if(in_state(GameState::InGame)),
+            ).add_systems(Update, 
+                (
+                    animate_player,
+                    // flip_gun_sprite_y,
+                    flip_player_sprite_x,
+            ).run_if(in_state(GameState::Home))
         );
     }
 }
@@ -73,22 +78,28 @@ fn move_template(
 }
 
 fn animate_player(
-    mut player_query: Query<(&mut Sprite, &PlayerState), With<Character>>,
+    time: Res<Time>,
+    mut player_query: Query<(&mut AnimationConfig, &mut Sprite, &PlayerState), With<Character>>,
 ) {
-    // if player_query.is_empty() {
-    //     return;
-    // }
-    // let (mut player, state, timer) = player_query.single_mut();
-    // if timer.just_finished() {
-    //     let all = match state {
-    //         PlayerState::Idle => 6,
-    //         PlayerState::Move => 10,
-    //         PlayerState::Jump => 8,
-    //     };
-    //     if let Some(atlas) = &mut player.texture_atlas{
-    //         atlas.index = (atlas.index + 1) % all;
-    //     };
-    // }
+    if player_query.is_empty() {
+        return;
+    }
+    let (mut config, mut player, state) = player_query.single_mut();
+    let all = match state {
+        PlayerState::Move => 10,
+        PlayerState::Idle => 6,
+        _ => 0,
+    };
+    // We track how long the current sprite has been displayed for
+    config.frame_timer.tick(time.delta());
+    // If it has been displayed for the user-defined amount of time (fps)...
+    if config.frame_timer.just_finished(){
+        if let Some(atlas) = &mut player.texture_atlas {
+            config.frame_timer = AnimationConfig::timer_from_fps(config.fps2p);
+            atlas.index = (atlas.index + 1) % all;
+        }
+    }
+
 }
 
 fn animate_enemy(

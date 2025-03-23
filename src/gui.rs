@@ -5,8 +5,6 @@ use crate::gamestate::GameState;
 
 pub struct GuiPlugin;
 
-#[derive(Component)]
-struct MainMenuItem;
 
 impl Plugin for GuiPlugin {
     fn build(&self, app: &mut App) {
@@ -26,7 +24,7 @@ fn animation1<S:Component>(
     mut query: Query<&mut Transform, With<S>>,
 ) {
     let mut transform = query.single_mut();
-    transform.translation.y += 1.0;
+    transform.translation.y += 0.5;
     if transform.translation.y > 930.0 {
         transform.translation.y = -935.0;
     }
@@ -35,7 +33,7 @@ fn animation2<S:Component>(
     mut query: Query<&mut Transform, With<S>>,
 ) {
     let mut transform = query.single_mut();
-    transform.translation.y -= 1.0;
+    transform.translation.y -= 0.5;
     if transform.translation.y < -930.0 {
         transform.translation.y = 935.0;
     }
