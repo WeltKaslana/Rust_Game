@@ -9,5 +9,5 @@ bevy = { version = "0.15.3", features = [
     "wav",
     "tiff",
 ]}
-bevy_kira_audio = "0.22.0"
+# pyo3 = { version = "0.24.0", features = ["auto-initialize"]}
 rand = "0.9.0"

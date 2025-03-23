@@ -1,4 +1,4 @@
-use bevy::{dev_tools::states::*, audio::AudioPlugin, diagnostic::LogDiagnosticsPlugin, prelude::*};
+use bevy::{dev_tools::states::*, diagnostic::LogDiagnosticsPlugin, prelude::*};
 use std::{sync::Arc, time::Duration};
 use bevy::math::vec3;
 
@@ -57,6 +57,8 @@ fn execute_animations(
 use demo::gamestate::GameState;
 use demo::gui::GuiPlugin;
 use demo::camera::FollowCameraPlugin;
+
+
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -82,6 +84,7 @@ fn main() {
         .add_systems(Update, log_transitions::<GameState>)
         .run();
 }
+
 
 #[derive(Component)]
 struct LeftSprite;
