@@ -7,6 +7,7 @@ pub mod gui;
 pub mod animation;
 pub mod camera;
 pub mod audio;
+pub mod home;
 
 pub use configs::*;
 pub use resources::*;

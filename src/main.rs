@@ -96,6 +96,7 @@ use demo::character::PlayerPlugin;
 use demo::animation::AnimationPlugin;
 use demo::resources::ResourcesPlugin;
 use demo::audio::GameAudioPlugin;
+use demo::home::HomePlugin;
 
 
 fn main() {
@@ -115,14 +116,14 @@ fn main() {
         //     LogDiagnosticsPlugin::default(),))
         .add_plugins(GuiPlugin)
         .add_plugins(FollowCameraPlugin)
-        // .add_plugins(PlayerPlugin)
+        .add_plugins(PlayerPlugin)
         // .add_plugins(AnimationPlugin)
-        .add_plugins(ResourcesPlugin)
+        // .add_plugins(ResourcesPlugin)
         .add_plugins(GameAudioPlugin)
+        .add_plugins(HomePlugin)
         .insert_state(GameState::MainMenu)
         // .add_systems(OnEnter(GameState::Home), setup)
         // .add_systems(Update, execute_animations.run_if(in_state(GameState::Home)))
-        // .add_systems(Startup, audio_play)
         .add_systems(Update, log_transitions::<GameState>)
         .run();
 }

@@ -24,7 +24,7 @@ impl Plugin for ResourcesPlugin {
     fn build(&self, app: &mut App) {
         app
             // .insert_resource(CursorPosition(None))
-            .add_systems(OnEnter(GameState::MainMenu), load_assets)
+            // .add_systems(OnEnter(GameState::MainMenu), load_assets)
             // .add_systems(
             //     Update,
             //     update_cursor_position.run_if(in_state(GameState::InGame))

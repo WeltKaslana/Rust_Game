@@ -1,11 +1,10 @@
-use bevy::prelude::*;
+use bevy::{dev_tools::states::*, prelude::*};
 use std::time::Duration;
 
 use crate::{
     gun::Gun,
     character::{Character, PlayerState}, 
-    gamestate::GameState, CursorPosition, 
-    configs::fps,
+    gamestate::GameState, CursorPosition,
 };
 // enemy::{Enemy, EnemyType},
 
@@ -32,23 +31,25 @@ impl AnimationConfig {
 
 impl Plugin for AnimationPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            Update,
-            (
-                animate_player,
-                animate_enemy,
-                flip_gun_sprite_y,
-                flip_player_sprite_x,
-                flip_enemy_sprite_x,
-                flip_boss_sprite_x,
-            ).run_if(in_state(GameState::InGame)),
-            ).add_systems(Update, 
+        app
+        // .add_systems(
+        //     Update,
+        //     (
+        //         animate_player,
+        //         animate_enemy,
+        //         flip_gun_sprite_y,
+        //         flip_player_sprite_x,
+        //         flip_enemy_sprite_x,
+        //         flip_boss_sprite_x,
+        //     ).run_if(in_state(GameState::InGame)),)
+            .add_systems(Update, log_transitions::<GameState>)
+            .add_systems(Update, 
                 (
                     animate_player,
                     // flip_gun_sprite_y,
-                    flip_player_sprite_x,
+                    // flip_player_sprite_x,
             ).run_if(in_state(GameState::Home))
-        );
+            );
     }
 }
 
@@ -82,8 +83,10 @@ fn animate_player(
     mut player_query: Query<(&mut AnimationConfig, &mut Sprite, &PlayerState), With<Character>>,
 ) {
     if player_query.is_empty() {
+        println!("check1");
         return;
     }
+    println!("check2");
     let (mut config, mut player, state) = player_query.single_mut();
     let all = match state {
         PlayerState::Move => 10,
