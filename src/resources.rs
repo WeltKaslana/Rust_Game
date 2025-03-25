@@ -1,3 +1,4 @@
+use bevy::render::camera;
 use bevy::{dev_tools::states::*, prelude::*};
 use bevy::window::PrimaryWindow;
 
@@ -27,6 +28,9 @@ impl Plugin for ResourcesPlugin {
             // .add_systems(OnEnter(GameState::MainMenu), load_assets)
             .add_systems(
                 Update,
+                update_cursor_position.run_if(in_state(GameState::MainMenu)))
+            .add_systems(
+                Update,
                 update_cursor_position.run_if(in_state(GameState::Home)))
             .add_systems(Update, log_transitions::<GameState>);
     }
@@ -37,19 +41,15 @@ impl Plugin for ResourcesPlugin {
 fn update_cursor_position(
     mut cursor_pos: ResMut<CursorPosition>,
     window_query: Query<&Window, With<PrimaryWindow>>,
-    // camera_query: Query<&Camera, With<Camera>>,
 ) {
-    // if window_query.is_empty() || camera_query.is_empty() {
-    //     cursor_pos.0 = None;
-    // }
     if window_query.is_empty() {
         cursor_pos.0 = None;
     }
-    // let camera = camera_query.single();
     let window = window_query.single();
     if let Some(pos) = window.cursor_position() {
         let size = Vec2::new(window.width() as f32, window.height() as f32);
-        let pos = pos - size / 2.0;
+        let mut pos = pos - size / 2.0;
+        pos.y *= -1.0;
         cursor_pos.0 = Some(pos);
     } else {
         cursor_pos.0 = None;

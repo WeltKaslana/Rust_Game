@@ -4,6 +4,7 @@ use crate::character::Character;
 
 pub  struct FollowCameraPlugin;
 
+
 impl Plugin for FollowCameraPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, setup_camera)

@@ -80,12 +80,18 @@ fn setup_player(
         }),
         ..Default::default()
         },
-        Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(0.0, 0.0, 30.0)),
+        Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(0.0, -200.0, 30.0)),
         AnimationConfig::new(10),
         PlayerState::default(),
         Character,
         Health(PLAYER_HEALTH),
-        ));
+        ))
+        .with_child((Sprite {
+            image: asset_server.load("Shiroko_Aura.png"),
+            ..Default::default()
+            },
+            Transform::from_scale(Vec3::splat(1.0)).with_translation(Vec3::new(0.0, 15.0, 0.0)),
+            ));
 }
 
 fn handle_player_move(

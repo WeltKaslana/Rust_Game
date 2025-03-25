@@ -1,7 +1,52 @@
 use bevy::{dev_tools::states::*, diagnostic::LogDiagnosticsPlugin, prelude::*};
 use std::{sync::Arc, time::Duration};
 use bevy::math::vec3;
+use bevy::window::CursorOptions;
 
+use demo::gamestate::GameState;
+use demo::gui::GuiPlugin;
+use demo::camera::FollowCameraPlugin;
+use demo::character::PlayerPlugin;
+use demo::animation::AnimationPlugin;
+use demo::gun::GunPlugin;
+use demo::resources::ResourcesPlugin;
+use demo::audio::GameAudioPlugin;
+use demo::home::HomePlugin;
+
+
+fn main() {
+    App::new()
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                title: "Blue Archieve!".to_string(),
+                resolution: (1600.0,700.0).into(),
+                cursor_options: CursorOptions{visible: false, ..Default::default()},
+                resizable: false,
+                enabled_buttons: bevy::window::EnabledButtons {
+                    maximize:false,
+                    minimize:true,
+                    close:true,
+                },
+                decorations: true,
+                ..default()
+            }),
+            ..default()
+            })
+            .set(ImagePlugin::default_nearest())) // prevents blurry sprites
+        // .add_plugins((
+        //     LogDiagnosticsPlugin::default(),))
+        .add_plugins(GuiPlugin)
+        .add_plugins(FollowCameraPlugin)
+        .add_plugins(PlayerPlugin)
+        .add_plugins(GunPlugin)
+        .add_plugins(AnimationPlugin)
+        .add_plugins(ResourcesPlugin)
+        .add_plugins(GameAudioPlugin)
+        .add_plugins(HomePlugin)
+        .insert_state(GameState::MainMenu)
+        .add_systems(Update, log_transitions::<GameState>)
+        .run();
+}
 
 // #[derive(Component)]
 // struct AnimationConfig {
@@ -87,46 +132,6 @@ use bevy::math::vec3;
 //     ));
 //     // state.set(GameState::Home);
 // }
-
-
-use demo::gamestate::GameState;
-use demo::gui::GuiPlugin;
-use demo::camera::FollowCameraPlugin;
-use demo::character::PlayerPlugin;
-use demo::animation::AnimationPlugin;
-use demo::resources::ResourcesPlugin;
-use demo::audio::GameAudioPlugin;
-use demo::home::HomePlugin;
-
-
-fn main() {
-    App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "Fuck you!".to_string(),
-                resolution: (1600.0,700.0).into(),
-                resizable: false,
-                decorations: true,
-                ..default()
-            }),
-            ..default()
-            })
-            .set(ImagePlugin::default_nearest())) // prevents blurry sprites
-        // .add_plugins((
-        //     LogDiagnosticsPlugin::default(),))
-        .add_plugins(GuiPlugin)
-        .add_plugins(FollowCameraPlugin)
-        .add_plugins(PlayerPlugin)
-        .add_plugins(AnimationPlugin)
-        .add_plugins(ResourcesPlugin)
-        .add_plugins(GameAudioPlugin)
-        .add_plugins(HomePlugin)
-        .insert_state(GameState::MainMenu)
-        // .add_systems(OnEnter(GameState::Home), setup)
-        // .add_systems(Update, execute_animations.run_if(in_state(GameState::Home)))
-        .add_systems(Update, log_transitions::<GameState>)
-        .run();
-}
 
 
  

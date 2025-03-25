@@ -28,7 +28,7 @@ impl Plugin for AnimationPlugin {
                 (
                     animate_player,
                     flip_player_sprite_x,
-                    // flip_gun_sprite_y,
+                    flip_gun_sprite_y,
             ).run_if(in_state(GameState::Home))
             );
     }

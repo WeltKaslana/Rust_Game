@@ -32,7 +32,7 @@ pub const ENEMY_SPEED: f32 = 1.0;
 pub const KD_TREE_REFRESH_RATE: f32 = 0.1;
 
 // Gun
-pub const BULLET_SPAWN_INTERVAL: f32 = 0.1;
+pub const BULLET_SPAWN_INTERVAL: f32 = 0.5;
 pub const BULLET_TIME_SECS: f32 = 0.5;
 pub const BULLET_SPEED: f32 = 15.0;
 pub const BULLET_DAMAGE: f32 = 15.0;
