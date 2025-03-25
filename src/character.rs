@@ -26,20 +26,20 @@ pub struct PlayerEnemyCollisionEvent;
 //定义角色动画帧率
 #[derive(Component)]
 
-struct AnimationConfig {
-    fps2p: u8,
-    frame_timer: Timer,
+pub struct AnimationConfig {
+    pub fps2p: u8,
+    pub frame_timer: Timer,
 }
 
 impl AnimationConfig {
-    fn new(fps2p: u8) -> Self {
+    pub fn new(fps2p: u8) -> Self {
         Self {
             fps2p,
             frame_timer: Self::timer_from_fps(fps2p),
         }
     }
 
-    fn timer_from_fps(fps2p: u8) -> Timer {
+    pub fn timer_from_fps(fps2p: u8) -> Timer {
         Timer::new(Duration::from_secs_f32(1.0 / (fps2p as f32)), TimerMode::Once)
     }
 }
@@ -62,35 +62,8 @@ impl Plugin for PlayerPlugin {
             ).run_if(in_state(GameState::Home))
             )
             .add_systems(Update, log_transitions::<GameState>)
-            .add_systems(Update, 
-                (animate_player,).run_if(in_state(GameState::Home)))
             ;
     }
-}
-
-fn animate_player(
-    time: Res<Time>,
-    mut player_query: Query<(&mut AnimationConfig, &mut Sprite, &PlayerState), With<Character>>,
-) {
-    if player_query.is_empty() {
-        return;
-    }
-    let (mut config, mut player, state) = player_query.single_mut();
-    let all = match state {
-        PlayerState::Move => 10,
-        PlayerState::Idle => 6,
-        _ => 0,
-    };
-    // We track how long the current sprite has been displayed for
-    config.frame_timer.tick(time.delta());
-    // If it has been displayed for the user-defined amount of time (fps)...
-    if config.frame_timer.just_finished(){
-        if let Some(atlas) = &mut player.texture_atlas {
-            config.frame_timer = AnimationConfig::timer_from_fps(config.fps2p);
-            atlas.index = (atlas.index + 1) % all;
-        }
-    }
-
 }
 
 fn setup_player(

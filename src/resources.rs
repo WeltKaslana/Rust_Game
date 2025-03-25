@@ -7,15 +7,15 @@ pub struct ResourcesPlugin;
 
 
 
-#[derive(Resource,Default)]
-pub struct GlobalCharacterTextureAtlas {
-    pub lay_out_idle: Handle<TextureAtlasLayout>,
-    pub image_idle: Handle<Image>,
-    pub lay_out_move: Option<Handle<TextureAtlasLayout>>,
-    pub image_move: Option<Handle<Image>>,
-}
+// #[derive(Resource,Default)]
+// pub struct GlobalCharacterTextureAtlas {
+//     pub lay_out_idle: Handle<TextureAtlasLayout>,
+//     pub image_idle: Handle<Image>,
+//     pub lay_out_move: Option<Handle<TextureAtlasLayout>>,
+//     pub image_move: Option<Handle<Image>>,
+// }
 
-pub static mut Shiroko: Option<&mut GlobalCharacterTextureAtlas> = None;
+
 
 #[derive(Resource)]
 pub struct CursorPosition(pub Option<Vec2>);
@@ -23,33 +23,15 @@ pub struct CursorPosition(pub Option<Vec2>);
 impl Plugin for ResourcesPlugin {
     fn build(&self, app: &mut App) {
         app
-            // .insert_resource(CursorPosition(None))
+            .insert_resource(CursorPosition(None))
             // .add_systems(OnEnter(GameState::MainMenu), load_assets)
-            // .add_systems(
-            //     Update,
-            //     update_cursor_position.run_if(in_state(GameState::InGame))
-            //                                     .run_if(in_state(GameState::Home)))
+            .add_systems(
+                Update,
+                update_cursor_position.run_if(in_state(GameState::Home)))
             .add_systems(Update, log_transitions::<GameState>);
     }
 }
 
-//暂时给白子移动的图集
-fn load_assets (
-    asset_server: Res<AssetServer>,
-    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,) {
-    let layout_move = TextureAtlasLayout::from_grid(UVec2::splat(64),5,2,None,None);
-    let layout_idle = TextureAtlasLayout::from_grid(UVec2::splat(64),6,1,None,None);
-    let player = Box::new(GlobalCharacterTextureAtlas {
-        lay_out_idle: texture_atlas_layouts.add(layout_idle), 
-        image_idle: asset_server.load("Shiroko_Idle.png"),
-        lay_out_move: Some(texture_atlas_layouts.add(layout_move)),
-        image_move: Some(asset_server.load("Shiroko_Move.png")),
-    });
-    unsafe {
-        Shiroko = Some(Box::leak(player));
-        println!("ok!");
-    }
-}
 
 //存疑
 fn update_cursor_position(
@@ -73,3 +55,21 @@ fn update_cursor_position(
         cursor_pos.0 = None;
     }
 }
+
+// //暂时给白子移动的图集
+// fn load_assets (
+//     asset_server: Res<AssetServer>,
+//     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,) {
+//     let layout_move = TextureAtlasLayout::from_grid(UVec2::splat(64),5,2,None,None);
+//     let layout_idle = TextureAtlasLayout::from_grid(UVec2::splat(64),6,1,None,None);
+//     let player = Box::new(GlobalCharacterTextureAtlas {
+//         lay_out_idle: texture_atlas_layouts.add(layout_idle), 
+//         image_idle: asset_server.load("Shiroko_Idle.png"),
+//         lay_out_move: Some(texture_atlas_layouts.add(layout_move)),
+//         image_move: Some(asset_server.load("Shiroko_Move.png")),
+//     });
+//     unsafe {
+//         Shiroko = Some(Box::leak(player));
+//         println!("ok!");
+//     }
+// }

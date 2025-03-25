@@ -6,7 +6,7 @@ resources:图片、纹理集、音乐资源加载
 world:游戏大厅ui及互动、游戏房间
 
 //开发日志
-1.  defaultplugins的set函数不能连续分多次写add_plugins，要放在一起写成.set(). set()的格式
+1.  defaultplugins的set函数不能连续分多次写add_plugins，要放在一起写成.set(). set()的格式；但是的.run_if不能合在一起写，得分成多个add_systems写！
 2.  defaultplugins一定要放在app的最顶端，因为很多插件涉及defaultplugin的初始化，顺序错了会直接panic
 3.  状态切换需要：use:bevy::bevy_dev_tools和.add_systems(Update, log_transitions::<GameState>)
 4.  删除对象只需调用Query<Entity, With<Sprite>>即可包括所有对象，然后：
@@ -18,6 +18,8 @@ world:游戏大厅ui及互动、游戏房间
 5. 音乐问题已解决，原因一是音乐组件在defaultplugin中，之前重复初始化到panic了；
     原因二是草丹的ogg文件损坏了！F！害的劳资花了一周半检查代码问题（0^0'''）
     还有就是bevy初始不支持wav文件，需要在toml中的feature注明才能使用(后续的tiff字体可能也有类似的问题，不过已经提前打开力（0v0）)
+6. 一个文件中的plugin中的system的query查询不到另一个文件中的plugin产生的实体的 问题已解决，原因是要查询就必须在本文件中把查询中提到的component通过use的方式从产生实体的文件中调用过来，不能单纯在本文件中吧component复制一遍。
+7. 解决了摄像头跟随问题，后续可以增加摄像头随角色的碰撞检测限位。
 
 //Issue
 1. 纹理集资源是否应该设置成一块缓存存放

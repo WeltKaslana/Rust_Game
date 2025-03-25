@@ -1,33 +1,14 @@
 use bevy::{dev_tools::states::*, prelude::*};
-use std::time::Duration;
 
 use crate::{
     gun::Gun,
-    character::{Character, PlayerState}, 
+    character::{Character, PlayerState, AnimationConfig}, 
     gamestate::GameState, CursorPosition,
 };
 // enemy::{Enemy, EnemyType},
 
 pub struct AnimationPlugin;
 
-#[derive(Component)]
-struct AnimationConfig {
-    fps2p: u8,
-    frame_timer: Timer,
-}
-
-impl AnimationConfig {
-    fn new(fps2p: u8) -> Self {
-        Self {
-            fps2p,
-            frame_timer: Self::timer_from_fps(fps2p),
-        }
-    }
-
-    fn timer_from_fps(fps2p: u8) -> Timer {
-        Timer::new(Duration::from_secs_f32(1.0 / (fps2p as f32)), TimerMode::Once)
-    }
-}
 
 impl Plugin for AnimationPlugin {
     fn build(&self, app: &mut App) {
@@ -46,8 +27,8 @@ impl Plugin for AnimationPlugin {
             .add_systems(Update, 
                 (
                     animate_player,
+                    flip_player_sprite_x,
                     // flip_gun_sprite_y,
-                    // flip_player_sprite_x,
             ).run_if(in_state(GameState::Home))
             );
     }
@@ -83,10 +64,8 @@ fn animate_player(
     mut player_query: Query<(&mut AnimationConfig, &mut Sprite, &PlayerState), With<Character>>,
 ) {
     if player_query.is_empty() {
-        println!("check1");
         return;
     }
-    println!("check2");
     let (mut config, mut player, state) = player_query.single_mut();
     let all = match state {
         PlayerState::Move => 10,

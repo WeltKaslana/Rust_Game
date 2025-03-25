@@ -9,9 +9,9 @@ impl Plugin for FollowCameraPlugin {
         app.add_systems(Startup, setup_camera)
             .add_systems(
                 Update,
-                camera_follow_player.run_if(in_state(GameState::InGame))
-                                            .run_if(in_state(GameState::Home)),
-            );
+                camera_follow_player.run_if(in_state(GameState::Home)),
+            )
+            .add_systems(Update, log_transitions::<GameState>);
     }
 }
 
