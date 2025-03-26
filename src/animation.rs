@@ -1,9 +1,10 @@
 use bevy::{dev_tools::states::*, prelude::*};
 
 use crate::{
-    gun::Gun,
-    character::{Character, PlayerState, AnimationConfig}, 
-    gamestate::GameState, CursorPosition,
+    gun::{Gun, Cursor, GunFire,},
+    character::{Character, PlayerState, AnimationConfig, }, 
+    gamestate::GameState,
+    home::{Sora, Fridge, },
 };
 // enemy::{Enemy, EnemyType},
 
@@ -29,6 +30,9 @@ impl Plugin for AnimationPlugin {
                     animate_player,
                     flip_player_sprite_x,
                     flip_gun_sprite_y,
+                    animate_gunfire,
+                    animate_sora,
+                    animate_fridge,
             ).run_if(in_state(GameState::Home))
             );
     }
@@ -91,19 +95,21 @@ fn animate_enemy(
 }
 
 fn flip_player_sprite_x(
-    cursor_position: Res<CursorPosition>,
-    mut player_query: Query<(&mut Sprite, &Transform), With<Character>>,
+    cursor_query: Query<&Transform, (With<Cursor>, Without<Character>)>,
+    mut player_query: Query<(&mut Sprite, &Transform), (With<Character>, Without<Cursor>)>,
 ) {
+    if cursor_query.is_empty() {
+        return;
+    }
     if player_query.is_empty() {
         return;
     }
+    let cursor_position = cursor_query.single().translation.truncate();
     let (mut sprite, transform) = player_query.single_mut();
-    if let Some(cursor_position) = cursor_position.0 {
-        if cursor_position.x > transform.translation.x {
-            sprite.flip_x = false;
-        } else {
-            sprite.flip_x = true;
-        }
+    if cursor_position.x > transform.translation.x {
+        sprite.flip_x = false;
+    } else {
+        sprite.flip_x = true;
     }
 }
 
@@ -121,19 +127,94 @@ fn flip_boss_sprite_x(
 }
 
 fn flip_gun_sprite_y(
-    cursor_position: Res<CursorPosition>,
-    mut gun_query: Query<(&mut Sprite, &Transform), With<Gun>>,
+    cursor_query: Query<&Transform, (With<Cursor>, Without<Gun>)>,
+    mut gun_query: Query<(&mut Sprite, &Transform), (With<Gun>,Without<Cursor>)>,
 ) {
+    if cursor_query.is_empty() {
+        return;
+    }
     if gun_query.is_empty() {
         return;
     }
-
+    let cursor_position = cursor_query.single().translation.truncate();
     let (mut sprite, transform) = gun_query.single_mut();
-    if let Some(cursor_position) = cursor_position.0 {
-        if cursor_position.x > transform.translation.x {
-            sprite.flip_y = false;
-        } else {
-            sprite.flip_y = true;
+    if cursor_position.x > transform.translation.x {
+        sprite.flip_y = false;
+    } else {
+        sprite.flip_y = true;
+    }
+}
+
+fn animate_gunfire(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut Gun_query: Query<(&mut AnimationConfig, &mut Sprite, Entity), With<GunFire>>,
+) {
+    if Gun_query.is_empty() {
+        return;
+    }
+    // let (mut config, mut sprite, entity) = Gun_query.single_mut();
+    for (mut config, mut sprite, entity) in &mut Gun_query.iter_mut() {
+        config.frame_timer.tick(time.delta());
+        if config.frame_timer.just_finished(){
+            if let Some(atlas) = &mut sprite.texture_atlas {
+                config.frame_timer = AnimationConfig::timer_from_fps(config.fps2p);
+                atlas.index = atlas.index + 1;
+                if atlas.index == 5 {
+                    commands.entity(entity).despawn();
+                }
+            }
         }
     }
 }
+
+fn animate_sora(
+    time: Res<Time>,
+    mut player_query: Query<(&mut AnimationConfig, &mut Sprite), With<Sora>>,
+) {
+    if player_query.is_empty() {
+        return;
+    }
+    let (mut config, mut player) = player_query.single_mut();
+    config.frame_timer.tick(time.delta());
+    if config.frame_timer.just_finished(){
+        if let Some(atlas) = &mut player.texture_atlas {
+            config.frame_timer = AnimationConfig::timer_from_fps(config.fps2p);
+            atlas.index = (atlas.index + 1) % 8;
+        }
+    }
+}
+
+fn animate_fridge(
+    time: Res<Time>,
+    mut player_query: Query<(&mut AnimationConfig, &mut Sprite,), With<Fridge>>,
+) {
+    if player_query.is_empty() {
+        return;
+    }
+    let (mut config, mut player) = player_query.single_mut();
+    config.frame_timer.tick(time.delta());
+    if config.frame_timer.just_finished(){
+        if let Some(atlas) = &mut player.texture_atlas {
+            config.frame_timer = AnimationConfig::timer_from_fps(config.fps2p);
+            atlas.index = (atlas.index + 1) % 24;
+        }
+    }
+}
+// fn flip_gun_sprite_y(
+//     cursor_position: Res<CursorPosition>,
+//     mut gun_query: Query<(&mut Sprite, &Transform), With<Gun>>,
+// ) {
+//     if gun_query.is_empty() {
+//         return;
+//     }
+
+//     let (mut sprite, transform) = gun_query.single_mut();
+//     if let Some(cursor_position) = cursor_position.0 {
+//         if cursor_position.x > transform.translation.x {
+//             sprite.flip_y = false;
+//         } else {
+//             sprite.flip_y = true;
+//         }
+//     }
+// }

@@ -90,7 +90,7 @@ fn setup_player(
             image: asset_server.load("Shiroko_Aura.png"),
             ..Default::default()
             },
-            Transform::from_scale(Vec3::splat(1.0)).with_translation(Vec3::new(0.0, 15.0, 0.0)),
+            Transform::from_scale(Vec3::splat(1.0)).with_translation(Vec3::new(0.0, 15.0, -1.0)),
             ));
 }
 
@@ -122,12 +122,12 @@ fn handle_player_move(
     //
     //test
     if down {
-        // println!("down");
-        delta.y -= 0.5;
+        println!("down");
+        // delta.y -= 0.5;
     }
     if jump {
-        // println!("jump!");
-        delta.y += 0.5;
+        println!("jump!");
+        // delta.y += 0.5;
     }
     delta = delta.normalize();
     if delta.is_finite() && (jump || down || left || right) {

@@ -30,5 +30,11 @@ fn camera_follow_player(
     let mut camera_transform = camera_query.single_mut();
     let player_transform = player_query.single().translation;
     let (x, y) = (player_transform.x, player_transform.y);
-    camera_transform.translation = camera_transform.translation.lerp(vec3(x, y, 0.0), 0.1);
+    //摄像机限位
+    let x = match x {
+        x if x < -50.0 => -50.0,
+        x if x > 50.0 => 50.0,
+        _ => x,
+    };
+    camera_transform.translation = camera_transform.translation.lerp(vec3(x, y + 100.0, 0.0), 0.1);
 }

@@ -33,8 +33,8 @@ fn main() {
             ..default()
             })
             .set(ImagePlugin::default_nearest())) // prevents blurry sprites
-        // .add_plugins((
-        //     LogDiagnosticsPlugin::default(),))
+        .add_plugins((
+            LogDiagnosticsPlugin::default(),))
         .add_plugins(GuiPlugin)
         .add_plugins(FollowCameraPlugin)
         .add_plugins(PlayerPlugin)
