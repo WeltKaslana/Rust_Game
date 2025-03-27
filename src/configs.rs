@@ -17,7 +17,7 @@ pub const WORLD_H: f32 = 2500.0;
 pub const fps: u8 = 60;
 
 // Player
-pub const PLAYER_SPEED: f32 = 2.0;
+pub const PLAYER_SPEED: f32 = 2.0 * 240.0 / fps as f32;
 pub const PLAYER_HEALTH: f32 = 100.0;
 
 // Enemy
@@ -26,7 +26,7 @@ pub const ENEMY_DAMAGE: f32 = 1.0;
 pub const SPAWN_RATE_PER_SECOND: usize = 500;
 pub const ENEMY_HEALTH: f32 = 100.0;
 pub const ENEMY_SPAWN_INTERVAL: f32 = 1.0;
-pub const ENEMY_SPEED: f32 = 1.0;
+pub const ENEMY_SPEED: f32 = 1.0 * 240.0 / fps as f32;
 
 // Kd-tree
 pub const KD_TREE_REFRESH_RATE: f32 = 0.1;
@@ -34,7 +34,7 @@ pub const KD_TREE_REFRESH_RATE: f32 = 0.1;
 // Gun
 pub const BULLET_SPAWN_INTERVAL: f32 = 0.2;
 pub const BULLET_TIME_SECS: f32 = 1.0;
-pub const BULLET_SPEED: f32 = 5.0;
+pub const BULLET_SPEED: f32 = 5.0 * 240.0 / fps as f32;
 pub const BULLET_DAMAGE: f32 = 15.0;
 
 pub const NUM_BULLETS_PER_SHOT: usize = 10;

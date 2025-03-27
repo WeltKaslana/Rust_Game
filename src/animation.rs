@@ -4,7 +4,10 @@ use crate::{
     gun::{Gun, Cursor, GunFire,},
     character::{Character, PlayerState, AnimationConfig, }, 
     gamestate::GameState,
-    home::{Sora, Fridge, },
+    home::{Sora,
+           SoraState,
+           Fridge,
+           FridgeState,},
 };
 // enemy::{Enemy, EnemyType},
 
@@ -169,52 +172,81 @@ fn animate_gunfire(
 }
 
 fn animate_sora(
+    asset_server: Res<AssetServer>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
     time: Res<Time>,
-    mut player_query: Query<(&mut AnimationConfig, &mut Sprite), With<Sora>>,
+    mut sora_query: Query<(&mut AnimationConfig, &mut Sprite, &mut SoraState), With<Sora>>,
 ) {
-    if player_query.is_empty() {
+    if sora_query.is_empty() {
         return;
     }
-    let (mut config, mut player) = player_query.single_mut();
+    let (mut config, mut sora, mut state) = sora_query.single_mut();
     config.frame_timer.tick(time.delta());
     if config.frame_timer.just_finished(){
-        if let Some(atlas) = &mut player.texture_atlas {
+        if let Some(atlas) = &mut sora.texture_atlas {
             config.frame_timer = AnimationConfig::timer_from_fps(config.fps2p);
-            atlas.index = (atlas.index + 1) % 8;
+            match *state {
+                SoraState::Loop => {
+                    atlas.index = (atlas.index + 1) % 8;
+                },
+                SoraState::Awake => {
+                    if atlas.index != 13 {
+                        atlas.index += 1;
+                    }
+                },
+                SoraState::Asleep => {
+                    atlas.index += 1;
+                    if atlas.index == 18 {
+                        *state = SoraState::Loop;
+                        sora.image = asset_server.load("Sora_RestLoop.png");
+                        let layout_sora = TextureAtlasLayout::from_grid(UVec2::splat(80),8,1,None,None);
+                        sora.texture_atlas = Some(TextureAtlas {
+                            layout: texture_atlas_layouts.add(layout_sora),
+                            index: 0,
+                        });
+                    }
+                },
+            }
         }
     }
 }
 
 fn animate_fridge(
+    asset_server: Res<AssetServer>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
     time: Res<Time>,
-    mut player_query: Query<(&mut AnimationConfig, &mut Sprite,), With<Fridge>>,
+    mut player_query: Query<(&mut AnimationConfig, &mut Sprite,&mut FridgeState), With<Fridge>>,
 ) {
     if player_query.is_empty() {
         return;
     }
-    let (mut config, mut player) = player_query.single_mut();
+    let (mut config, mut fridge, mut state) = player_query.single_mut();
     config.frame_timer.tick(time.delta());
     if config.frame_timer.just_finished(){
-        if let Some(atlas) = &mut player.texture_atlas {
+        if let Some(atlas) = &mut fridge.texture_atlas {
             config.frame_timer = AnimationConfig::timer_from_fps(config.fps2p);
-            atlas.index = (atlas.index + 1) % 24;
+            match *state {
+                FridgeState::Loop => {
+                    atlas.index = (atlas.index + 1) % 24;
+                },
+                FridgeState::Open => {
+                    if atlas.index != 6 {
+                        atlas.index += 1;
+                    }
+                },
+                FridgeState::Close => {
+                    atlas.index += 1;
+                    if atlas.index == 14 {
+                        *state = FridgeState::Loop;
+                        fridge.image = asset_server.load("Teleporter_2_Start.png");
+                        let layout_fridge = TextureAtlasLayout::from_grid(UVec2::splat(96),10,3,None,None);
+                        fridge.texture_atlas = Some(TextureAtlas {
+                            layout: texture_atlas_layouts.add(layout_fridge),
+                            index: 0,
+                        });
+                    }
+                },
+            }
         }
     }
 }
-// fn flip_gun_sprite_y(
-//     cursor_position: Res<CursorPosition>,
-//     mut gun_query: Query<(&mut Sprite, &Transform), With<Gun>>,
-// ) {
-//     if gun_query.is_empty() {
-//         return;
-//     }
-
-//     let (mut sprite, transform) = gun_query.single_mut();
-//     if let Some(cursor_position) = cursor_position.0 {
-//         if cursor_position.x > transform.translation.x {
-//             sprite.flip_y = false;
-//         } else {
-//             sprite.flip_y = true;
-//         }
-//     }
-// }

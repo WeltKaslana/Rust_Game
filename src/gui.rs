@@ -1,10 +1,11 @@
-use bevy::{dev_tools::states::*, prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
+use bevy::{dev_tools::states::*, diagnostic::FrameTimeDiagnosticsPlugin, prelude::*, state::{self, commands}, transform};
 
-use crate::gamestate::GameState;
-// use crate::world::GameEntity;
+use crate::{gamestate::GameState,
+            character::Character,};
 
 pub struct GuiPlugin;
-
+#[derive(Component)]
+pub struct Transition;
 
 impl Plugin for GuiPlugin {
     fn build(&self, app: &mut App) {
@@ -16,6 +17,8 @@ impl Plugin for GuiPlugin {
                 handle_main_menu_buttons.run_if(in_state(GameState::MainMenu)),
             )
             .add_systems(Update, (animation1::<LeftSlide1>, animation1::<LeftSlide2>, animation2::<RightSlide1>, animation2::<RightSlide2>).run_if(in_state(GameState::MainMenu)))
+            .add_systems(Update, statetransition.run_if(in_state(GameState::MainMenu)))
+            .add_systems(Update, statetransition.run_if(in_state(GameState::Home)))
             .add_systems(Update, log_transitions::<GameState>);
     }
 }
@@ -24,7 +27,7 @@ fn animation1<S:Component>(
     mut query: Query<&mut Transform, With<S>>,
 ) {
     let mut transform = query.single_mut();
-    transform.translation.y += 0.5;
+    transform.translation.y += 4.0;
     if transform.translation.y > 930.0 {
         transform.translation.y = -935.0;
     }
@@ -33,7 +36,7 @@ fn animation2<S:Component>(
     mut query: Query<&mut Transform, With<S>>,
 ) {
     let mut transform = query.single_mut();
-    transform.translation.y -= 0.5;
+    transform.translation.y -= 4.0;
     if transform.translation.y < -930.0 {
         transform.translation.y = 935.0;
     }
@@ -111,20 +114,48 @@ fn setup_main_menu(
     ));//标题
 }
 
+
 fn handle_main_menu_buttons(
-    // interaction_query: Query<&Interaction, (Changed<Interaction>, With<Button>)>,
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
+    transition_query: Query<Entity, With<Transition>>,
+) {
+    if  keyboard_input.pressed(KeyCode::KeyK) && transition_query.is_empty() {
+        println!("Working!");
+        commands.spawn((
+            Sprite {
+                image: asset_server.load("Menu_Transition1.png"),
+                ..Default::default()
+            },
+            Transform::from_scale(Vec3::new(0.7,0.7,0.5)).with_translation(Vec3::new(-2400.0, 0.0, 100.0)),
+            Transition,
+        )); 
+    }
+}
+
+fn statetransition(
+    mut commands: Commands, 
+    mut transition_query: Query<(&mut Transform, Entity), With<Transition>>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
-    if  keyboard_input.pressed(KeyCode::KeyK) {
-        println!("Working!");
+    if transition_query.is_empty() {
+        return;
+    }
+    let (mut transform, e) = transition_query.single_mut();
+    transform.translation.x += 20.0;
+    if transform.translation.x == 400.0 {
+        transform.translation.y -= 100.0;
         next_state.set(GameState::Home);
+    }
+    if transform.translation.x > 2400.0 {
+        commands.entity(e).despawn_recursive();
     }
 }
 
 fn despawn_main_menu(
     mut commands: Commands, 
-    mut menu_items_query: Query<Entity, With<Sprite>>) {
+    mut menu_items_query: Query<Entity, (With<Sprite>, Without<Transition>)>) {
     for parent in &mut menu_items_query {
         commands.entity(parent).despawn_recursive();
     }

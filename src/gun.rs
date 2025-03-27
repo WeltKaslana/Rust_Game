@@ -48,6 +48,7 @@ pub struct PlayerFireEvent;
 impl Plugin for GunPlugin {
     fn build(&self, app: &mut App) {
         app
+        .add_event::<PlayerFireEvent>()
         .add_systems(OnEnter(GameState::Home), (setup_gun,setup_cursor))
         .add_systems(
             Update,(
@@ -80,6 +81,7 @@ fn setup_cursor(
 }
 
 fn handle_cursor_transform(
+    mut events: EventReader<PlayerFireEvent>,
     time: Res<Time>,
     cursor_pos: Res<CursorPosition>,
     mut cursor_query: Query<&mut Transform, (With<Cursor>, Without<Character>)>,
@@ -94,13 +96,22 @@ fn handle_cursor_transform(
     };
     let player_pos = player_query.single().translation.truncate();
     let mut cursor_transform = cursor_query.single_mut();
-    cursor_transform.translation = vec3(cursor_pos.x + player_pos.x, 
-                                        cursor_pos.y + player_pos.y, 
-                                        cursor_transform.translation.z);
+    //两种鼠标显示模式
+    // cursor_transform.translation = vec3(cursor_pos.x + player_pos.x, 
+    //                                     cursor_pos.y + player_pos.y, 
+    //                                     cursor_transform.translation.z);
+    cursor_transform.translation = vec3(cursor_pos.x, cursor_pos.y, cursor_transform.translation.z);
     //鼠标旋转
     let rotation_speed = 1.0;
     let delta_rotation = Quat::from_rotation_z(rotation_speed * time.delta_secs());
     cursor_transform.rotation *= delta_rotation;
+        
+    //准心随开火抖动
+    cursor_transform.scale = Vec3::splat(2.0);
+    for _ in events.read() {
+        cursor_transform.scale *= 1.3;
+    }
+    
 }
 
 fn setup_gun(
@@ -118,6 +129,7 @@ fn setup_gun(
 }
 
 fn handle_gun_transform(
+    mut events: EventReader<PlayerFireEvent>,
     cursor_query: Query<&mut Transform, (With<Cursor>, Without<Gun>,Without<Character>)>,
     player_query: Query<&mut Transform, (With<Character>, Without<Gun>, Without<Cursor>)>,
     mut gun_query: Query<&mut Transform, (With<Gun>, Without<Character>, Without<Cursor>)>,
@@ -139,40 +151,20 @@ fn handle_gun_transform(
     gun_transform.rotation = Quat::from_rotation_z(angle);
 
     let offset = 15.0;
-    let new_gun_pos = vec2(
+    let mut new_gun_pos = vec2(
         player_pos.x + offset * angle.cos() - 5.0,
         player_pos.y + offset * angle.sin() - 10.0,
     );
+
+    // 枪随开火抖动,必须和帧率挂钩，不然太快了看不清
+    for _ in events.read() {
+        // println!("Gun recoil!");
+        new_gun_pos -= vec2(offset * angle.cos(),
+                            offset * angle.sin());
+    }
+
     gun_transform.translation = vec3(new_gun_pos.x, new_gun_pos.y, gun_transform.translation.z);
 }
-
-// fn handle_gun_transform(
-//     cursor_pos: Res<CursorPosition>,
-//     player_query: Query<&mut Transform, (With<Character>,Without<Gun>)>,
-//     mut gun_query: Query<&mut Transform, (With<Gun>, Without<Character>)>,
-// ) {
-//     if player_query.is_empty() {
-//         return;
-//     }
-//     if gun_query.is_empty() {
-//         return;
-//     }
-//     let player_pos = player_query.single().translation.truncate();
-//     let cursor_pos = match cursor_pos.0 {
-//         Some(pos) => pos,
-//         None => player_pos,
-//     };
-//     let mut gun_transform = gun_query.single_mut();
-//     let angle = (player_pos.y - 15.0 - cursor_pos.y).atan2(player_pos.x + 15.0 - cursor_pos.x) + PI;
-//     gun_transform.rotation = Quat::from_rotation_z(angle);
-
-//     let offset = 15.0;
-//     let new_gun_pos = vec2(
-//         player_pos.x + offset * angle.cos() - 5.0,
-//         player_pos.y + offset * angle.sin() - 10.0,
-//     );
-//     gun_transform.translation = vec3(new_gun_pos.x, new_gun_pos.y, gun_transform.translation.z);
-// }
 
 fn handle_gun_fire(
     time: Res<Time>,
@@ -186,20 +178,23 @@ fn handle_gun_fire(
     if gun_query.is_empty() {
         return;
     }
-
+    if !mouse_button_input.pressed(MouseButton::Left) {
+        return;
+    }
     let (gun_transform, mut gun_timer) = gun_query.single_mut();
     let gun_pos = gun_transform.translation.truncate();
     gun_timer.0.tick(time.delta());
 
-    if !mouse_button_input.pressed(MouseButton::Left) {
-        return;
-    }
+    // if !mouse_button_input.pressed(MouseButton::Left) {
+    //     return;
+    // }
 
     let mut rng = rand::rng();
     let bullet_direction = gun_transform.local_x();
     if gun_timer.0.elapsed_secs() >= BULLET_SPAWN_INTERVAL {
         gun_timer.0.reset();
         ew.send(PlayerFireEvent);
+
         //枪口焰动画
         let layout_fire = TextureAtlasLayout::from_grid(UVec2::splat(32),5,1,None,None);
         commands.spawn((Sprite {
@@ -213,7 +208,7 @@ fn handle_gun_fire(
             Transform{
                 translation: vec3(gun_pos.x + bullet_direction.x * 30.0, 
                                   gun_pos.y + bullet_direction.y * 30.0, 
-                                  31.0),
+                                  32.0),//深度要盖过枪
                 rotation: Quat::from_rotation_z(bullet_direction.y.atan2(bullet_direction.x)),
                 scale: Vec3::splat(2.5),
             },

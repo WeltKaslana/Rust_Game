@@ -1,7 +1,8 @@
 use bevy::{dev_tools::states::*, diagnostic::LogDiagnosticsPlugin, prelude::*};
 use std::{sync::Arc, time::Duration};
 use bevy::math::vec3;
-use bevy::window::CursorOptions;
+use bevy::window::{CursorOptions};
+use bevy_framepace::{FramepacePlugin, Limiter};
 
 use demo::gamestate::GameState;
 use demo::gui::GuiPlugin;
@@ -33,8 +34,9 @@ fn main() {
             ..default()
             })
             .set(ImagePlugin::default_nearest())) // prevents blurry sprites
-        .add_plugins((
-            LogDiagnosticsPlugin::default(),))
+        // .add_plugins((
+        //     LogDiagnosticsPlugin::default(),))
+        .add_plugins(FramepacePlugin)
         .add_plugins(GuiPlugin)
         .add_plugins(FollowCameraPlugin)
         .add_plugins(PlayerPlugin)
@@ -44,10 +46,16 @@ fn main() {
         .add_plugins(GameAudioPlugin)
         .add_plugins(HomePlugin)
         .insert_state(GameState::MainMenu)
+        .add_systems(Startup, set_rate)
         .add_systems(Update, log_transitions::<GameState>)
         .run();
 }
 
+fn set_rate(
+    mut settings: ResMut<bevy_framepace::FramepaceSettings>,
+) {
+    settings.limiter = Limiter::from_framerate(70.0); 
+}
 // #[derive(Component)]
 // struct AnimationConfig {
 //     fps: u8,

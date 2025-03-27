@@ -1,23 +1,28 @@
 use bevy::{
     dev_tools::states::*, 
-    audio::{AudioPlayer, PlaybackSettings},
+    audio::{AudioPlayer, PlaybackSettings, Volume},
     prelude::*,
 };
-use crate::{gamestate::GameState, gun::PlayerFireEvent,};
+use crate::{character::{Character, PlayerRunEvent, PlayerTimer}, gamestate::GameState, gun::PlayerFireEvent};
 pub struct GameAudioPlugin;
 
-// #[derive(Event)]
-// pub struct PlayerFireEvent;
+#[derive(Component)]
+pub struct FireAudio;
+#[derive(Component)]
+pub struct RunAudio;
 
 impl Plugin for GameAudioPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_event::<PlayerFireEvent>()
+            .add_event::<PlayerRunEvent>()
             .add_systems(OnEnter(GameState::MainMenu), audio_play__MainMenu)
             .add_systems(OnExit(GameState::MainMenu), pause)
             .add_systems(OnEnter(GameState::Home), audio_play_Home)
             .add_systems(OnExit(GameState::Home), pause)
+
             .add_systems(Update, audio_fire.run_if(in_state(GameState::Home)))
+            .add_systems(Update, player_run.run_if(in_state(GameState::Home)))
             .add_systems(Update, log_transitions::<GameState>);
     }
 }
@@ -40,16 +45,54 @@ fn audio_play_Home(
         AudioPlayer::new(asset_server.load("AudioClip/Angel24 - Cotton Candy Island.wav")),
         PlaybackSettings::LOOP,
     ));
+
 }
 fn audio_fire (
     mut events: EventReader<PlayerFireEvent>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
+    mut query: Query<Entity, With<FireAudio>>,
 ) {
     for _ in events.read() {
+        for e in query.iter_mut() {
+            println!("despawn fire audio");
+            commands.entity(e).despawn();
+        }
         commands.spawn((
             AudioPlayer::new(asset_server.load("AudioClip/SE_Shiroko_Attack.wav")),
             PlaybackSettings::default(),
+            FireAudio,
+        ));
+    }
+}
+fn player_run (
+    mut events: EventReader<PlayerRunEvent>,
+    time: Res<Time>,
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut player_query: Query<&mut PlayerTimer, (With<Character>, Without<RunAudio>)>,
+    mut query: Query<Entity, (With<RunAudio>, Without<Character>)>,
+) {
+    if player_query.is_empty() {
+        return;
+    }
+    let mut timer = player_query.single_mut();
+    for _ in events.read() {
+        timer.0.tick(time.delta());
+        if timer.0.elapsed_secs() < 0.4 {
+            return;
+        }
+
+        for e in query.iter_mut() {
+            println!("despawn run audio");
+            commands.entity(e).despawn();
+        }
+
+        timer.0.reset();
+        commands.spawn((
+            AudioPlayer::new(asset_server.load("AudioClip/SE_EntityRun.wav")),
+            PlaybackSettings::default().with_volume(Volume::new(0.9)),
+            RunAudio,
         ));
     }
 }
@@ -57,7 +100,7 @@ fn pause(
     mut commands: Commands,
     mut audio_sink: Query<(&mut AudioSink, Entity)>,
 ){
-    for (mut audio, entity) in audio_sink.iter_mut() {
+    for (audio, entity) in audio_sink.iter_mut() {
         commands.entity(entity).despawn();
     }
 }

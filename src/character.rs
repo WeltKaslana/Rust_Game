@@ -1,7 +1,6 @@
 use bevy::math::vec3;
-use bevy::{dev_tools::states::*, prelude::*};
+use bevy::{dev_tools::states::*, prelude::*, time::Stopwatch};
 use std::{time::Duration};
-
 use crate::gamestate::GameState;
 use crate::*;
 pub struct PlayerPlugin;
@@ -11,6 +10,9 @@ pub struct Character;
 
 #[derive(Component)]
 pub struct Health(pub f32);
+
+#[derive(Component)]
+pub struct PlayerTimer(pub Stopwatch);
 
 #[derive(Component, Default)]
 pub enum PlayerState {
@@ -22,6 +24,9 @@ pub enum PlayerState {
 
 #[derive(Event)]
 pub struct PlayerEnemyCollisionEvent;
+
+#[derive(Event)]
+pub struct PlayerRunEvent;
 
 //定义角色动画帧率
 #[derive(Component)]
@@ -81,10 +86,11 @@ fn setup_player(
         ..Default::default()
         },
         Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(0.0, -200.0, 30.0)),
-        AnimationConfig::new(10),
+        AnimationConfig::new(13),
         PlayerState::default(),
         Character,
         Health(PLAYER_HEALTH),
+        PlayerTimer(Stopwatch::default()),
         ))
         .with_child((Sprite {
             image: asset_server.load("Shiroko_Aura.png"),
@@ -95,6 +101,7 @@ fn setup_player(
 }
 
 fn handle_player_move(
+    mut events: EventWriter<PlayerRunEvent>,
     mut player_query: Query<(&mut Sprite, &mut Transform, &mut PlayerState), With<Character>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     asset_server: Res<AssetServer>,
@@ -148,7 +155,7 @@ fn handle_player_move(
                 *player_state = PlayerState::Move;
             },
         };
-        
+        events.send(PlayerRunEvent);
         
     } else {
         match *player_state {
