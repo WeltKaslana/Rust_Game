@@ -1,8 +1,7 @@
 use bevy::{dev_tools::states::*, diagnostic::LogDiagnosticsPlugin, prelude::*};
-use std::{sync::Arc, time::Duration};
-use bevy::math::vec3;
-use bevy::window::{CursorOptions};
+use bevy::window::CursorOptions;
 use bevy_framepace::{FramepacePlugin, Limiter};
+use tiled::Loader;
 
 use demo::gamestate::GameState;
 use demo::gui::GuiPlugin;

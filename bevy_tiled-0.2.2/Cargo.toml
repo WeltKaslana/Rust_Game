@@ -1,0 +1,32 @@
+[package]
+name = "bevy_tiled_prototype"
+description = "A plugin for rendering tiled maps."
+version = "0.2.2"
+authors = ["John Mitchell", "Daniel Taub<dmtaub@gmail.com>", "Rob Parrett<robparrett@gmail.com>"]
+homepage = "https://github.com/StarArawn/bevy_tiled"
+repository = "https://github.com/StarArawn/bevy_tiled"
+license-file = "LICENSE"
+edition = "2018"
+exclude = [
+    "assets/*",
+]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+
+default = [
+    "bevy/bevy_wgpu",
+    "bevy/bevy_winit",
+    "bevy/png",
+    "bevy/render",
+]
+
+web = [
+    "bevy/bevy_winit",
+    "bevy/render",
+]
+
+[dependencies]
+anyhow = "1.0"
+bevy = { version = "0.5", default-features = false }
+tiled = "0.9"
