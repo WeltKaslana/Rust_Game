@@ -17,17 +17,18 @@ pub struct AnimationPlugin;
 impl Plugin for AnimationPlugin {
     fn build(&self, app: &mut App) {
         app
-        // .add_systems(
-        //     Update,
-        //     (
-        //         animate_player,
-        //         animate_enemy,
-        //         flip_gun_sprite_y,
-        //         flip_player_sprite_x,
-        //         flip_enemy_sprite_x,
-        //         flip_boss_sprite_x,
-        //     ).run_if(in_state(GameState::InGame)),)
-            .add_systems(Update, log_transitions::<GameState>)
+        .add_systems(Update, log_transitions::<GameState>)
+        .add_systems(
+            Update,
+            (
+                animate_player,
+                // animate_enemy,
+                flip_gun_sprite_y,
+                flip_player_sprite_x,
+                animate_gunfire,
+                // flip_enemy_sprite_x,
+                // flip_boss_sprite_x,
+            ).run_if(in_state(GameState::InGame)),)
             .add_systems(Update, 
                 (
                     animate_player,
@@ -77,7 +78,8 @@ fn animate_player(
     let all = match state {
         PlayerState::Move => 10,
         PlayerState::Idle => 6,
-        _ => 0,
+        PlayerState::Jump => 8,
+        _ => 100,
     };
     // We track how long the current sprite has been displayed for
     config.frame_timer.tick(time.delta());
@@ -85,7 +87,20 @@ fn animate_player(
     if config.frame_timer.just_finished(){
         if let Some(atlas) = &mut player.texture_atlas {
             config.frame_timer = AnimationConfig::timer_from_fps(config.fps2p);
-            atlas.index = (atlas.index + 1) % all;
+            match state {
+                PlayerState::Jump => {
+                    if atlas.index == 2 {
+                        atlas.index = 4;//纹理集莫名其妙少一块
+                    }
+                    if atlas.index < 7 {
+                        atlas.index += 1;
+                    }
+                },
+                PlayerState::Jumpover => {},
+                _ => {
+                    atlas.index = (atlas.index + 1) % all;
+                },
+            }
         }
     }
 

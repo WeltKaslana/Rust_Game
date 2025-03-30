@@ -8,6 +8,8 @@ pub mod animation;
 pub mod camera;
 pub mod audio;
 pub mod home;
+pub mod room;
+
 
 pub use configs::*;
 pub use resources::*;

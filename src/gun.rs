@@ -58,6 +58,14 @@ impl Plugin for GunPlugin {
                 handle_bullet_move,
                 despawn_old_bullets,
             ).run_if(in_state(GameState::Home)))
+            .add_systems(
+                Update,(
+                    handle_gun_transform,
+                    handle_cursor_transform,
+                    handle_gun_fire,
+                    handle_bullet_move,
+                    despawn_old_bullets,
+                ).run_if(in_state(GameState::InGame)))
         .add_systems(Update, log_transitions::<GameState>);
     }
 }
@@ -88,6 +96,7 @@ fn handle_cursor_transform(
     player_query: Query<&mut Transform, (With<Character>, Without<Cursor>)>,
 ) {
     if cursor_query.is_empty() {
+        println!("Cursor is empty!!!!!");
         return;
     }
     let cursor_pos = match cursor_pos.0 {
@@ -135,12 +144,15 @@ fn handle_gun_transform(
     mut gun_query: Query<&mut Transform, (With<Gun>, Without<Character>, Without<Cursor>)>,
 ) {
     if cursor_query.is_empty() {
+        println!("Cursor is empty!");
         return;
     }
     if player_query.is_empty() {
+        println!("Player is empty!");
         return;
     }
     if gun_query.is_empty() {
+        println!("Gun is empty!");
         return;
     }
 

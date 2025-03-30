@@ -128,7 +128,7 @@ fn handle_main_menu_buttons(
                 image: asset_server.load("Menu_Transition1.png"),
                 ..Default::default()
             },
-            Transform::from_scale(Vec3::new(0.7,0.7,0.5)).with_translation(Vec3::new(-2400.0, 0.0, 100.0)),
+            Transform::from_scale(Vec3::new(0.7,0.7,0.5)).with_translation(Vec3::new(-3200.0, 0.0, 100.0)),
             Transition,
         )); 
     }

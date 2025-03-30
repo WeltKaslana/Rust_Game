@@ -588,6 +588,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_ecs_tiled"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c3c83101ffb04b2ade1b2996fb430bd279b38b4a55c6503b1ab2e13e49ade03b"
+dependencies = [
+ "bevy",
+ "bevy_ecs_tilemap",
+ "futures-lite",
+ "log",
+ "thiserror",
+ "tiled",
+]
+
+[[package]]
+name = "bevy_ecs_tilemap"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d860132718d33627950294b0f316310f1dae789fb995deb4516ebdd7f3e6219"
+dependencies = [
+ "bevy",
+ "bevy_internal",
+ "log",
+]
+
+[[package]]
 name = "bevy_encase_derive"
 version = "0.15.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1791,9 +1816,10 @@ name = "demo"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "bevy_ecs_tiled",
+ "bevy_ecs_tilemap",
  "bevy_framepace",
  "rand 0.9.0",
- "tiled",
 ]
 
 [[package]]
@@ -3684,6 +3710,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_regex"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a8136f1a4ea815d7eac4101cfd0b16dc0cb5e1fe1b8609dfd728058656b7badf"
+dependencies = [
+ "regex",
+ "serde",
+]
+
+[[package]]
 name = "sharded-slab"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3898,6 +3934,10 @@ checksum = "963ef63fa3552ead705617d9f42de2b076c48a15f780e4d1c95dd52e9362a700"
 dependencies = [
  "base64 0.22.1",
  "flate2",
+ "regex",
+ "serde",
+ "serde_json",
+ "serde_regex",
  "xml-rs",
  "zstd",
 ]

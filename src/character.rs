@@ -12,6 +12,9 @@ pub struct Character;
 pub struct Health(pub f32);
 
 #[derive(Component)]
+pub struct Velocity(pub f32);
+
+#[derive(Component)]
 pub struct PlayerTimer(pub Stopwatch);
 
 #[derive(Component, Default)]
@@ -20,6 +23,7 @@ pub enum PlayerState {
     Idle,
     Jump,
     Move,
+    Jumpover,
 }
 
 #[derive(Event)]
@@ -27,6 +31,9 @@ pub struct PlayerEnemyCollisionEvent;
 
 #[derive(Event)]
 pub struct PlayerRunEvent;
+
+#[derive(Event)]
+pub struct PlayerJumpEvent;
 
 //定义角色动画帧率
 #[derive(Component)]
@@ -58,14 +65,22 @@ impl Plugin for PlayerPlugin {
             .add_systems(
             Update,
                 (
-                    // handle_player_death,
                     handle_player_move,
                     // handle_player_skills,
-                    // handle_player_shoot,
                     // handle_player_enemy_collision_events,
                     // handle_play_bullet_collision_events,
             ).run_if(in_state(GameState::Home))
             )
+            .add_systems(
+                Update,
+                    (
+                        // handle_player_death,
+                        handle_player_move,
+                        // handle_player_skills,
+                        // handle_player_enemy_collision_events,
+                        // handle_play_bullet_collision_events,
+                ).run_if(in_state(GameState::InGame))
+                )
             .add_systems(Update, log_transitions::<GameState>)
             ;
     }
@@ -90,6 +105,7 @@ fn setup_player(
         PlayerState::default(),
         Character,
         Health(PLAYER_HEALTH),
+        Velocity(PLAYER_JUMP_SPEED),
         PlayerTimer(Stopwatch::default()),
         ))
         .with_child((Sprite {
@@ -102,7 +118,8 @@ fn setup_player(
 
 fn handle_player_move(
     mut events: EventWriter<PlayerRunEvent>,
-    mut player_query: Query<(&mut Sprite, &mut Transform, &mut PlayerState), With<Character>>,
+    mut events2: EventWriter<PlayerJumpEvent>,
+    mut player_query: Query<(&mut Sprite, &mut Transform, &mut PlayerState, &mut Velocity), With<Character>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     asset_server: Res<AssetServer>,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
@@ -111,7 +128,7 @@ fn handle_player_move(
         return;
     }
     //之后可以改为自定义的键位，数据存到configs中
-    let (mut player, mut transform, mut player_state) = player_query.single_mut();
+    let (mut player, mut transform, mut player_state, mut V) = player_query.single_mut();
     let jump = keyboard_input.pressed(KeyCode::KeyW) || keyboard_input.pressed(KeyCode::Space);
     let left = keyboard_input.pressed(KeyCode::KeyA);
     let down = keyboard_input.pressed(KeyCode::KeyS);
@@ -133,8 +150,27 @@ fn handle_player_move(
         // delta.y -= 0.5;
     }
     if jump {
-        println!("jump!");
-        // delta.y += 0.5;
+        // println!("jump!");
+
+        match *player_state {
+            PlayerState::Jump => {},
+            _=> {
+                player.image = asset_server.load("Shiroko_Jump.png");
+                let layout_jump = TextureAtlasLayout::from_grid(UVec2::splat(64),4,2,None,None);
+                player.texture_atlas = Some(TextureAtlas {
+                    layout: texture_atlas_layouts.add(layout_jump),
+                    index: 0,
+                });
+                *player_state = PlayerState::Jump;
+                events2.send(PlayerJumpEvent);
+                transform.translation.y += V.0;
+                V.0 -= PLAYER_GRAVITY;
+            },
+        };
+        // if V.0 == PLAYER_JUMP_SPEED {
+        //     transform.translation.y += V.0;
+        //     V.0 -= PLAYER_GRAVITY;
+        // }
     }
     delta = delta.normalize();
     if delta.is_finite() && (jump || down || left || right) {
@@ -142,10 +178,10 @@ fn handle_player_move(
         //
         transform.translation.z = 30.0;
         //
- 
         match *player_state {
-            PlayerState::Move=> {},
-            _=> {
+            PlayerState::Move =>{},
+            PlayerState::Jump =>{},
+            _ => {
                 player.image = asset_server.load("Shiroko_Move.png");
                 let layout_move = TextureAtlasLayout::from_grid(UVec2::splat(64),5,2,None,None);
                 player.texture_atlas = Some(TextureAtlas {
@@ -159,8 +195,9 @@ fn handle_player_move(
         
     } else {
         match *player_state {
-            PlayerState::Idle=> {},
-            _=> {
+            PlayerState::Idle =>{},
+            PlayerState::Jump =>{},
+            _ => {
                 player.image = asset_server.load("Shiroko_Idle.png");
                 let layout_idle = TextureAtlasLayout::from_grid(UVec2::splat(64),6,1,None,None);
                 player.texture_atlas = Some(TextureAtlas {
@@ -170,7 +207,23 @@ fn handle_player_move(
                 *player_state = PlayerState::Idle;
             },
         };
-
+    }
+    if transform.translation.y <= -200.0 {
+        if transform.translation.y != -200.0 {
+            transform.translation.y = -200.0;
+        }
+        if V.0 < 0.0 {
+            V.0 = PLAYER_JUMP_SPEED;
+        }
+        match *player_state {
+            PlayerState::Jump => {*player_state = PlayerState::Jumpover;},
+            _ => {},
+        }
+        
+    }
+    else {
+        transform.translation.y += V.0;
+        V.0 -= PLAYER_GRAVITY;
     }
 }
 
@@ -208,10 +261,6 @@ fn handle_player_skills(
 ) {
 }
 
-fn handle_player_shoot(
-
-) {
-}
 
 fn handle_play_bullet_collision_events(
     

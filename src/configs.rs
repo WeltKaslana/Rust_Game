@@ -19,6 +19,8 @@ pub const fps: u8 = 60;
 // Player
 pub const PLAYER_SPEED: f32 = 2.0 * 240.0 / fps as f32;
 pub const PLAYER_HEALTH: f32 = 100.0;
+pub const PLAYER_JUMP_SPEED: f32 = 20.0;
+pub const PLAYER_GRAVITY: f32 = 1.0;
 
 // Enemy
 pub const MAX_NUM_ENEMIES: usize = 20000;

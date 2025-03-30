@@ -26,18 +26,19 @@ impl Plugin for ResourcesPlugin {
         app
             .insert_resource(CursorPosition(None))
             // .add_systems(OnEnter(GameState::MainMenu), load_assets)
-            .add_systems(
-                Update,
-                update_cursor_position.run_if(in_state(GameState::MainMenu)))
-            .add_systems(
-                Update,
-                update_cursor_position.run_if(in_state(GameState::Home)))
+            // .add_systems(
+            //     Update,
+            //     update_cursor_position.run_if(in_state(GameState::MainMenu)))
+            // .add_systems(
+            //     Update,
+            //     update_cursor_position.run_if(in_state(GameState::Home)))
+            .add_systems(Update,update_cursor_position)
             .add_systems(Update, log_transitions::<GameState>);
     }
 }
 
 
-//存疑
+
 fn update_cursor_position(
     mut cursor_pos: ResMut<CursorPosition>,
     window_query: Query<&Window, With<PrimaryWindow>>,

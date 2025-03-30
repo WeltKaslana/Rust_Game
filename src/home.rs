@@ -1,6 +1,4 @@
-use bevy::render::texture;
 use bevy::{dev_tools::states::*, prelude::*};
-use bevy::math::vec3;
 use crate::{gamestate::GameState,
             character::{AnimationConfig, Character},
             };
@@ -26,6 +24,10 @@ pub enum FridgeState {
     Open,
     Close,
 }
+
+#[derive(Component)]
+pub struct Home;
+
 impl Plugin for HomePlugin {
     fn build(&self, app: &mut App) {
         app
@@ -47,6 +49,7 @@ fn setup(
         ..Default::default()
         },
         Transform::from_scale(Vec3::splat(3.0)).with_translation(Vec3::new(0.0, 0.0, 5.0)),
+        Home,
         ))
         .with_child(
             (Sprite {
@@ -114,6 +117,7 @@ fn setup(
             AnimationConfig::new(10),
             Fridge,
             FridgeState::default(),
+            Home,
             ));
     //小空
     let layout_sora = TextureAtlasLayout::from_grid(UVec2::splat(80),8,1,None,None);
@@ -130,6 +134,7 @@ fn setup(
             AnimationConfig::new(7),
             Sora,
             SoraState::default(),
+            Home,
             ));
     //看板
     commands.spawn( 
@@ -138,6 +143,7 @@ fn setup(
             ..Default::default()
             },
             Transform::from_scale(Vec3::splat(3.0)).with_translation(Vec3::new(70.0, -200.0, -0.5)),
+            Home,
             ));
 }
 fn check_state(
@@ -147,6 +153,7 @@ fn check_state(
     player_query: Query<&Transform, (With<Character>, Without<Sora>, Without<Fridge>)>,
     mut sora_query: Query<(&Transform, &mut Sprite, &mut SoraState), (With<Sora>, Without<Fridge>, Without<Character>)>,
     mut fridge_query: Query<(&Transform, &mut Sprite, &mut FridgeState), (With<Fridge>, Without<Character>, Without<Sora>)>,
+    mut next_state: ResMut<NextState<GameState>>,
  ) {
     if player_query.is_empty() || sora_query.is_empty() || fridge_query.is_empty() {
         // println!("empty1!");
@@ -207,6 +214,8 @@ fn check_state(
                 if keyboard_input.just_pressed(KeyCode::KeyE) {
                     println!("Game Start!");
                     // to do: change game state to GameState::InGame
+                    //为了测试，先将状态转换到游戏中，游戏初始化状态之后再设置
+                    next_state.set(GameState::InGame);
                 }
             }
             _ => {},
@@ -224,7 +233,7 @@ fn check_state(
  }
 fn cleanup(
     mut commands: Commands, 
-    mut menu_items_query: Query<Entity, With<Sprite>>) {
+    mut menu_items_query: Query<Entity, With<Home>>) {
     for parent in &mut menu_items_query {
         commands.entity(parent).despawn_recursive();
     }
