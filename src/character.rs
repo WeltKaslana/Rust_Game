@@ -88,14 +88,15 @@ impl Plugin for PlayerPlugin {
 
 fn setup_player(
     mut commands: Commands,
+    source: Res<GlobalCharacterTextureAtlas>,
     asset_server: Res<AssetServer>,
-    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    // mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
-    let layout_idle = TextureAtlasLayout::from_grid(UVec2::splat(64),6,1,None,None);
+    // let layout_idle = TextureAtlasLayout::from_grid(UVec2::splat(64),6,1,None,None);
     commands.spawn( (Sprite {
-        image: asset_server.load("Shiroko_Idle.png"),
+        image: source.image_idle.clone(),
         texture_atlas: Some(TextureAtlas {
-            layout: texture_atlas_layouts.add(layout_idle),
+            layout: source.lay_out_idle.clone(),
             index: 1,
         }),
         ..Default::default()
@@ -121,8 +122,7 @@ fn handle_player_move(
     mut events2: EventWriter<PlayerJumpEvent>,
     mut player_query: Query<(&mut Sprite, &mut Transform, &mut PlayerState, &mut Velocity), With<Character>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    asset_server: Res<AssetServer>,
-    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    source: Res<GlobalCharacterTextureAtlas>,
 ) {
     if player_query.is_empty() {
         return;
@@ -155,10 +155,9 @@ fn handle_player_move(
         match *player_state {
             PlayerState::Jump => {},
             _=> {
-                player.image = asset_server.load("Shiroko_Jump.png");
-                let layout_jump = TextureAtlasLayout::from_grid(UVec2::splat(64),4,2,None,None);
+                player.image = source.image_jump.clone();
                 player.texture_atlas = Some(TextureAtlas {
-                    layout: texture_atlas_layouts.add(layout_jump),
+                    layout: source.lay_out_jump.clone(),
                     index: 0,
                 });
                 *player_state = PlayerState::Jump;
@@ -167,10 +166,6 @@ fn handle_player_move(
                 V.0 -= PLAYER_GRAVITY;
             },
         };
-        // if V.0 == PLAYER_JUMP_SPEED {
-        //     transform.translation.y += V.0;
-        //     V.0 -= PLAYER_GRAVITY;
-        // }
     }
     delta = delta.normalize();
     if delta.is_finite() && (jump || down || left || right) {
@@ -182,10 +177,9 @@ fn handle_player_move(
             PlayerState::Move =>{},
             PlayerState::Jump =>{},
             _ => {
-                player.image = asset_server.load("Shiroko_Move.png");
-                let layout_move = TextureAtlasLayout::from_grid(UVec2::splat(64),5,2,None,None);
+                player.image = source.image_move.clone();
                 player.texture_atlas = Some(TextureAtlas {
-                    layout: texture_atlas_layouts.add(layout_move),
+                    layout: source.lay_out_move.clone(),
                     index: 1,
                 });
                 *player_state = PlayerState::Move;
@@ -198,10 +192,9 @@ fn handle_player_move(
             PlayerState::Idle =>{},
             PlayerState::Jump =>{},
             _ => {
-                player.image = asset_server.load("Shiroko_Idle.png");
-                let layout_idle = TextureAtlasLayout::from_grid(UVec2::splat(64),6,1,None,None);
+                player.image = source.image_idle.clone();
                 player.texture_atlas = Some(TextureAtlas {
-                    layout: texture_atlas_layouts.add(layout_idle),
+                    layout: source.lay_out_idle.clone(),
                     index: 1,
                 });
                 *player_state = PlayerState::Idle;
@@ -267,3 +260,116 @@ fn handle_play_bullet_collision_events(
 ) {
 
 }
+//测试内存
+
+
+// fn handle_player_mov(
+//     mut events: EventWriter<PlayerRunEvent>,
+//     mut events2: EventWriter<PlayerJumpEvent>,
+//     mut player_query: Query<(&mut Sprite, &mut Transform, &mut PlayerState, &mut Velocity), With<Character>>,
+//     keyboard_input: Res<ButtonInput<KeyCode>>,
+//     asset_server: Res<AssetServer>,
+//     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+// ) {
+//     if player_query.is_empty() {
+//         return;
+//     }
+//     //之后可以改为自定义的键位，数据存到configs中
+//     let (mut player, mut transform, mut player_state, mut V) = player_query.single_mut();
+//     let jump = keyboard_input.pressed(KeyCode::KeyW) || keyboard_input.pressed(KeyCode::Space);
+//     let left = keyboard_input.pressed(KeyCode::KeyA);
+//     let down = keyboard_input.pressed(KeyCode::KeyS);
+//     let right = keyboard_input.pressed(KeyCode::KeyD);
+//     //到边界的检测缺
+//     let mut delta = Vec2::ZERO;
+//     if left {
+//         // println!("left!");
+//         delta.x -= 0.5;
+//     }
+//     if right {
+//         // println!("right!");
+//         delta.x += 0.5;
+//     }
+//     //
+//     //test
+//     if down {
+//         println!("down");
+//         // delta.y -= 0.5;
+//     }
+//     if jump {
+//         // println!("jump!");
+
+//         match *player_state {
+//             PlayerState::Jump => {},
+//             _=> {
+//                 player.image = asset_server.load("Shiroko_Jump.png");
+//                 let layout_jump = TextureAtlasLayout::from_grid(UVec2::splat(64),4,2,None,None);
+//                 player.texture_atlas = Some(TextureAtlas {
+//                     layout: texture_atlas_layouts.add(layout_jump),
+//                     index: 0,
+//                 });
+//                 *player_state = PlayerState::Jump;
+//                 events2.send(PlayerJumpEvent);
+//                 transform.translation.y += V.0;
+//                 V.0 -= PLAYER_GRAVITY;
+//             },
+//         };
+//         // if V.0 == PLAYER_JUMP_SPEED {
+//         //     transform.translation.y += V.0;
+//         //     V.0 -= PLAYER_GRAVITY;
+//         // }
+//     }
+//     delta = delta.normalize();
+//     if delta.is_finite() && (jump || down || left || right) {
+//         transform.translation += vec3(delta.x, delta.y, 0.0) * PLAYER_SPEED;
+//         //
+//         transform.translation.z = 30.0;
+//         //
+//         match *player_state {
+//             PlayerState::Move =>{},
+//             PlayerState::Jump =>{},
+//             _ => {
+//                 player.image = asset_server.load("Shiroko_Move.png");
+//                 let layout_move = TextureAtlasLayout::from_grid(UVec2::splat(64),5,2,None,None);
+//                 player.texture_atlas = Some(TextureAtlas {
+//                     layout: texture_atlas_layouts.add(layout_move),
+//                     index: 1,
+//                 });
+//                 *player_state = PlayerState::Move;
+//             },
+//         };
+//         events.send(PlayerRunEvent);
+        
+//     } else {
+//         match *player_state {
+//             PlayerState::Idle =>{},
+//             PlayerState::Jump =>{},
+//             _ => {
+//                 player.image = asset_server.load("Shiroko_Idle.png");
+//                 let layout_idle = TextureAtlasLayout::from_grid(UVec2::splat(64),6,1,None,None);
+//                 player.texture_atlas = Some(TextureAtlas {
+//                     layout: texture_atlas_layouts.add(layout_idle),
+//                     index: 1,
+//                 });
+//                 *player_state = PlayerState::Idle;
+//             },
+//         };
+//     }
+//     if transform.translation.y <= -200.0 {
+//         if transform.translation.y != -200.0 {
+//             transform.translation.y = -200.0;
+//         }
+//         if V.0 < 0.0 {
+//             V.0 = PLAYER_JUMP_SPEED;
+//         }
+//         match *player_state {
+//             PlayerState::Jump => {*player_state = PlayerState::Jumpover;},
+//             _ => {},
+//         }
+        
+//     }
+//     else {
+//         transform.translation.y += V.0;
+//         V.0 -= PLAYER_GRAVITY;
+//     }
+// }

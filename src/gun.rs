@@ -12,6 +12,7 @@ use crate::{
     character::{Character, AnimationConfig, },
     gamestate::GameState,
     CursorPosition,
+    GlobalCharacterTextureAtlas,
     configs::{BULLET_SPAWN_INTERVAL, 
               BULLET_SPEED, 
               BULLET_TIME_SECS,
@@ -109,7 +110,7 @@ fn handle_cursor_transform(
     // cursor_transform.translation = vec3(cursor_pos.x + player_pos.x, 
     //                                     cursor_pos.y + player_pos.y, 
     //                                     cursor_transform.translation.z);
-    cursor_transform.translation = vec3(cursor_pos.x, cursor_pos.y, cursor_transform.translation.z);
+    cursor_transform.translation = vec3(cursor_pos.x, cursor_pos.y - 105.0 , cursor_transform.translation.z);
     //鼠标旋转
     let rotation_speed = 1.0;
     let delta_rotation = Quat::from_rotation_z(rotation_speed * time.delta_secs());
@@ -125,10 +126,11 @@ fn handle_cursor_transform(
 
 fn setup_gun(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    source: Res<GlobalCharacterTextureAtlas>,
 ) {
+    //Utaha的貌似不是枪，逻辑可能要另写！！！
     commands.spawn((Sprite {
-        image: asset_server.load("Shiroko_Gun.png"),
+        image: source.image_gun.clone(),
         ..Default::default()
         },
         Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(15.0,-215.0,31.0)),
@@ -187,6 +189,9 @@ fn handle_gun_fire(
     mouse_button_input: Res<ButtonInput<MouseButton>>,
     mut ew: EventWriter<PlayerFireEvent>,
 ) {
+    //枪的开火没法通用，ARISU的枪和子弹甚至有开火动画，而UTAHA居然用的不是枪
+    //没法写通用的逻辑
+    //后续考虑根据内存中的角色id判断角色，然后写不同的开火逻辑
     if gun_query.is_empty() {
         return;
     }

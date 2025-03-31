@@ -8,6 +8,7 @@ use crate::{
            SoraState,
            Fridge,
            FridgeState,},
+    resources::GlobalHomeTextureAtlas,
 };
 // enemy::{Enemy, EnemyType},
 
@@ -187,10 +188,11 @@ fn animate_gunfire(
 }
 
 fn animate_sora(
-    asset_server: Res<AssetServer>,
-    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    // asset_server: Res<AssetServer>,
+    // mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
     time: Res<Time>,
     mut sora_query: Query<(&mut AnimationConfig, &mut Sprite, &mut SoraState), With<Sora>>,
+    source: Res<GlobalHomeTextureAtlas>,
 ) {
     if sora_query.is_empty() {
         return;
@@ -213,10 +215,9 @@ fn animate_sora(
                     atlas.index += 1;
                     if atlas.index == 18 {
                         *state = SoraState::Loop;
-                        sora.image = asset_server.load("Sora_RestLoop.png");
-                        let layout_sora = TextureAtlasLayout::from_grid(UVec2::splat(80),8,1,None,None);
+                        sora.image = source.Sora_image_loop.clone();
                         sora.texture_atlas = Some(TextureAtlas {
-                            layout: texture_atlas_layouts.add(layout_sora),
+                            layout: source.Sora_lay_out_loop.clone(),
                             index: 0,
                         });
                     }
@@ -227,10 +228,11 @@ fn animate_sora(
 }
 
 fn animate_fridge(
-    asset_server: Res<AssetServer>,
-    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    // asset_server: Res<AssetServer>,
+    // mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
     time: Res<Time>,
     mut player_query: Query<(&mut AnimationConfig, &mut Sprite,&mut FridgeState), With<Fridge>>,
+    source: Res<GlobalHomeTextureAtlas>,
 ) {
     if player_query.is_empty() {
         return;
@@ -253,10 +255,9 @@ fn animate_fridge(
                     atlas.index += 1;
                     if atlas.index == 14 {
                         *state = FridgeState::Loop;
-                        fridge.image = asset_server.load("Teleporter_2_Start.png");
-                        let layout_fridge = TextureAtlasLayout::from_grid(UVec2::splat(96),10,3,None,None);
+                        fridge.image = source.Fridge_image_loop.clone();
                         fridge.texture_atlas = Some(TextureAtlas {
-                            layout: texture_atlas_layouts.add(layout_fridge),
+                            layout: source.Fridge_lay_out_loop.clone(),
                             index: 0,
                         });
                     }
