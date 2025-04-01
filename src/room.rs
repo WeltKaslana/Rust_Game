@@ -80,8 +80,11 @@ impl AssetsManager {
         }
 
         // Then spawn the new map
-        let mut entity_commands = commands.spawn(TiledMapHandle(
+        let mut entity_commands = commands.spawn((TiledMapHandle(
             self.map_assets[self.map_index].asset.to_owned(),
+            ),
+            TiledMapAnchor::Center,
+            Transform::from_scale(Vec3::splat(2.0)),
         ));
         (self.map_assets[self.map_index].callback)(&mut entity_commands);
         self.map_entity = Some(entity_commands.id());
