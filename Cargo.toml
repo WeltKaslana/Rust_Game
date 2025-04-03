@@ -15,8 +15,7 @@ bevy_ecs_tiled = { version = "0.6.0", features = [
 ]}
 bevy_ecs_tilemap = "0.15.0"
 bevy_framepace = "0.18.1"
-# pyo3 = { version = "0.24.0", features = ["auto-initialize"]}
+bevy_rapier2d = "0.29.0"
 rand = "0.9.0"
-# tiled = "0.14.0"
 
 

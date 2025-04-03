@@ -3,6 +3,7 @@ use crate::{gamestate::GameState,
             character::{AnimationConfig, Character},
             resources::GlobalHomeTextureAtlas,
             };
+use bevy_rapier2d::prelude::*;
 
 pub struct HomePlugin;
 //小空叫Sora
@@ -42,7 +43,7 @@ impl Plugin for HomePlugin {
 fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    // mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
     source: Res<GlobalHomeTextureAtlas>,
 ) {
     //背景板
@@ -65,14 +66,14 @@ fn setup(
                 image: asset_server.load("StorageRacks1.png"),
                 ..Default::default()
                 },
-            Transform::from_scale(Vec3::splat(0.8)).with_translation(Vec3::new(-60.0, -58.0, -1.0)),
+            Transform::from_scale(Vec3::splat(0.8)).with_translation(Vec3::new(-65.0, -58.0, -1.0)),
             ))
         .with_child(
             (Sprite {
                 image: asset_server.load("StorageRacks2.png"),
                 ..Default::default()
                 },
-            Transform::from_scale(Vec3::splat(0.8)).with_translation(Vec3::new(-10.0, -58.0, -2.0)),
+            Transform::from_scale(Vec3::splat(0.8)).with_translation(Vec3::new(-15.0, -58.0, -2.0)),
             ))
         .with_child(
             (Sprite {
@@ -114,7 +115,7 @@ fn setup(
             }),
             ..Default::default()
             },
-            Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(-470.0, -118.0, -1.0)),
+            Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(-470.0, -123.0, -1.0)),
             AnimationConfig::new(10),
             Fridge,
             FridgeState::default(),
@@ -142,13 +143,37 @@ fn setup(
             image: asset_server.load("Billboard.png"),
             ..Default::default()
             },
-            Transform::from_scale(Vec3::splat(3.0)).with_translation(Vec3::new(70.0, -200.0, -0.5)),
+            Transform::from_scale(Vec3::splat(3.0)).with_translation(Vec3::new(75.0, -170.0, -0.5)),
+            Home,
+            //test
+            Collider::cuboid(15.0, 18.0),
+            // CollisionGroups::new(Group::GROUP_2, Group::ALL),
+            RigidBody::Dynamic,
+            ));
+    //地板
+    commands.spawn((
+        Collider::cuboid(2400.0, 25.0),
+        RigidBody::Dynamic,
+        // CollisionGroups::new(Group::GROUP_2, Group::ALL),
+        Transform::from_translation(Vec3::new(0.0, -270.0, 0.0)),
+        Home,
+        ));
+    commands.spawn((
+        Collider::cuboid(2400.0, 1.0),
+        RigidBody::Dynamic,
+        Transform::from_translation(Vec3::new(0.0, -295.0, 10.0)),
+        Home,
+        ));
+    commands.spawn((
+            Collider::cuboid(2400.0, 5.0),
+            RigidBody::Fixed,
+            Transform::from_translation(Vec3::new(0.0, -296.0, 10.0)),
             Home,
             ));
 }
 fn check_state(
-    asset_server: Res<AssetServer>,
-    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    // asset_server: Res<AssetServer>,
+    // mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     player_query: Query<&Transform, (With<Character>, Without<Sora>, Without<Fridge>)>,
     mut sora_query: Query<(&Transform, &mut Sprite, &mut SoraState), (With<Sora>, Without<Fridge>, Without<Character>)>,

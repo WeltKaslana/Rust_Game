@@ -8,9 +8,13 @@ use crate::{
            SoraState,
            Fridge,
            FridgeState,},
+    enemy::{
+        Enemy, 
+        EnemyState, 
+        EnemyType, 
+        PatrolState}, 
     resources::GlobalHomeTextureAtlas,
 };
-// enemy::{Enemy, EnemyType},
 
 pub struct AnimationPlugin;
 
@@ -23,11 +27,10 @@ impl Plugin for AnimationPlugin {
             Update,
             (
                 animate_player,
-                // animate_enemy,
+                animate_enemy,
                 flip_gun_sprite_y,
                 flip_player_sprite_x,
                 animate_gunfire,
-                // flip_enemy_sprite_x,
                 // flip_boss_sprite_x,
             ).run_if(in_state(GameState::InGame)),)
             .add_systems(Update, 
@@ -108,9 +111,71 @@ fn animate_player(
 }
 
 fn animate_enemy(
-
+    time: Res<Time>,
+    mut enemy_query: Query<(&mut AnimationConfig, &mut Sprite, &mut EnemyState, &EnemyType, &mut PatrolState), With<Enemy>>,
 ) {
+    if enemy_query.is_empty() {
+        return;
+    }
 
+    for (mut aconfig, mut enemy, mut enemy_state, enemy_type, mut patrolstate) in enemy_query.iter_mut() {
+        
+        if patrolstate.direction >= 0.0 {
+            enemy.flip_x = false;
+        }else{
+            enemy.flip_x = true;
+        }
+
+        match enemy_type {
+            EnemyType::Sweeper => {
+                let all = match *enemy_state {
+                    EnemyState::Idea => 1,
+                    EnemyState::Move => 14,
+                    EnemyState::FireLoop => 13,
+                    EnemyState::FireEnd | EnemyState::FireStart => 1,
+                };
+                aconfig.frame_timer.tick(time.delta());
+                if aconfig.frame_timer.just_finished(){
+                    if let Some(atlas) = &mut enemy.texture_atlas {
+                        aconfig.frame_timer = AnimationConfig::timer_from_fps(aconfig.fps2p);
+                        atlas.index = (atlas.index + 1) % all;
+                    }
+                }
+            },
+            EnemyType::DroneVulcan => {
+                let all = match *enemy_state {
+                    EnemyState::Idea => 5,
+                    EnemyState::Move => 5,
+                    EnemyState::FireLoop => 3,
+                    EnemyState::FireEnd => 2,
+                    EnemyState::FireStart => 3,
+                };
+                aconfig.frame_timer.tick(time.delta());
+                if aconfig.frame_timer.just_finished(){
+                    if let Some(atlas) = &mut enemy.texture_atlas {
+                        aconfig.frame_timer = AnimationConfig::timer_from_fps(aconfig.fps2p);
+                        atlas.index = (atlas.index + 1) % all;
+                    }
+                }
+            },
+            EnemyType::DroneMissile => {
+                let all = match *enemy_state {
+                    EnemyState::Idea => 5,
+                    EnemyState::Move => 5,
+                    EnemyState::FireLoop => 5,
+                    EnemyState::FireEnd => 2,
+                    EnemyState::FireStart => 3,
+                };
+                aconfig.frame_timer.tick(time.delta());
+                if aconfig.frame_timer.just_finished(){
+                    if let Some(atlas) = &mut enemy.texture_atlas {
+                        aconfig.frame_timer = AnimationConfig::timer_from_fps(aconfig.fps2p);
+                        atlas.index = (atlas.index + 1) % all;
+                    }
+                }
+            },
+        }
+    }
 }
 
 fn flip_player_sprite_x(
@@ -133,11 +198,6 @@ fn flip_player_sprite_x(
 }
 
 
-fn flip_enemy_sprite_x(
-    
-) {
-
-}
 
 fn flip_boss_sprite_x(
     

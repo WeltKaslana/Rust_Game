@@ -1,11 +1,10 @@
 use std::f32::consts::PI;
-use bevy::scene::ron::de::Position;
 use bevy::utils::Instant;
 
 use bevy::math::{vec2, vec3};
-use bevy::winit::cursor;
-use bevy::{dev_tools::states::*, prelude::*, transform};
+use bevy::{dev_tools::states::*, prelude::*};
 use bevy::time::Stopwatch;
+use bevy_rapier2d::prelude::*;
 use rand::Rng;
 
 use crate::{
@@ -94,7 +93,7 @@ fn handle_cursor_transform(
     time: Res<Time>,
     cursor_pos: Res<CursorPosition>,
     mut cursor_query: Query<&mut Transform, (With<Cursor>, Without<Character>)>,
-    player_query: Query<&mut Transform, (With<Character>, Without<Cursor>)>,
+    camera_query: Query<&mut Transform, (With<Camera2d>, Without<Character>, Without<Cursor>)>,
 ) {
     if cursor_query.is_empty() {
         println!("Cursor is empty!!!!!");
@@ -104,13 +103,12 @@ fn handle_cursor_transform(
         Some(pos) => pos,
         None => return,
     };
-    let player_pos = player_query.single().translation.truncate();
+
+    let camera_pos = camera_query.single().translation.truncate();
     let mut cursor_transform = cursor_query.single_mut();
-    //两种鼠标显示模式
-    // cursor_transform.translation = vec3(cursor_pos.x + player_pos.x, 
-    //                                     cursor_pos.y + player_pos.y, 
-    //                                     cursor_transform.translation.z);
-    cursor_transform.translation = vec3(cursor_pos.x, cursor_pos.y - 105.0 , cursor_transform.translation.z);
+    cursor_transform.translation = vec3(cursor_pos.x + camera_pos.x, 
+                                        cursor_pos.y + camera_pos.y, 
+                                        cursor_transform.translation.z);
     //鼠标旋转
     let rotation_speed = 1.0;
     let delta_rotation = Quat::from_rotation_z(rotation_speed * time.delta_secs());
@@ -252,6 +250,10 @@ fn handle_gun_fire(
             Bullet,
             BulletDirection(dir),
             SpawnInstant(Instant::now()),
+            //碰撞体
+            Collider::cuboid(2.0, 1.0),
+            // CollisionGroups::new(Group::GROUP_3, Group::GROUP_2),
+            // ActiveEvents::COLLISION_EVENTS,
         ));
     }
 }

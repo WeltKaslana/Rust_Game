@@ -122,6 +122,136 @@ impl GlobalHomeTextureAtlas {
         }
     }
 }
+#[derive(Resource,Default)]
+pub struct GlobalSweeperTextureAtlas {
+    pub lay_out_idle: Handle<TextureAtlasLayout>,
+    pub image_idle: Handle<Image>,
+    pub lay_out_move: Handle<TextureAtlasLayout>,
+    pub image_move: Handle<Image>,
+    pub lay_out_attack: Handle<TextureAtlasLayout>,
+    pub image_attack: Handle<Image>,
+}
+
+impl GlobalSweeperTextureAtlas {
+    pub fn init(
+        asset_server: &Res<AssetServer>,
+        mut texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>,
+    ) -> Self {
+        let mut layout_move = TextureAtlasLayout::from_grid(UVec2::splat(64),14,1,None,None);
+        let mut layout_idle = TextureAtlasLayout::from_grid(UVec2::splat(64),1,1,None,None);
+        let mut layout_attack = TextureAtlasLayout::from_grid(UVec2::splat(128),13,1,None,None);
+        let mut path_move = String::from("Sweeper_Move.png");
+        let mut path_idle = String::from("Sweeper_Idea.png");
+        let mut path_attack = String::from("Sweeper_Attack.png");
+
+        Self {
+            lay_out_move: texture_atlas_layouts.add(layout_move),
+            lay_out_attack: texture_atlas_layouts.add(layout_attack),
+            lay_out_idle: texture_atlas_layouts.add(layout_idle),
+            image_attack: asset_server.load(path_attack),
+            image_idle: asset_server.load(path_idle),
+            image_move: asset_server.load(path_move),
+        }
+    }
+}
+
+#[derive(Resource,Default)]
+pub struct GlobalDroneVulcanTextureAtlas {
+    pub lay_out_idle: Handle<TextureAtlasLayout>,
+    pub image_idle: Handle<Image>,
+    pub lay_out_fire_start: Handle<TextureAtlasLayout>,
+    pub image_fire_start: Handle<Image>,
+    pub lay_out_fire_loop: Handle<TextureAtlasLayout>,
+    pub image_fire_loop: Handle<Image>,
+    pub lay_out_fire_end: Handle<TextureAtlasLayout>,
+    pub image_fire_end: Handle<Image>,
+}
+
+#[derive(Resource,Default)]
+pub struct GlobalDroneMissileTextureAtlas {
+    pub lay_out_idle: Handle<TextureAtlasLayout>,
+    pub image_idle: Handle<Image>,
+    pub lay_out_fire_start: Handle<TextureAtlasLayout>,
+    pub image_fire_start: Handle<Image>,
+    pub lay_out_fire_loop: Handle<TextureAtlasLayout>,
+    pub image_fire_loop: Handle<Image>,
+    pub lay_out_fire_end: Handle<TextureAtlasLayout>,
+    pub image_fire_end: Handle<Image>,
+}
+
+impl GlobalDroneVulcanTextureAtlas {
+    pub fn init(
+        asset_server: &Res<AssetServer>,
+        mut texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>,
+    ) -> Self {
+        let mut layout_idle_1 = TextureAtlasLayout::from_grid(UVec2::splat(64),5,1,None,None);
+        let mut path_idle_1 = String::from("DroneVulcan_Idea.png");
+
+        let mut layout_idle_2 = TextureAtlasLayout::from_grid(UVec2::splat(64),5,1,None,None);
+        let mut path_idle_2 = String::from("DroneMissile_Idea.png");
+
+        let mut layout_fire_start_1 = TextureAtlasLayout::from_grid(UVec2::splat(64),3,1,None,None);
+        let mut path_fire_start_1 = String::from("DroneVulcan_Fire_Start.png");
+
+        let mut layout_fire_start_2 = TextureAtlasLayout::from_grid(UVec2::splat(64),3,1,None,None);
+        let mut path_fire_start_2 = String::from("DroneMissile_Fire_Start.png");
+
+        let mut layout_fire_loop_1 = TextureAtlasLayout::from_grid(UVec2::splat(64),3,1,None,None);
+        let mut path_fire_loop_1 = String::from("DroneVulcan_Fire.png");
+
+        let mut layout_fire_loop_2 = TextureAtlasLayout::from_grid(UVec2::splat(64),5,1,None,None);
+        let mut path_fire_loop_2 = String::from("DroneMissile_Fire.png");
+
+        let mut layout_fire_end_1 = TextureAtlasLayout::from_grid(UVec2::splat(64),2,1,None,None);
+        let mut path_fire_end_1 = String::from("DroneVulcan_Fire_End.png");
+
+        let mut layout_fire_end_2 = TextureAtlasLayout::from_grid(UVec2::splat(64),2,1,None,None);
+        let mut path_fire_end_2 = String::from("DroneMissile_Fire_End.png");
+
+        Self {
+            lay_out_idle: texture_atlas_layouts.add(layout_idle_1),
+            lay_out_fire_start: texture_atlas_layouts.add(layout_fire_start_1),
+            lay_out_fire_loop: texture_atlas_layouts.add(layout_fire_loop_1),
+            lay_out_fire_end: texture_atlas_layouts.add(layout_fire_end_1),
+            image_idle: asset_server.load(path_idle_1),
+            image_fire_start: asset_server.load(path_fire_start_1),
+            image_fire_loop: asset_server.load(path_fire_loop_1),
+            image_fire_end: asset_server.load(path_fire_end_1),
+        }
+    }
+}
+
+impl GlobalDroneMissileTextureAtlas {
+    pub fn init(
+        asset_server: &Res<AssetServer>,
+        mut texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>,
+    ) -> Self {
+
+        let mut layout_idle_2 = TextureAtlasLayout::from_grid(UVec2::splat(64),5,1,None,None);
+        let mut path_idle_2 = String::from("DroneMissile_Idea.png");
+
+        let mut layout_fire_start_2 = TextureAtlasLayout::from_grid(UVec2::splat(64),3,1,None,None);
+        let mut path_fire_start_2 = String::from("DroneMissile_Fire_Start.png");
+
+        let mut layout_fire_loop_2 = TextureAtlasLayout::from_grid(UVec2::splat(64),5,1,None,None);
+        let mut path_fire_loop_2 = String::from("DroneMissile_Fire.png");
+
+        let mut layout_fire_end_2 = TextureAtlasLayout::from_grid(UVec2::splat(64),2,1,None,None);
+        let mut path_fire_end_2 = String::from("DroneMissile_Fire_End.png");
+
+        Self {
+            lay_out_idle: texture_atlas_layouts.add(layout_idle_2),
+            lay_out_fire_start: texture_atlas_layouts.add(layout_fire_start_2),
+            lay_out_fire_loop: texture_atlas_layouts.add(layout_fire_loop_2),
+            lay_out_fire_end: texture_atlas_layouts.add(layout_fire_end_2),
+            image_idle: asset_server.load(path_idle_2),
+            image_fire_start: asset_server.load(path_fire_start_2),
+            image_fire_loop: asset_server.load(path_fire_loop_2),
+            image_fire_end: asset_server.load(path_fire_end_2),
+        }
+    }
+}
+
 #[derive(Resource)]
 pub struct CursorPosition(pub Option<Vec2>);
 
@@ -132,6 +262,7 @@ impl Plugin for ResourcesPlugin {
 
             .add_systems(Startup, load_assets)
             .add_systems(Update,update_cursor_position)
+            .add_systems(OnEnter(GameState::Home),load_assets_enemy)
             .add_systems(Update, log_transitions::<GameState>);
     }
 }
@@ -170,4 +301,21 @@ fn load_assets (
     let ghta = GlobalHomeTextureAtlas::init(&asset_server, &mut texture_atlas_layouts);
     commands.insert_resource(ghta);
     println!("over!");
+}
+
+fn load_assets_enemy (
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+) {
+    let enemy_sweeper = GlobalSweeperTextureAtlas::init(&asset_server, &mut texture_atlas_layouts);
+    commands.insert_resource(enemy_sweeper);
+
+    let enemy_dronevulcan = GlobalDroneVulcanTextureAtlas::init( &asset_server, &mut texture_atlas_layouts);
+    commands.insert_resource(enemy_dronevulcan);
+
+    let enemy_dronemissile = GlobalDroneMissileTextureAtlas::init( &asset_server, &mut texture_atlas_layouts);
+    commands.insert_resource(enemy_dronemissile);
+
+    println!("Enemy Resourse Loaded");
 }

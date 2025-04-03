@@ -9,7 +9,7 @@ pub mod camera;
 pub mod audio;
 pub mod home;
 pub mod room;
-
+pub mod enemy;
 
 pub use configs::*;
 pub use resources::*;

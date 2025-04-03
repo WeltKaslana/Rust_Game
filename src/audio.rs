@@ -72,7 +72,7 @@ fn audio_fire (
 ) {
     for _ in events.read() {
         for e in query.iter_mut() {
-            println!("despawn fire audio");
+            // println!("despawn fire audio");
             commands.entity(e).despawn();
         }
         commands.spawn((
@@ -101,7 +101,7 @@ fn player_run (
         }
 
         for e in query.iter_mut() {
-            println!("despawn run audio");
+            // println!("despawn run audio");
             commands.entity(e).despawn();
         }
         timer.0.reset();
@@ -120,7 +120,7 @@ fn player_jump(
 ) {
     for _ in events.read() {
         for e in query.iter_mut() {
-            println!("despawn jump audio");
+            // println!("despawn jump audio");
             commands.entity(e).despawn();
         }
         commands.spawn((
