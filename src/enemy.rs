@@ -2,6 +2,7 @@ use bevy::math::vec3;
 use bevy::reflect::Enum;
 use bevy::transform;
 use bevy::{dev_tools::states::*, prelude::*, time::Stopwatch};
+use bevy_ecs_tiled::physics::collider;
 use std::clone;
 use std::{time::Duration};
 use crate::{gamestate::GameState,
@@ -9,6 +10,7 @@ use crate::{gamestate::GameState,
 use crate::*;
 use rand::Rng;
 use character::AnimationConfig;
+use bevy_rapier2d::prelude::*;
 
 pub struct EnemyPlugin;
 
@@ -22,7 +24,10 @@ pub struct Enemy_Bullet;
 pub struct Health(pub f32);
 
 #[derive(Component)]
-pub struct Velocity(pub f32);
+pub enum Idleflag {
+    idle,
+    patrol,
+}
 
 #[derive(Component)]
 pub enum EnemyType {
@@ -43,8 +48,10 @@ pub enum EnemyState {
 
 #[derive(Component)]
 pub struct PatrolState {
-    pub direction: f32,
-    pub timer: Stopwatch,
+    pub directionx: f32,
+    pub directiony: f32,
+    pub timer1: Stopwatch,
+    pub timer2: Stopwatch,
     pub patrol_duration: Duration,
 }
 
@@ -78,7 +85,7 @@ fn set_enemy(
 ) {
     let mut rng = rand::rng();
     let random_index = rng.random_range(0..3);
-    //let x=2;
+    // let x=0;
     let random_enemy = match random_index {
         0 => EnemyType::Sweeper,
         1 => EnemyType::DroneMissile,
@@ -86,10 +93,16 @@ fn set_enemy(
         _ => unreachable!(),
     };
     
-    let patrol_duration = Duration::from_secs(2); // 巡逻持续时间，可根据需要调整
+    let patrol_duration = Duration::from_millis(500); // 巡逻持续时间，可根据需要调整
 
     match random_enemy{
         EnemyType::Sweeper=>{
+            let collider_box = vec![
+                Vec2::new(-9.0,4.0),
+                Vec2::new(-9.0,-18.0),
+                Vec2::new(9.0,4.0),
+                Vec2::new(9.0,-18.0)];
+            let mut enemy_entity =
             commands.spawn( (
                 Sprite {
                     image: source1.image_idle.clone(),
@@ -104,17 +117,30 @@ fn set_enemy(
                 Enemy,
                 EnemyType::Sweeper,
                 Health(ENEMY_HEALTH),
-                Velocity(0.0),
+                //Velocity(ENEMY_SPEED),
                 AnimationConfig::new(13),
                 PatrolState {
-                    direction: 1.0,
-                    timer: Stopwatch::new(),
+                    directionx: 0.0,
+                    directiony: 0.0,
+                    timer1: Stopwatch::new(),
+                    timer2: Stopwatch::new(),
                     patrol_duration,
                 },
+                Idleflag::patrol,
+                Sensor,
+                RigidBody::Dynamic,
+                GravityScale(0.0),
+                //Collider::cuboid(9.0, 18.0),
+                Collider::convex_hull(&collider_box).unwrap(),
+                ActiveEvents::COLLISION_EVENTS,
                 )
             );
+            enemy_entity.insert(KinematicCharacterController {
+                ..Default::default()
+            });
         },
         EnemyType::DroneMissile=>{
+            let mut enemy_entity =
             commands.spawn( (
                 Sprite {
                     image: source3.image_idle.clone(),
@@ -129,17 +155,28 @@ fn set_enemy(
                 Enemy,
                 EnemyType::DroneMissile,
                 Health(ENEMY_HEALTH),
-                Velocity(ENEMY_SPEED),
+                //Velocity(ENEMY_SPEED),
                 AnimationConfig::new(13),
                 PatrolState {
-                    direction: 1.0,
-                    timer: Stopwatch::new(),
+                    directionx: 0.0,
+                    directiony: 0.0,
+                    timer1: Stopwatch::new(),
+                    timer2: Stopwatch::new(),
                     patrol_duration,
                 },
+                Idleflag::patrol,
+                Sensor,
+                RigidBody::Dynamic,
+                GravityScale(0.0),
+                Collider::cuboid(10.0, 10.0),
                 )
             );
+            enemy_entity.insert(KinematicCharacterController {
+                ..Default::default()
+            });
         },
         EnemyType::DroneVulcan=>{
+            let mut enemy_entity =
             commands.spawn( (
                 Sprite {
                     image: source2.image_idle.clone(),
@@ -154,27 +191,46 @@ fn set_enemy(
                 Enemy,
                 EnemyType::DroneVulcan,
                 Health(ENEMY_HEALTH),
-                Velocity(ENEMY_SPEED),
+                //Velocity(ENEMY_SPEED),
                 AnimationConfig::new(13),
                 PatrolState {
-                    direction: 1.0,
-                    timer: Stopwatch::new(),
+                    directionx: 0.0,
+                    directiony: 0.0,
+                    timer1: Stopwatch::new(),
+                    timer2: Stopwatch::new(),
                     patrol_duration,
                 },
+                Idleflag::patrol,
+                Sensor,
+                RigidBody::Dynamic,
+                GravityScale(0.0),
+                Collider::cuboid(10.0, 10.0),
                 )
             );
+            enemy_entity.insert(KinematicCharacterController {
+                ..Default::default()
+            });
         },
     }
 }
 
 fn handle_enemy_move(
     mut player_query: Query< & Transform,(With<Character>,Without<Enemy>)>,
-    mut enemy_query: Query<(&mut Sprite, &mut Transform, &mut EnemyState, & Velocity, & EnemyType, &mut PatrolState), (With<Enemy>,Without<Character>)>,
+    mut enemy_query: Query<(
+        &mut Sprite, 
+        &mut Transform, 
+        &mut EnemyState, 
+        //& Velocity, 
+        & EnemyType, 
+        &mut PatrolState,
+        &mut Idleflag,
+        &mut KinematicCharacterController
+        ), (With<Enemy>,Without<Character>)>,
     //asset_server: Res<AssetServer>,
-    //mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
-    source1: Res<GlobalSweeperTextureAtlas>,
-    source2: Res<GlobalDroneVulcanTextureAtlas>,
-    source3: Res<GlobalDroneMissileTextureAtlas>,
+    // mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    // source1: Res<GlobalSweeperTextureAtlas>,
+    // source2: Res<GlobalDroneVulcanTextureAtlas>,
+    // source3: Res<GlobalDroneMissileTextureAtlas>,
     time: Res<Time>, 
 ) {
     if player_query.is_empty() {
@@ -186,18 +242,29 @@ fn handle_enemy_move(
 
     let player = player_query.single_mut();
     
-    for (mut enemy, mut transform, mut enemystate, v, enemytype, mut patrol_state) in enemy_query.iter_mut(){
+    for (   mut enemy, 
+            transform, 
+            mut enemystate,
+            //v,
+            enemytype, 
+            mut patrol_state,
+            mut flag,
+            mut controller) in enemy_query.iter_mut(){
         let dx = player.translation.x - transform.translation.x;
-        let dy = player.translation.y - transform.translation.y + 50.0;
+        let dy = player.translation.y - transform.translation.y;
         let distance = (dx * dx + dy * dy).sqrt();
 
         if let Some(atlas) = &mut enemy.texture_atlas {
             if distance <= ENEMY_ALARM {
+
+                patrol_state.directionx = dx;
+                patrol_state.directiony = dy;
+
                 match enemytype {
                     EnemyType::DroneMissile => {
 
-                        if dx * patrol_state.direction < 0.0 {
-                            patrol_state.direction = -1.0 * patrol_state.direction;
+                        if dx * patrol_state.directionx < 0.0 {
+                            patrol_state.directionx = -1.0 * patrol_state.directionx;
                         }
 
                         if distance <= ENEMY_FIRE {
@@ -205,14 +272,12 @@ fn handle_enemy_move(
                                 EnemyState::Idea | EnemyState::Move => { 
                                     if atlas.index == 4{
                                         atlas.index = 0;
-                                        atlas.layout = source3.lay_out_fire_start.clone();
                                         *enemystate = EnemyState::FireStart;
                                     }
                                 },
                                 EnemyState::FireStart => {
                                     if atlas.index == 2{
                                         atlas.index = 0;
-                                        atlas.layout = source3.lay_out_fire_loop.clone();
                                         *enemystate = EnemyState::FireLoop;
                                     }
                                 },
@@ -220,7 +285,6 @@ fn handle_enemy_move(
                                 EnemyState::FireEnd => { 
                                     if atlas.index == 1{
                                         atlas.index = 0;
-                                        atlas.layout = source3.lay_out_fire_start.clone();
                                         *enemystate = EnemyState::FireStart;
                                         }
                                 },
@@ -235,34 +299,35 @@ fn handle_enemy_move(
                                 EnemyState::FireLoop => { 
                                     if atlas.index == 4 {
                                         atlas.index=0;
-                                        atlas.layout = source3.lay_out_fire_end.clone();
                                         *enemystate = EnemyState::FireEnd;
                                     }
                                 },
                                 EnemyState::FireStart => { 
                                     if atlas.index == 2 {
                                         atlas.index=0;
-                                        atlas.layout = source3.lay_out_fire_end.clone();
                                         *enemystate = EnemyState::FireEnd;
                                     }
                                 },
                                 EnemyState::FireEnd => {
                                     if atlas.index == 1 {
                                         atlas.index=0;
-                                        atlas.layout = source3.lay_out_idle.clone();
                                         *enemystate = EnemyState::Move;
                                     }
                                 },
                             }
-                            let direction = Vec3::new(dx, dy, 0.0).normalize();
-                            transform.translation += direction * v.0;
+                            
+                            // let direction = Vec3::new(dx, dy, 0.0).normalize();
+                            // transform.translation += direction * v.0;
+                            let direction = Vec2::new(dx,dy).normalize();
+                            controller.translation = Some(direction.normalize_or_zero().clone() * ENEMY_SPEED);
+
                         }
                     },
 
                     EnemyType::DroneVulcan => {
 
-                        if dx * patrol_state.direction < 0.0 {
-                            patrol_state.direction = -1.0 * patrol_state.direction;
+                        if dx * patrol_state.directionx < 0.0 {
+                            patrol_state.directionx = -1.0 * patrol_state.directionx;
                         }
 
                         if distance <= ENEMY_FIRE {
@@ -270,14 +335,12 @@ fn handle_enemy_move(
                                 EnemyState::Idea | EnemyState::Move => { 
                                     if atlas.index == 4{
                                         atlas.index = 0;
-                                        atlas.layout = source2.lay_out_fire_start.clone();
                                         *enemystate = EnemyState::FireStart;
                                     }
                                 },
                                 EnemyState::FireStart => {
                                     if atlas.index == 2{
                                         atlas.index = 0;
-                                        atlas.layout = source2.lay_out_fire_loop.clone();
                                         *enemystate = EnemyState::FireLoop;
                                     }
                                 },
@@ -285,7 +348,6 @@ fn handle_enemy_move(
                                 EnemyState::FireEnd => { 
                                     if atlas.index == 1{
                                         atlas.index = 0;
-                                        atlas.layout = source2.lay_out_fire_start.clone();
                                         *enemystate = EnemyState::FireStart;
                                     }
                                 },
@@ -300,54 +362,46 @@ fn handle_enemy_move(
                                 EnemyState::FireLoop => { 
                                     if atlas.index == 2 {
                                         atlas.index=0;
-                                        atlas.layout = source2.lay_out_fire_end.clone();
                                         *enemystate = EnemyState::FireEnd;
                                     }
                                 },
                                 EnemyState::FireStart => { 
                                     if atlas.index == 2 {
                                         atlas.index=0;
-                                        atlas.layout = source2.lay_out_fire_end.clone();
                                         *enemystate = EnemyState::FireEnd;
                                     }
                                 },
                                 EnemyState::FireEnd => {
                                     if atlas.index == 1 {
                                         atlas.index=0;
-                                        atlas.layout = source2.lay_out_idle.clone();
                                         *enemystate = EnemyState::Move;
                                     }
                                 },
                             }
-                            let direction = Vec3::new(dx, dy, 0.0).normalize();
-                            //if {
+                            
+                            // let direction = Vec3::new(dx, dy, 0.0).normalize();
                             // transform.translation += direction * v.0;
-                            // } else if {
-                            //     transform.translation.x += direction.x * v.0;
-                            // } else if {
-                            //     transform.translation.y += direction.y * v.0;
-                            // } else {}
+                            let direction = Vec2::new(dx,dy).normalize();
+                            controller.translation = Some(direction.normalize_or_zero().clone() * ENEMY_SPEED);
                         }
                     },
 
                     EnemyType::Sweeper => {
 
-                        if dx * patrol_state.direction < 0.0 {
-                            patrol_state.direction = -1.0 * patrol_state.direction;
+                        if dx * patrol_state.directionx < 0.0 {
+                            patrol_state.directionx = -1.0 * patrol_state.directionx;
                         }
 
-                        if dx.abs() <= ENEMY_ATTACK {
+                        if dx.abs() <= ENEMY_ATTACK && dy <= ENEMY_ATTACK-50.0 && dy >= 25.0-ENEMY_ATTACK {
                             match *enemystate{
                                 EnemyState::Move => {
                                     if atlas.index == 13 {
                                         atlas.index = 0;
-                                        atlas.layout = source1.lay_out_attack.clone();
                                         *enemystate = EnemyState::FireLoop;
                                     }
                                 },
                                 EnemyState::Idea => {
                                     atlas.index=0;
-                                    atlas.layout = source1.lay_out_attack.clone();
                                     *enemystate = EnemyState::FireLoop;
                                 },
                                 EnemyState::FireLoop => {},
@@ -360,126 +414,113 @@ fn handle_enemy_move(
                                 EnemyState::Move => {},
                                 EnemyState::Idea => {
                                     atlas.index=0;
-                                    atlas.layout = source1.lay_out_move.clone();
                                     *enemystate = EnemyState::Move;
                                 },
                                 EnemyState::FireLoop => {
                                     if atlas.index == 12 {
                                         atlas.index=0;
-                                        atlas.layout = source1.lay_out_move.clone();
                                         *enemystate = EnemyState::Move;
                                     }
                                 },
                                 EnemyState::FireStart => {},
                                 EnemyState::FireEnd => {},
                             }
-                            let direction = Vec3::new(dx, 0.0, 0.0).normalize();
-                            //if {//侧面碰撞检测
-                            transform.translation += direction * ENEMY_SPEED;
-                            //} else {}
+                            
+                            // let direction = Vec3::new(dx, dy, 0.0).normalize();
+                            // transform.translation += direction * ENEMY_SPEED;
+                            let direction = Vec2::new(dx,dy).normalize();
+                            controller.translation = Some(direction.normalize_or_zero().clone() * ENEMY_SPEED);
                         }
-                        //下方碰撞检测
-                        // if {
-                        //     v.0 -= PLAYER_GRAVITY;
-                        //     transform.translation.y -= v.0;
-                        // }else{
-                        //     v.0=0.0;
-                        // }
                     }
                 }
+                
+                *flag = Idleflag::patrol;
+                patrol_state.timer1.reset();
+                patrol_state.timer2.reset();
+
             } else {//巡逻
-                match *enemystate{
-                    EnemyState::Move => {},
-                    EnemyState::Idea => { 
-                        atlas.index = 0;
-                        match *enemytype {
-                            EnemyType::Sweeper => {
-                                atlas.layout = source1.lay_out_move.clone();
+                let mut rng = rand::rng();
+                match *flag {
+                    Idleflag::patrol => {
+                        match *enemystate{
+                            EnemyState::Move => {},
+                            EnemyState::Idea => { 
+                                atlas.index = 0;
+                                *enemystate = EnemyState::Move;
                             },
-                            EnemyType::DroneMissile => {    
-                                atlas.layout = source3.lay_out_idle.clone();
-                            },
-                            EnemyType::DroneVulcan => {
-                                atlas.layout = source2.lay_out_idle.clone();
-                            },
-                        }
-                        *enemystate = EnemyState::Move;
-                    },
-                    EnemyState::FireLoop => { 
-                        match *enemytype {
-                            EnemyType::DroneMissile => {
-                                if atlas.index == 4 {
-                                    atlas.index = 0;
-                                    atlas.layout = source3.lay_out_fire_end.clone();
-                                    *enemystate = EnemyState::FireEnd;
+                            EnemyState::FireLoop => { 
+                                match *enemytype {
+                                    EnemyType::DroneMissile => {
+                                        if atlas.index == 4 {
+                                            atlas.index = 0;
+                                            *enemystate = EnemyState::FireEnd;
+                                        }
+                                    },
+                                    EnemyType::DroneVulcan => {
+                                        if atlas.index == 2 {
+                                            atlas.index = 0;
+                                            *enemystate = EnemyState::FireEnd;
+                                        }
+                                    },
+                                    EnemyType::Sweeper =>{
+                                        if atlas.index == 12 {
+                                            atlas.index = 0;
+                                            *enemystate = EnemyState::Move;
+                                        }
+                                    },
                                 }
                             },
-                            EnemyType::DroneVulcan => {
+                            EnemyState::FireStart => { 
                                 if atlas.index == 2 {
                                     atlas.index = 0;
-                                    atlas.layout = source2.lay_out_fire_end.clone();
                                     *enemystate = EnemyState::FireEnd;
                                 }
                             },
-                            EnemyType::Sweeper =>{
-                                if atlas.index == 12 {
+                            EnemyState::FireEnd => { 
+                                if atlas.index == 1 {
                                     atlas.index = 0;
-                                    atlas.layout = source1.lay_out_move.clone();
                                     *enemystate = EnemyState::Move;
                                 }
                             },
                         }
-                    },
-                    EnemyState::FireStart => { 
-                        if atlas.index == 2 {
-                            atlas.index = 0;
-                            match enemytype {
-                                EnemyType::DroneMissile =>atlas.layout = source3.lay_out_fire_end.clone(),
-                                EnemyType::DroneVulcan =>atlas.layout = source2.lay_out_fire_end.clone(),
-                                _=>{},                             
-                            }
-                            *enemystate = EnemyState::FireEnd;
-                        }
-                    },
-                    EnemyState::FireEnd => { 
-                        if atlas.index == 1 {
-                            atlas.index = 0;
-                            match enemytype {
-                                EnemyType::DroneMissile =>atlas.layout = source3.lay_out_idle.clone(),
-                                EnemyType::DroneVulcan =>atlas.layout = source2.lay_out_idle.clone(),
-                                _=>{},                             
-                            }
-                            *enemystate = EnemyState::Move;
-                        }
-                    },
-                }
-                
-                patrol_state.timer.tick(time.delta());
-                if patrol_state.timer.elapsed() >= patrol_state.patrol_duration {
-                    patrol_state.direction = -1.0 * patrol_state.direction;
-                    patrol_state.timer.reset();
-                }
-                
-                transform.translation.x += patrol_state.direction * ENEMY_SPEED;
+                        
+                        patrol_state.timer1.tick(time.delta());
 
-                //侧面碰撞检测
-                // if {
-                //     transform.translation.x += patrol_state.direction * ENEMY_SPEED;
-                // }
-                match enemytype{
-                    EnemyType::Sweeper=>{
-                        //下方碰撞检测
-                        // if {
-                        //     v.0 -= PLAYER_GRAVITY;
-                        //     transform.translation.y -= v.0;
-                        // }else{
-                        //     v.0=0.0;
-                        // }
+                        if patrol_state.timer1.elapsed() >= patrol_state.patrol_duration {
+                            patrol_state.timer1.reset();
+
+                            let random_x = rng.random_range(-1.0..=1.0);
+                            let random_y = rng.random_range(-1.0..=1.0);
+                            patrol_state.directionx = random_x as f32;
+                            patrol_state.directiony = random_y as f32;
+
+                            atlas.index = 0;
+                            *enemystate = EnemyState::Idea;
+                            *flag = Idleflag::idle;
+                        }
+                        // println!("patrol");
+                        
+                        // transform.translation.x += patrol_state.direction * ENEMY_SPEED;
+                        let direction = Vec2::new(patrol_state.directionx, patrol_state.directiony);
+                        controller.translation = Some(direction.normalize_or_zero().clone() * ENEMY_SPEED);
                     },
-                    _=>{},
+                    Idleflag::idle=> {
+                        patrol_state.timer2.tick(time.delta());
+                        if patrol_state.timer2.elapsed() >= patrol_state.patrol_duration {
+                            patrol_state.timer2.reset();
+
+                            let random_x = rng.random_range(-1.0..=1.0);
+                            let random_y = rng.random_range(-1.0..=1.0);
+                            patrol_state.directionx = random_x as f32;
+                            patrol_state.directiony = random_y as f32;
+
+                            atlas.index = 0;
+                            *flag = Idleflag::patrol;
+                        }
+                        // println!("idle");
+                    },
                 };
             }
-
         }
     }
 }
@@ -494,26 +535,81 @@ fn handle_enemy_animation(
         match enemytype {
             EnemyType::Sweeper =>{
                 match enemystate {
-                    EnemyState::Idea => { enemy.image = source1.image_move.clone();},
-                    EnemyState::Move => { enemy.image = source1.image_move.clone();},
-                    EnemyState::FireLoop => { enemy.image = source1.image_attack.clone();},
+                    EnemyState::Idea => { 
+                        enemy.image = source1.image_move.clone();
+                        if let Some(atlas) = &mut enemy.texture_atlas {
+                            atlas.layout = source1.lay_out_idle.clone();
+                        }
+                    },
+                    EnemyState::Move => { 
+                        enemy.image = source1.image_move.clone();
+                        if let Some(atlas) = &mut enemy.texture_atlas {
+                            atlas.layout = source1.lay_out_move.clone();
+                        }
+                    },
+                    EnemyState::FireLoop => { 
+                        enemy.image = source1.image_attack.clone();
+                        if let Some(atlas) = &mut enemy.texture_atlas {
+                            atlas.layout = source1.lay_out_attack.clone();
+                        }
+                    },
                     EnemyState::FireEnd | EnemyState::FireStart => { },
                 }
             },
             EnemyType::DroneVulcan => {
                 match enemystate {
-                    EnemyState::Move | EnemyState::Idea => {enemy.image = source2.image_idle.clone();},
-                    EnemyState::FireStart => {enemy.image = source2.image_fire_start.clone();},
-                    EnemyState::FireLoop => {enemy.image = source2.image_fire_loop.clone();},
-                    EnemyState::FireEnd => {enemy.image = source2.image_fire_end.clone();},
+                    EnemyState::Move | EnemyState::Idea => {
+                        enemy.image = source2.image_idle.clone();
+                        if let Some(atlas) = &mut enemy.texture_atlas {
+                            atlas.layout = source2.lay_out_idle.clone();
+                        }
+                    },
+                    EnemyState::FireStart => {
+                        enemy.image = source2.image_fire_start.clone();
+                        if let Some(atlas) = &mut enemy.texture_atlas {
+                            atlas.layout = source2.lay_out_fire_start.clone();
+                        }
+                    },
+                    EnemyState::FireLoop => {
+                        enemy.image = source2.image_fire_loop.clone();
+                        if let Some(atlas) = &mut enemy.texture_atlas {
+                            atlas.layout = source2.lay_out_fire_loop.clone();
+                        }
+                    },
+                    EnemyState::FireEnd => {
+                        enemy.image = source2.image_fire_end.clone();
+                        if let Some(atlas) = &mut enemy.texture_atlas {
+                            atlas.layout = source2.lay_out_fire_end.clone();
+                        }
+                    },
                 }
             },
             EnemyType::DroneMissile => {
                 match enemystate {
-                    EnemyState::Move | EnemyState::Idea => {enemy.image = source3.image_idle.clone();},
-                    EnemyState::FireStart => {enemy.image = source3.image_fire_start.clone();},
-                    EnemyState::FireLoop => {enemy.image = source3.image_fire_loop.clone();},
-                    EnemyState::FireEnd => {enemy.image = source3.image_fire_end.clone();},
+                    EnemyState::Move | EnemyState::Idea => {
+                        enemy.image = source3.image_idle.clone();
+                        if let Some(atlas) = &mut enemy.texture_atlas {
+                            atlas.layout = source3.lay_out_idle.clone();
+                        }
+                    },
+                    EnemyState::FireStart => {
+                        enemy.image = source3.image_fire_start.clone();
+                        if let Some(atlas) = &mut enemy.texture_atlas {
+                            atlas.layout = source3.lay_out_fire_start.clone();
+                        }
+                    },
+                    EnemyState::FireLoop => {
+                        enemy.image = source3.image_fire_loop.clone();
+                        if let Some(atlas) = &mut enemy.texture_atlas {
+                            atlas.layout = source3.lay_out_fire_loop.clone();
+                        }
+                    },
+                    EnemyState::FireEnd => {
+                        enemy.image = source3.image_fire_end.clone();
+                        if let Some(atlas) = &mut enemy.texture_atlas {
+                            atlas.layout = source3.lay_out_fire_end.clone();
+                        }
+                    },
                 }
             },
         }

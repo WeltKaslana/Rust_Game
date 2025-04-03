@@ -10,6 +10,7 @@ pub mod audio;
 pub mod home;
 pub mod room;
 pub mod enemy;
+pub mod ui;
 
 pub use configs::*;
 pub use resources::*;

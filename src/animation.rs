@@ -120,7 +120,7 @@ fn animate_enemy(
 
     for (mut aconfig, mut enemy, mut enemy_state, enemy_type, mut patrolstate) in enemy_query.iter_mut() {
         
-        if patrolstate.direction >= 0.0 {
+        if patrolstate.directionx >= 0.0 {
             enemy.flip_x = false;
         }else{
             enemy.flip_x = true;

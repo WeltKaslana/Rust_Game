@@ -9,17 +9,18 @@ pub struct Transition;
 
 impl Plugin for GuiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(FrameTimeDiagnosticsPlugin)
-            .add_systems(OnEnter(GameState::MainMenu), setup_main_menu)
-            .add_systems(OnExit(GameState::MainMenu), despawn_main_menu)
-            .add_systems(
-                Update,
-                handle_main_menu_buttons.run_if(in_state(GameState::MainMenu)),
-            )
-            .add_systems(Update, (animation1::<LeftSlide1>, animation1::<LeftSlide2>, animation2::<RightSlide1>, animation2::<RightSlide2>).run_if(in_state(GameState::MainMenu)))
-            .add_systems(Update, statetransition.run_if(in_state(GameState::MainMenu)))
-            .add_systems(Update, statetransition.run_if(in_state(GameState::Home)))
-            .add_systems(Update, log_transitions::<GameState>);
+        app
+        // .add_plugins(FrameTimeDiagnosticsPlugin)
+        .add_systems(OnEnter(GameState::MainMenu), setup_main_menu)
+        .add_systems(OnExit(GameState::MainMenu), despawn_main_menu)
+        .add_systems(
+            Update,
+            handle_main_menu_buttons.run_if(in_state(GameState::MainMenu)),
+        )
+        .add_systems(Update, (animation1::<LeftSlide1>, animation1::<LeftSlide2>, animation2::<RightSlide1>, animation2::<RightSlide2>).run_if(in_state(GameState::MainMenu)))
+        .add_systems(Update, statetransition.run_if(in_state(GameState::MainMenu)))
+        .add_systems(Update, statetransition.run_if(in_state(GameState::Home)))
+        .add_systems(Update, log_transitions::<GameState>);
     }
 }
 

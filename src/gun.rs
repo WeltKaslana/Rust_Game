@@ -253,7 +253,7 @@ fn handle_gun_fire(
             //碰撞体
             Collider::cuboid(2.0, 1.0),
             // CollisionGroups::new(Group::GROUP_3, Group::GROUP_2),
-            // ActiveEvents::COLLISION_EVENTS,
+            ActiveEvents::COLLISION_EVENTS,
         ));
     }
 }
