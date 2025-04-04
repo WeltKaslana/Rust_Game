@@ -30,6 +30,7 @@ pub const SPAWN_RATE_PER_SECOND: usize = 500;
 pub const ENEMY_HEALTH: f32 = 100.0;
 pub const ENEMY_SPAWN_INTERVAL: f32 = 1.0;
 pub const ENEMY_SPEED: f32 = 1.0 * 240.0 / fps as f32;
+pub const ENEMY_BULLET_SPEED: f32 = 2.0 * 240.0 / fps as f32;
 pub const ENEMY_ALARM: f32 = 300.0;
 pub const ENEMY_FIRE: f32 = 200.0;
 pub const ENEMY_ATTACK: f32 = 75.0;

@@ -252,6 +252,41 @@ impl GlobalDroneMissileTextureAtlas {
     }
 }
 
+#[derive(Resource,Default)]
+pub struct GlobalEnemyBulletTextureAtlas {
+    pub lay_out_bullet_dronevulcan: Handle<TextureAtlasLayout>,
+    pub image_bullet_dronevulcan: Handle<Image>,
+    pub lay_out_bullet_dronemissile: Handle<TextureAtlasLayout>,
+    pub image_bullet_dronemissile: Handle<Image>,
+    pub lay_out_bullet_unknownguardian: Handle<TextureAtlasLayout>,
+    pub image_bullet_unknownguardian: Handle<Image>,
+}
+
+impl GlobalEnemyBulletTextureAtlas {
+    pub fn init(
+        asset_server: &Res<AssetServer>,
+        mut texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>,
+    ) -> Self {
+        let layoutbullet1 = TextureAtlasLayout::from_grid(UVec2::splat(32),4,1,None,None);
+        let path_bullet1 = String::from("Entity_Bullet_Normal.png");
+
+        let layoutbullet2 = TextureAtlasLayout::from_grid(UVec2::splat(32),5,1,None,None);
+        let path_bullet2 = String::from("Entity_Bullet_Missile.png");
+
+        let layoutbullet3 = TextureAtlasLayout::from_grid(UVec2::splat(32),4,1,None,None);
+        let path_bullet3 = String::from("Entity_Bullet_UnKnownGuardian.png");
+
+        Self {
+            lay_out_bullet_dronevulcan : texture_atlas_layouts.add(layoutbullet1),
+            lay_out_bullet_dronemissile : texture_atlas_layouts.add(layoutbullet2),
+            lay_out_bullet_unknownguardian : texture_atlas_layouts.add(layoutbullet3),
+            image_bullet_dronevulcan : asset_server.load(path_bullet1),
+            image_bullet_dronemissile : asset_server.load(path_bullet2),
+            image_bullet_unknownguardian : asset_server.load(path_bullet3),
+        }
+    }
+}
+
 #[derive(Resource)]
 pub struct CursorPosition(pub Option<Vec2>);
 
@@ -316,6 +351,9 @@ fn load_assets_enemy (
 
     let enemy_dronemissile = GlobalDroneMissileTextureAtlas::init( &asset_server, &mut texture_atlas_layouts);
     commands.insert_resource(enemy_dronemissile);
+
+    let enemy_bullet = GlobalEnemyBulletTextureAtlas::init( &asset_server, &mut texture_atlas_layouts);
+    commands.insert_resource(enemy_bullet);
 
     println!("Enemy Resourse Loaded");
 }

@@ -193,16 +193,15 @@ fn handle_gun_fire(
     if gun_query.is_empty() {
         return;
     }
-    if !mouse_button_input.pressed(MouseButton::Left) {
-        return;
-    }
     let (gun_transform, mut gun_timer) = gun_query.single_mut();
     let gun_pos = gun_transform.translation.truncate();
     gun_timer.0.tick(time.delta());
 
-    // if !mouse_button_input.pressed(MouseButton::Left) {
-    //     return;
-    // }
+    //如果tick在检测鼠标按键后就会出现单点不射击的情况
+    if !mouse_button_input.pressed(MouseButton::Left) {
+        return;
+    }
+    // println!("mouse pressed!");
 
     let mut rng = rand::rng();
     let bullet_direction = gun_transform.local_x();

@@ -11,6 +11,7 @@ use crate::*;
 use rand::Rng;
 use character::AnimationConfig;
 use bevy_rapier2d::prelude::*;
+use std::f32::consts::PI;
 
 pub struct EnemyPlugin;
 
@@ -18,15 +19,31 @@ pub struct EnemyPlugin;
 pub struct Enemy;
 
 #[derive(Component)]
-pub struct Enemy_Bullet;
+pub enum EnemyBullet {
+    DroneMissile,
+    DroneVulcan,
+    UnknownGuardian,
+} 
 
 #[derive(Component)]
 pub struct Health(pub f32);
 
 #[derive(Component)]
 pub enum Idleflag {
-    idle,
-    patrol,
+    Idle,
+    Patrol,
+}
+
+#[derive(Component)]
+pub enum Fireflag {
+    Fire,
+    Done,
+}
+
+#[derive(Component)]
+pub struct BulletDirection {
+    pub x : f32,
+    pub y : f32,
 }
 
 #[derive(Component)]
@@ -65,7 +82,8 @@ impl Plugin for EnemyPlugin {
                     (
                         handle_enemy_move,
                         handle_enemy_animation,
-                        // handle_enemy_fire,
+                        handle_enemy_fire,
+                        handle_bullet_move,
                         handle_enemy_hurt,
                         handle_enemy_death,
                 ).run_if(in_state(GameState::InGame))
@@ -85,7 +103,7 @@ fn set_enemy(
 ) {
     let mut rng = rand::rng();
     let random_index = rng.random_range(0..3);
-    // let x=0;
+    // let x=1;
     let random_enemy = match random_index {
         0 => EnemyType::Sweeper,
         1 => EnemyType::DroneMissile,
@@ -116,9 +134,10 @@ fn set_enemy(
                 EnemyState::default(),
                 Enemy,
                 EnemyType::Sweeper,
+                Fireflag::Done,
                 Health(ENEMY_HEALTH),
                 //Velocity(ENEMY_SPEED),
-                AnimationConfig::new(13),
+                AnimationConfig::new(20),
                 PatrolState {
                     directionx: 0.0,
                     directiony: 0.0,
@@ -126,11 +145,10 @@ fn set_enemy(
                     timer2: Stopwatch::new(),
                     patrol_duration,
                 },
-                Idleflag::patrol,
+                Idleflag::Patrol,
                 Sensor,
                 RigidBody::Dynamic,
                 GravityScale(0.0),
-                //Collider::cuboid(9.0, 18.0),
                 Collider::convex_hull(&collider_box).unwrap(),
                 ActiveEvents::COLLISION_EVENTS,
                 )
@@ -154,9 +172,10 @@ fn set_enemy(
                 EnemyState::default(),
                 Enemy,
                 EnemyType::DroneMissile,
+                Fireflag::Fire,
                 Health(ENEMY_HEALTH),
                 //Velocity(ENEMY_SPEED),
-                AnimationConfig::new(13),
+                AnimationConfig::new(10),
                 PatrolState {
                     directionx: 0.0,
                     directiony: 0.0,
@@ -164,7 +183,7 @@ fn set_enemy(
                     timer2: Stopwatch::new(),
                     patrol_duration,
                 },
-                Idleflag::patrol,
+                Idleflag::Patrol,
                 Sensor,
                 RigidBody::Dynamic,
                 GravityScale(0.0),
@@ -190,9 +209,10 @@ fn set_enemy(
                 EnemyState::default(),
                 Enemy,
                 EnemyType::DroneVulcan,
+                Fireflag::Fire,
                 Health(ENEMY_HEALTH),
                 //Velocity(ENEMY_SPEED),
-                AnimationConfig::new(13),
+                AnimationConfig::new(10),
                 PatrolState {
                     directionx: 0.0,
                     directiony: 0.0,
@@ -200,7 +220,7 @@ fn set_enemy(
                     timer2: Stopwatch::new(),
                     patrol_duration,
                 },
-                Idleflag::patrol,
+                Idleflag::Patrol,
                 Sensor,
                 RigidBody::Dynamic,
                 GravityScale(0.0),
@@ -262,12 +282,12 @@ fn handle_enemy_move(
 
                 match enemytype {
                     EnemyType::DroneMissile => {
-
+                        patrol_state.directiony += 30.0;
                         if dx * patrol_state.directionx < 0.0 {
                             patrol_state.directionx = -1.0 * patrol_state.directionx;
                         }
 
-                        if distance <= ENEMY_FIRE {
+                        if distance <= ENEMY_FIRE && transform.translation.y >= player.translation.y {
                             match *enemystate{
                                 EnemyState::Idea | EnemyState::Move => { 
                                     if atlas.index == 4{
@@ -325,12 +345,12 @@ fn handle_enemy_move(
                     },
 
                     EnemyType::DroneVulcan => {
-
+                        patrol_state.directiony += 30.0;
                         if dx * patrol_state.directionx < 0.0 {
                             patrol_state.directionx = -1.0 * patrol_state.directionx;
                         }
-
-                        if distance <= ENEMY_FIRE {
+                        
+                        if distance <= ENEMY_FIRE && transform.translation.y >= player.translation.y {
                             match *enemystate{
                                 EnemyState::Idea | EnemyState::Move => { 
                                     if atlas.index == 4{
@@ -434,14 +454,14 @@ fn handle_enemy_move(
                     }
                 }
                 
-                *flag = Idleflag::patrol;
+                *flag = Idleflag::Patrol;
                 patrol_state.timer1.reset();
                 patrol_state.timer2.reset();
 
             } else {//巡逻
                 let mut rng = rand::rng();
                 match *flag {
-                    Idleflag::patrol => {
+                    Idleflag::Patrol => {
                         match *enemystate{
                             EnemyState::Move => {},
                             EnemyState::Idea => { 
@@ -496,15 +516,15 @@ fn handle_enemy_move(
 
                             atlas.index = 0;
                             *enemystate = EnemyState::Idea;
-                            *flag = Idleflag::idle;
+                            *flag = Idleflag::Idle;
                         }
-                        // println!("patrol");
+                        //println!("patrol");
                         
                         // transform.translation.x += patrol_state.direction * ENEMY_SPEED;
                         let direction = Vec2::new(patrol_state.directionx, patrol_state.directiony);
                         controller.translation = Some(direction.normalize_or_zero().clone() * ENEMY_SPEED);
                     },
-                    Idleflag::idle=> {
+                    Idleflag::Idle=> {
                         patrol_state.timer2.tick(time.delta());
                         if patrol_state.timer2.elapsed() >= patrol_state.patrol_duration {
                             patrol_state.timer2.reset();
@@ -515,9 +535,9 @@ fn handle_enemy_move(
                             patrol_state.directiony = random_y as f32;
 
                             atlas.index = 0;
-                            *flag = Idleflag::patrol;
+                            *flag = Idleflag::Patrol;
                         }
-                        // println!("idle");
+                        //println!("idle");
                     },
                 };
             }
@@ -616,70 +636,152 @@ fn handle_enemy_animation(
     }
 }
 
-// fn handle_enemy_fire(
-//     mut enemy_query : Query<(& Sprite, & Transform, & EnemyState, & EnemyType),(With<Enemy>,Without<Character>)>,
-//     mut player_query : Query<& Transform, (With<Character>, Without<Enemy>)>,
-//     mut commands: Commands,
-//     asset_server: Res<AssetServer>,
-//     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
-//     source: Res<GlobalEnemyBulletTextureAtlas>,
-// ) {
-//     if enemy_query.is_empty() {
-//         return;
-//     }
-//     if player_query.is_empty() {
-//         return;
-//     }
-//     let player_transform =player_query.single_mut();
-//     for (enemy, enemy_transform, enemystate, enemytype) in enemy_query.iter_mut() {
-//         match enemystate {
-//             EnemyState::FireLoop => {
-//                 match enemytype {
-//                     EnemyType::Sweeper => {return;},
-//                     EnemyType::DroneMissile => {
-//                         if let Some(atlas) = &enemy.texture_atlas {
-//                             if atlas.index == 0 {
-//                                 commands.spawn( (
-//                                     Sprite {
-//                                         image: source.image1.clone(),
-//                                         texture_atlas: Some(TextureAtlas {
-//                                             layout: source.layout1.clone(),
-//                                             index: 0,
-//                                         }),
-//                                         ..Default::default()
-//                                     },
-//                                     Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(enemy_transform.translation.x, enemy_transform.translation.y, 31.0)),
-//                                     Enemy_Bullet,
-//                                     )
-//                                 );
-//                             }
-//                         }
-//                     },
-//                     EnemyType::DroneVulcan => {
-//                         if let Some(atlas) = &enemy.texture_atlas {
-//                             if atlas.index == 1 {
-//                                 commands.spawn( (
-//                                     Sprite {
-//                                         image: source.image2.clone(),
-//                                         texture_atlas: Some(TextureAtlas {
-//                                             layout: source.layout2.clone(),
-//                                             index: 0,
-//                                         }),
-//                                         ..Default::default()
-//                                     },
-//                                     Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(enemy_transform.translation.x, enemy_transform.translation.y, 31.0)),
-//                                     Enemy_Bullet,
-//                                     )
-//                                 );
-//                             }
-//                         }
-//                     },
-//                 }
-//             },
-//             _=> {return;},
-//         }
-//     }
-// }
+fn handle_enemy_fire(
+    mut enemy_query : Query<(& Sprite, 
+        & Transform, 
+        & EnemyState, 
+        & EnemyType,
+        &mut Fireflag),(With<Enemy>,Without<Character>)>,
+    mut player_query : Query<& Transform, (With<Character>, Without<Enemy>)>,
+    mut commands: Commands,
+    // asset_server: Res<AssetServer>,
+    // mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    source: Res<GlobalEnemyBulletTextureAtlas>,
+) {
+    if enemy_query.is_empty() {
+        return;
+    }
+    if player_query.is_empty() {
+        return;
+    }
+    let player_transform =player_query.single_mut();
+    for (enemy, 
+        enemy_transform, 
+        enemystate, 
+        enemytype,
+        mut flag) in enemy_query.iter_mut() {
+        
+        let dx = player_transform.translation.x - enemy_transform.translation.x;
+        let dy = player_transform.translation.y - enemy_transform.translation.y;
+        match enemystate {
+            EnemyState::FireLoop => {
+                match enemytype {
+                    EnemyType::Sweeper => {return;},
+                    EnemyType::DroneMissile => {
+                        if let Some(atlas) = &enemy.texture_atlas {
+                            if atlas.index == 0 {
+                                match *flag {
+                                    Fireflag::Fire => {
+                                        *flag = Fireflag::Done;
+                                        commands.spawn( (
+                                            Sprite {
+                                                image: source.image_bullet_dronemissile.clone(),
+                                                texture_atlas: Some(TextureAtlas {
+                                                    layout: source.lay_out_bullet_dronemissile.clone(),
+                                                    index: 0,
+                                                }),
+                                                ..Default::default()
+                                            },
+                                            Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(enemy_transform.translation.x, enemy_transform.translation.y, 31.0)),
+                                            EnemyBullet::DroneMissile,
+                                            BulletDirection {
+                                                x : dx,
+                                                y : dy,},
+                                            AnimationConfig::new(5),
+                                            Sensor,
+                                            RigidBody::Dynamic,
+                                            GravityScale(0.0),
+                                            Collider::cuboid(11.0, 5.0),
+                                            KinematicCharacterController {
+                                                ..Default::default()
+                                            },
+                                            )
+                                        );
+                                    },
+                                    Fireflag::Done => { }
+                                }
+                            }
+                        }
+                    },
+                    EnemyType::DroneVulcan => {
+                        if let Some(atlas) = &enemy.texture_atlas {
+                            if atlas.index == 1 {
+                                match *flag {
+                                    Fireflag::Fire => {
+                                        *flag = Fireflag::Done;
+                                        commands.spawn( (
+                                            Sprite {
+                                                image: source.image_bullet_dronevulcan.clone(),
+                                                texture_atlas: Some(TextureAtlas {
+                                                    layout: source.lay_out_bullet_dronevulcan.clone(),
+                                                    index: 0,
+                                                }),
+                                                ..Default::default()
+                                            },
+                                            Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(enemy_transform.translation.x, enemy_transform.translation.y, 31.0)),
+                                            EnemyBullet::DroneVulcan,
+                                            BulletDirection {
+                                                x : dx,
+                                                y : dy,},
+                                            AnimationConfig::new(5),
+                                            Sensor,
+                                            RigidBody::Dynamic,
+                                            GravityScale(0.0),
+                                            Collider::cuboid(6.0, 6.0),
+                                            KinematicCharacterController {
+                                                ..Default::default()
+                                            },
+                                            )
+                                        );
+                                    },
+                                    Fireflag::Done => { },
+                                }
+                            }
+                        }
+                    },
+                }
+            },
+            _=> {return;},
+        }
+    }
+}
+
+fn handle_bullet_move(
+    mut player_query : Query<& Transform, (With<Character>, Without<EnemyBullet>)>,
+    mut bullet_query : Query<(
+        &mut Transform,
+        &EnemyBullet,
+        &mut BulletDirection), (With<EnemyBullet>, Without<Character>)>,
+) {
+    if player_query.is_empty() {
+        return;
+    }
+    if bullet_query.is_empty() {
+        return;
+    }
+    let playertransform = player_query.single_mut();
+    for (mut bullettransform,
+        bullertype,
+        mut BulletDirection) in &mut bullet_query.iter_mut() {
+        
+        match bullertype {
+            EnemyBullet::DroneMissile => {
+                let dx = playertransform.translation.x - bullettransform.translation.x;
+                let dy = playertransform.translation.y - bullettransform.translation.y;
+                let add_speed = Vec2::new(dx, dy).normalize();
+                BulletDirection.x += add_speed.x * ENEMY_BULLET_SPEED / 2.0;
+                BulletDirection.y += add_speed.y * ENEMY_BULLET_SPEED / 2.0;
+
+                let angle = (BulletDirection.y).atan2(BulletDirection.x);
+                bullettransform.rotation = Quat::from_rotation_z(angle);
+
+            },
+            _=> { }
+        }
+        let direction = Vec3::new(BulletDirection.x, BulletDirection.y,0.0).normalize();
+        bullettransform.translation += direction * ENEMY_BULLET_SPEED;
+    }
+}
 
 fn handle_enemy_death(
      

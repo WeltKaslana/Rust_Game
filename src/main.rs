@@ -13,6 +13,7 @@ use demo::resources::ResourcesPlugin;
 use demo::audio::GameAudioPlugin;
 use demo::home::HomePlugin;
 use demo::enemy::EnemyPlugin;
+use demo::ui::UIPlugin;
 
 use demo::room::RoomPlugin;
 
@@ -22,7 +23,7 @@ fn main() {
             primary_window: Some(Window {
                 title: "Blue Archieve!".to_string(),
                 resolution: (1600.0,700.0).into(),
-                cursor_options: CursorOptions{visible: true, ..Default::default()},
+                cursor_options: CursorOptions{visible: false, ..Default::default()},
                 resizable: false,
                 enabled_buttons: bevy::window::EnabledButtons {
                     maximize:false,
@@ -47,7 +48,8 @@ fn main() {
         .add_plugins(GameAudioPlugin)
         .add_plugins(HomePlugin)
         .add_plugins(EnemyPlugin)
-        
+        .add_plugins(UIPlugin)
+
         .add_plugins(RoomPlugin)
 
         .insert_state(GameState::MainMenu)

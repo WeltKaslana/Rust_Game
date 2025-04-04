@@ -1,5 +1,9 @@
 use bevy::math::vec3;
-use bevy::{dev_tools::states::*, prelude::*, time::Stopwatch};
+use bevy::{
+    dev_tools::states::*, 
+    prelude::*, 
+    time::Stopwatch,
+    ecs::world::DeferredWorld,};
 use bevy_rapier2d::prelude::*;
 
 use std::{time::Duration};
@@ -107,7 +111,7 @@ fn setup_player(
         }),
         ..Default::default()
         },
-        Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(0.0, -200.0, 30.0)),
+        Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(-200.0, -200.0, 30.0)),
         AnimationConfig::new(13),
         PlayerState::default(),
         Character,
@@ -151,18 +155,33 @@ fn setup_player(
 }
 
 fn handle_player_move(
+    mut commands: Commands,
     mut events: EventWriter<PlayerRunEvent>,
     mut events2: EventWriter<PlayerJumpEvent>,
-    mut player_query: Query<(&mut Sprite, &mut Transform, &mut PlayerState, &mut Velocity,), With<Character>>,
+    mut collision_events: EventReader<CollisionEvent>,
+    mut player_query: Query<(
+        &mut Sprite, 
+        &mut Transform, 
+        &mut PlayerState, 
+        &mut Velocity,
+        Entity,
+    ), With<Character>>,
+    transform_query: Query<&Transform, Without<Character>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     source: Res<GlobalCharacterTextureAtlas>,
-    mut collision_events: EventReader<CollisionEvent>,
 ) {
     if player_query.is_empty() {
         return;
     }
+
     //之后可以改为自定义的键位，数据存到configs中
-    let (mut player, mut transform, mut player_state, mut V) = player_query.single_mut();
+    let (
+        mut player, 
+        mut transform, 
+        mut player_state, 
+        mut V, 
+        entity,
+    ) = player_query.single_mut();
     let jump = keyboard_input.pressed(KeyCode::KeyW) || keyboard_input.pressed(KeyCode::Space);
     let left = keyboard_input.pressed(KeyCode::KeyA);
     let down = keyboard_input.pressed(KeyCode::KeyS);
@@ -177,8 +196,6 @@ fn handle_player_move(
         // println!("right!");
         delta.x += 0.5;
     }
-    //
-    //test
     if down {
         // println!("down");
         // delta.y -= 0.5;
@@ -238,7 +255,7 @@ fn handle_player_move(
     for collision_event in collision_events.read() {
         match collision_event {
             CollisionEvent::Started(entity1, entity2, _) => {
-                println!("Collision started between {:?} and {:?}", entity1, entity2);
+                // println!("Collision started between {:?} and {:?}", entity1, entity2);
                 V.0 = 0.0;
                 match *player_state {
                     PlayerState::Jump => {*player_state = PlayerState::Jumpover;},
@@ -249,16 +266,45 @@ fn handle_player_move(
             CollisionEvent::Stopped(entity1, entity2, _) => {
                 println!("Collision stopped between {:?} and {:?}", entity1, entity2);
                 
-                player.image = source.image_jump.clone();
-                player.texture_atlas = Some(TextureAtlas {
-                    layout: source.lay_out_jump.clone(),
-                    index: 0,
-                });
-                *player_state = PlayerState::Jump;
+                let mut y1 = 0.0;
+                let mut y2 = 0.0;
+                let mut tip = false;//用于判断碰撞事件是否跟自己有关
+                if entity1.eq(&entity) {
+                    y1 = transform.translation.y.clone();
+                    tip = true;
+                } else {
+                    if let Ok(trans) = transform_query.get(*entity1) {
+                        y1 = trans.translation.y.clone();
+                    } else {
+                        return;
+                    }
+                    // println!("y1={}", y1);
+                }
+                if entity2.eq(&entity) {
+                    y2 = transform.translation.y.clone();
+                    tip = true;
+                } else {
+                    if let Ok(trans) = transform_query.get(*entity2) {
+                        y2 = trans.translation.y.clone();
+                    } else {
+                        return;
+                    }
+                    println!("y1 - y2={}", y1 - y2);
+                }
+                //说明不是横向产生的碰撞，需要下降
+                if tip && (y1 - y2).abs() > 50.0 {
+                    player.image = source.image_jump.clone();
+                    player.texture_atlas = Some(TextureAtlas {
+                        layout: source.lay_out_jump.clone(),
+                        index: 0,
+                    });
+                    *player_state = PlayerState::Jump;
+    
+                    transform.translation.y += V.0;
+                    V.0 -= PLAYER_GRAVITY;
+                    return;
+                }
 
-                transform.translation.y += V.0;
-                V.0 -= PLAYER_GRAVITY;
-                return;
             }
         }
     }

@@ -202,17 +202,19 @@ fn switch_map(
 }
 
 fn check_collision(
-    mut commands:Commands,
+    // mut commands:Commands,
     mut collision_events: EventReader<CollisionEvent>,
-    mut q: Query<Entity,(With<Collider>,Without<RigidBody>)>,
+    // mut q: Query<Entity,(With<Collider>,Without<RigidBody>)>,
 ) {
     
-    if q.is_empty(){
-        return;
-    }
+    // if q.is_empty(){
+    //     return;
+    // }
     // for e in q.iter_mut() {
     //     commands.entity(e).insert(RigidBody::Dynamic)
-    //         .insert(GravityScale(0.0));
+    //         .insert(GravityScale(0.0))
+    //         .insert(Sensor);
+        
     //     // println!("over!");
     // }
     for collision_event in collision_events.read() {

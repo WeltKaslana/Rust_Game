@@ -1,19 +1,8 @@
-use bevy::{dev_tools::states::*, prelude::*};
+use bevy::{dev_tools::states::*, log::tracing_subscriber::fmt::time, prelude::*};
 
 use crate::{
-    gun::{Gun, Cursor, GunFire,},
-    character::{Character, PlayerState, AnimationConfig, }, 
-    gamestate::GameState,
-    home::{Sora,
-           SoraState,
-           Fridge,
-           FridgeState,},
-    enemy::{
-        Enemy, 
-        EnemyState, 
-        EnemyType, 
-        PatrolState}, 
-    resources::GlobalHomeTextureAtlas,
+    character::{AnimationConfig, Character, PlayerState }, enemy::{
+        BulletDirection, Enemy, EnemyBullet, EnemyState, EnemyType, Fireflag, PatrolState}, gamestate::GameState, gun::{Bullet, Cursor, Gun, GunFire}, home::{Fridge, FridgeState, Sora, SoraState}, resources::GlobalHomeTextureAtlas
 };
 
 pub struct AnimationPlugin;
@@ -31,6 +20,7 @@ impl Plugin for AnimationPlugin {
                 flip_gun_sprite_y,
                 flip_player_sprite_x,
                 animate_gunfire,
+                animate_bullet,
                 // flip_boss_sprite_x,
             ).run_if(in_state(GameState::InGame)),)
             .add_systems(Update, 
@@ -112,13 +102,24 @@ fn animate_player(
 
 fn animate_enemy(
     time: Res<Time>,
-    mut enemy_query: Query<(&mut AnimationConfig, &mut Sprite, &mut EnemyState, &EnemyType, &mut PatrolState), With<Enemy>>,
+    mut enemy_query: Query<(
+        &mut AnimationConfig, 
+        &mut Sprite, 
+        &mut EnemyState, 
+        &EnemyType, 
+        &mut PatrolState,
+        &mut Fireflag), With<Enemy>>,
 ) {
     if enemy_query.is_empty() {
         return;
     }
 
-    for (mut aconfig, mut enemy, mut enemy_state, enemy_type, mut patrolstate) in enemy_query.iter_mut() {
+    for (   mut aconfig, 
+            mut enemy, 
+            mut enemy_state, 
+            enemy_type, 
+            mut patrolstate,
+            mut flag) in enemy_query.iter_mut() {
         
         if patrolstate.directionx >= 0.0 {
             enemy.flip_x = false;
@@ -155,6 +156,9 @@ fn animate_enemy(
                     if let Some(atlas) = &mut enemy.texture_atlas {
                         aconfig.frame_timer = AnimationConfig::timer_from_fps(aconfig.fps2p);
                         atlas.index = (atlas.index + 1) % all;
+                        if atlas.index == all - 1 {
+                            *flag = Fireflag::Fire;
+                        }
                     }
                 }
             },
@@ -169,6 +173,49 @@ fn animate_enemy(
                 aconfig.frame_timer.tick(time.delta());
                 if aconfig.frame_timer.just_finished(){
                     if let Some(atlas) = &mut enemy.texture_atlas {
+                        aconfig.frame_timer = AnimationConfig::timer_from_fps(aconfig.fps2p);
+                        atlas.index = (atlas.index + 1) % all;
+                        if atlas.index == all - 1 {
+                            *flag = Fireflag::Fire;
+                        }
+                    }
+                }
+            },
+        }
+    }
+}
+
+fn animate_bullet(
+    time: Res<Time>,
+    mut bullet_query : Query<(
+        &mut Sprite,
+        &mut AnimationConfig,
+        & EnemyBullet),With<EnemyBullet>>,
+) {
+    if bullet_query.is_empty() {
+        return;
+    }
+
+    for (   mut bullet,
+            mut aconfig,
+            bullettype) in bullet_query.iter_mut(){
+        
+        match bullettype {
+            EnemyBullet::DroneMissile => {
+                let all = 5;
+                aconfig.frame_timer.tick(time.delta());
+                if aconfig.frame_timer.just_finished(){
+                    if let Some(atlas) = &mut bullet.texture_atlas {
+                        aconfig.frame_timer = AnimationConfig::timer_from_fps(aconfig.fps2p);
+                        atlas.index = (atlas.index + 1) % all;
+                    }
+                }
+            },
+            _=> {
+                let all = 4;
+                aconfig.frame_timer.tick(time.delta());
+                if aconfig.frame_timer.just_finished(){
+                    if let Some(atlas) = &mut bullet.texture_atlas {
                         aconfig.frame_timer = AnimationConfig::timer_from_fps(aconfig.fps2p);
                         atlas.index = (atlas.index + 1) % all;
                     }
