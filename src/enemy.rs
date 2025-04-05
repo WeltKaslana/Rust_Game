@@ -282,12 +282,12 @@ fn handle_enemy_move(
 
                 match enemytype {
                     EnemyType::DroneMissile => {
-                        patrol_state.directiony += 30.0;
+                        patrol_state.directiony += 70.0;
                         if dx * patrol_state.directionx < 0.0 {
                             patrol_state.directionx = -1.0 * patrol_state.directionx;
                         }
 
-                        if distance <= ENEMY_FIRE && transform.translation.y >= player.translation.y {
+                        if distance <= ENEMY_FIRE && transform.translation.y >= player.translation.y + 50.0 {
                             match *enemystate{
                                 EnemyState::Idea | EnemyState::Move => { 
                                     if atlas.index == 4{
@@ -345,12 +345,12 @@ fn handle_enemy_move(
                     },
 
                     EnemyType::DroneVulcan => {
-                        patrol_state.directiony += 30.0;
+                        patrol_state.directiony += 70.0;
                         if dx * patrol_state.directionx < 0.0 {
                             patrol_state.directionx = -1.0 * patrol_state.directionx;
                         }
                         
-                        if distance <= ENEMY_FIRE && transform.translation.y >= player.translation.y {
+                        if distance <= ENEMY_FIRE && transform.translation.y >= player.translation.y + 50.0 {
                             match *enemystate{
                                 EnemyState::Idea | EnemyState::Move => { 
                                     if atlas.index == 4{

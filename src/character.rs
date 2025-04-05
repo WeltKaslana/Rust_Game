@@ -198,7 +198,20 @@ fn handle_player_move(
     }
     if down {
         // println!("down");
-        // delta.y -= 0.5;
+        match *player_state {
+            PlayerState::Jump => {},
+            _=> {
+                player.image = source.image_jump.clone();
+                player.texture_atlas = Some(TextureAtlas {
+                    layout: source.lay_out_jump.clone(),
+                    index: 0,
+                });
+                *player_state = PlayerState::Jump;
+        
+                transform.translation.y += V.0;
+                V.0 -= PLAYER_GRAVITY;
+            },
+        };    
     }
     if jump {
         // println!("jump!");
@@ -255,11 +268,13 @@ fn handle_player_move(
     for collision_event in collision_events.read() {
         match collision_event {
             CollisionEvent::Started(entity1, entity2, _) => {
-                // println!("Collision started between {:?} and {:?}", entity1, entity2);
-                V.0 = 0.0;
-                match *player_state {
-                    PlayerState::Jump => {*player_state = PlayerState::Jumpover;},
-                    _ => {},
+                println!("Collision started between {:?} and {:?}", entity1, entity2);
+                if entity1.eq(&entity) || entity2.eq(&entity) {
+                    V.0 = 0.0;
+                    match *player_state {
+                        PlayerState::Jump => {*player_state = PlayerState::Jumpover;},
+                        _ => {},
+                    }                    
                 }
                 return;
             }
@@ -289,7 +304,7 @@ fn handle_player_move(
                     } else {
                         return;
                     }
-                    println!("y1 - y2={}", y1 - y2);
+                    // println!("y1 - y2={}", y1 - y2);
                 }
                 //说明不是横向产生的碰撞，需要下降
                 if tip && (y1 - y2).abs() > 50.0 {
