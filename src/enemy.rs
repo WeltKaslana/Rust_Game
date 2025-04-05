@@ -103,8 +103,8 @@ fn set_enemy(
 ) {
     let mut rng = rand::rng();
     let random_index = rng.random_range(0..3);
-    // let x=1;
-    let random_enemy = match random_index {
+    let x=1;
+    let random_enemy = match x {
         0 => EnemyType::Sweeper,
         1 => EnemyType::DroneMissile,
         2 => EnemyType::DroneVulcan,
@@ -282,12 +282,21 @@ fn handle_enemy_move(
 
                 match enemytype {
                     EnemyType::DroneMissile => {
-                        patrol_state.directiony += 70.0;
-                        if dx * patrol_state.directionx < 0.0 {
-                            patrol_state.directionx = -1.0 * patrol_state.directionx;
+                        
+                        if dx >= 0.0 {
+                            patrol_state.directionx -= 50.0;
+                        }else {
+                            patrol_state.directionx += 50.0;
                         }
+                        patrol_state.directiony += 50.0;
+                        
 
-                        if distance <= ENEMY_FIRE && transform.translation.y >= player.translation.y + 50.0 {
+                        if distance <= ENEMY_FIRE && transform.translation.y >= player.translation.y + 20.0 && dx.abs() >= 30.0 {
+                            
+                            if dx * patrol_state.directionx < 0.0 {
+                                patrol_state.directionx = -1.0 * patrol_state.directionx;
+                            }
+
                             match *enemystate{
                                 EnemyState::Idea | EnemyState::Move => { 
                                     if atlas.index == 4{
@@ -338,19 +347,27 @@ fn handle_enemy_move(
                             
                             // let direction = Vec3::new(dx, dy, 0.0).normalize();
                             // transform.translation += direction * v.0;
-                            let direction = Vec2::new(dx,dy).normalize();
+                            let direction = Vec2::new(patrol_state.directionx,patrol_state.directiony).normalize();
                             controller.translation = Some(direction.normalize_or_zero().clone() * ENEMY_SPEED);
 
                         }
                     },
 
                     EnemyType::DroneVulcan => {
-                        patrol_state.directiony += 70.0;
-                        if dx * patrol_state.directionx < 0.0 {
-                            patrol_state.directionx = -1.0 * patrol_state.directionx;
-                        }
                         
-                        if distance <= ENEMY_FIRE && transform.translation.y >= player.translation.y + 50.0 {
+                        if dx >= 0.0 {
+                            patrol_state.directionx -= 50.0;
+                        }else {
+                            patrol_state.directionx += 50.0;
+                        }
+                        patrol_state.directiony += 50.0;
+                        
+                        if distance <= ENEMY_FIRE && transform.translation.y >= player.translation.y + 20.0 && dx.abs() >= 30.0 {
+
+                            if dx * patrol_state.directionx < 0.0 {
+                                patrol_state.directionx = -1.0 * patrol_state.directionx;
+                            }
+
                             match *enemystate{
                                 EnemyState::Idea | EnemyState::Move => { 
                                     if atlas.index == 4{
@@ -401,7 +418,7 @@ fn handle_enemy_move(
                             
                             // let direction = Vec3::new(dx, dy, 0.0).normalize();
                             // transform.translation += direction * v.0;
-                            let direction = Vec2::new(dx,dy).normalize();
+                            let direction = Vec2::new(patrol_state.directionx,patrol_state.directiony).normalize();
                             controller.translation = Some(direction.normalize_or_zero().clone() * ENEMY_SPEED);
                         }
                     },

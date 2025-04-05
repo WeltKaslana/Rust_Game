@@ -27,8 +27,8 @@ impl Plugin for UIPlugin {
         .add_systems(OnEnter(GameState::Home), setup_ui_all)
         .add_systems(Update, (
             hurtui,
-            update_ui.before(handle_state_bar),
-            handle_state_bar.after(update_ui),
+            update_ui,
+            handle_state_bar,
         ))
         .add_systems(Update, log_transitions::<GameState>);
     }
