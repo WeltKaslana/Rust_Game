@@ -251,6 +251,7 @@ fn handle_gun_fire(
             SpawnInstant(Instant::now()),
             //碰撞体
             Collider::cuboid(2.0, 1.0),
+            // Sensor,
             // CollisionGroups::new(Group::GROUP_3, Group::GROUP_2),
             ActiveEvents::COLLISION_EVENTS,
         ));

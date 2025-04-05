@@ -64,9 +64,3 @@ fn set_rate(
     settings.limiter = Limiter::from_framerate(70.0); 
 }
 
- 
-
-
-
-
-

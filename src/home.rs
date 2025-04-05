@@ -149,6 +149,7 @@ fn setup(
             Collider::cuboid(15.0, 18.0),
             // CollisionGroups::new(Group::GROUP_2, Group::ALL),
             RigidBody::Dynamic,
+            // Sensor,
             ));
     //地板
     commands.spawn((

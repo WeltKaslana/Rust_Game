@@ -27,8 +27,8 @@ impl Plugin for UIPlugin {
         .add_systems(OnEnter(GameState::Home), setup_ui_all)
         .add_systems(Update, (
             hurtui,
-            update_ui.before(handle_state_bar),
-            handle_state_bar.after(update_ui),
+            update_ui,
+            handle_state_bar,
         ))
         .add_systems(Update, log_transitions::<GameState>);
     }
@@ -153,7 +153,7 @@ fn handle_state_bar(
         buffer.translation = Vec3::new(loc.x + buffer_offset, loc.y , buffer.translation.z) + UI_OFFSET;
         bar.translation = Vec3::new(loc.x + bar_offset, loc.y , bar.translation.z) + UI_OFFSET;  
     }
-  
+
     //血条控制
     let mut delta = bar.scale.x;
     let barwidth = 582.0; //582为血条宽度
