@@ -237,9 +237,7 @@ fn evt_object_created(
     mut object_events: EventReader<TiledObjectCreated>,
     mut object_query: Query<(&Name, &mut Transform), (With<TiledMapObject>, Without<Character>)>,
     mut player_query: Query<&mut Transform, (With<Character>, Without<TiledMapObject>)>,
-    source1: Res<GlobalSweeperTextureAtlas>,
-    source2: Res<GlobalDroneVulcanTextureAtlas>,
-    source3: Res<GlobalDroneMissileTextureAtlas>,
+    source: Res<GlobalEnemyTextureAtlas>,
 ) {
     for e in object_events.read() {
         let Ok((name, mut transform)) = object_query.get_mut(e.entity) else {
@@ -263,9 +261,7 @@ fn evt_object_created(
                     transform .translation.x * 3.0 - 700.0, 
                     transform .translation.y * 3.0 - 500.0), 
                 &mut commands, 
-                &source1, 
-                &source2, 
-                &source3);
+                &source);
         }
         // commands.spawn((
         //     Transform::from_translation(

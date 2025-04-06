@@ -11,7 +11,6 @@ use crate::*;
 use rand::Rng;
 use character::AnimationConfig;
 use bevy_rapier2d::prelude::*;
-use std::f32::consts::PI;
 
 pub struct EnemyPlugin;
 
@@ -94,23 +93,17 @@ impl Plugin for EnemyPlugin {
 }
 
 fn setup_enemy (
-    source1: Res<GlobalSweeperTextureAtlas>,
-    source2: Res<GlobalDroneVulcanTextureAtlas>,
-    source3: Res<GlobalDroneMissileTextureAtlas>,
+    source: Res<GlobalEnemyTextureAtlas>,
     mut commands: Commands,
 ) {
-    set_enemy(2,Vec2::new(0.0, 20.0), &mut commands, &source1, &source2, &source3);
+    set_enemy(2,Vec2::new(0.0, 20.0), &mut commands, &source);
 }
 
 pub fn set_enemy(
     id : u8,
     loc : Vec2,
     commands: &mut Commands,
-    source1: &Res<GlobalSweeperTextureAtlas>,
-    source2: &Res<GlobalDroneVulcanTextureAtlas>,
-    source3: &Res<GlobalDroneMissileTextureAtlas>,
-    //asset_server: Res<AssetServer>,
-    //mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    source: &Res<GlobalEnemyTextureAtlas>,
 ) {
     let mut rng = rand::rng();
     let random_index = rng.random_range(0..3);
@@ -141,9 +134,9 @@ pub fn set_enemy(
             let mut enemy_entity =
             commands.spawn( (
                 Sprite {
-                    image: source1.image_idle.clone(),
+                    image: source.image_sweeper_idle.clone(),
                     texture_atlas: Some(TextureAtlas {
-                        layout: source1.lay_out_idle.clone(),
+                        layout: source.layout_sweeper_idle.clone(),
                         index: 0,
                     }),
                     ..Default::default()
@@ -180,9 +173,9 @@ pub fn set_enemy(
             let mut enemy_entity =
             commands.spawn( (
                 Sprite {
-                    image: source3.image_idle.clone(),
+                    image: source.image_missile_idle.clone(),
                     texture_atlas: Some(TextureAtlas {
-                        layout: source3.lay_out_idle.clone(),
+                        layout: source.layout_missile_idle.clone(),
                         index: 0,
                     }),
                     ..Default::default()
@@ -219,9 +212,9 @@ pub fn set_enemy(
             let mut enemy_entity =
             commands.spawn( (
                 Sprite {
-                    image: source2.image_idle.clone(),
+                    image: source.image_vulcan_idle.clone(),
                     texture_atlas: Some(TextureAtlas {
-                        layout: source2.lay_out_idle.clone(),
+                        layout: source.layout_vulcan_idle.clone(),
                         index: 0,
                     }),
                     ..Default::default()
@@ -269,11 +262,6 @@ fn handle_enemy_move(
         &mut Idleflag,
         &mut KinematicCharacterController
         ), (With<Enemy>,Without<Character>)>,
-    //asset_server: Res<AssetServer>,
-    // mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
-    // source1: Res<GlobalSweeperTextureAtlas>,
-    // source2: Res<GlobalDroneVulcanTextureAtlas>,
-    // source3: Res<GlobalDroneMissileTextureAtlas>,
     time: Res<Time>, 
 ) {
     if player_query.is_empty() {
@@ -587,30 +575,28 @@ fn handle_enemy_move(
 
 fn handle_enemy_animation(
     mut enemy_query: Query<(&mut Sprite, & EnemyState, & EnemyType), With<Enemy>>,
-    source1: Res<GlobalSweeperTextureAtlas>,
-    source2: Res<GlobalDroneVulcanTextureAtlas>,
-    source3: Res<GlobalDroneMissileTextureAtlas>,
+    source: Res<GlobalEnemyTextureAtlas>,
 ) {
     for (mut enemy, enemystate, enemytype) in enemy_query.iter_mut() {
         match enemytype {
             EnemyType::Sweeper =>{
                 match enemystate {
                     EnemyState::Idea => { 
-                        enemy.image = source1.image_move.clone();
+                        enemy.image = source.image_sweeper_idle.clone();
                         if let Some(atlas) = &mut enemy.texture_atlas {
-                            atlas.layout = source1.lay_out_idle.clone();
+                            atlas.layout = source.layout_sweeper_idle.clone();
                         }
                     },
                     EnemyState::Move => { 
-                        enemy.image = source1.image_move.clone();
+                        enemy.image = source.image_sweeper_move.clone();
                         if let Some(atlas) = &mut enemy.texture_atlas {
-                            atlas.layout = source1.lay_out_move.clone();
+                            atlas.layout = source.layout_sweeper_move.clone();
                         }
                     },
                     EnemyState::FireLoop => { 
-                        enemy.image = source1.image_attack.clone();
+                        enemy.image = source.image_sweeper_attack.clone();
                         if let Some(atlas) = &mut enemy.texture_atlas {
-                            atlas.layout = source1.lay_out_attack.clone();
+                            atlas.layout = source.layout_sweeper_attack.clone();
                         }
                     },
                     EnemyState::FireEnd | EnemyState::FireStart => { },
@@ -619,27 +605,27 @@ fn handle_enemy_animation(
             EnemyType::DroneVulcan => {
                 match enemystate {
                     EnemyState::Move | EnemyState::Idea => {
-                        enemy.image = source2.image_idle.clone();
+                        enemy.image = source.image_vulcan_idle.clone();
                         if let Some(atlas) = &mut enemy.texture_atlas {
-                            atlas.layout = source2.lay_out_idle.clone();
+                            atlas.layout = source.layout_vulcan_idle.clone();
                         }
                     },
                     EnemyState::FireStart => {
-                        enemy.image = source2.image_fire_start.clone();
+                        enemy.image = source.image_vulcan_fire_start.clone();
                         if let Some(atlas) = &mut enemy.texture_atlas {
-                            atlas.layout = source2.lay_out_fire_start.clone();
+                            atlas.layout = source.layout_vulcan_fire_start.clone();
                         }
                     },
                     EnemyState::FireLoop => {
-                        enemy.image = source2.image_fire_loop.clone();
+                        enemy.image = source.image_vulcan_fire_loop.clone();
                         if let Some(atlas) = &mut enemy.texture_atlas {
-                            atlas.layout = source2.lay_out_fire_loop.clone();
+                            atlas.layout = source.layout_vulcan_fire_loop.clone();
                         }
                     },
                     EnemyState::FireEnd => {
-                        enemy.image = source2.image_fire_end.clone();
+                        enemy.image = source.image_vulcan_fire_end.clone();
                         if let Some(atlas) = &mut enemy.texture_atlas {
-                            atlas.layout = source2.lay_out_fire_end.clone();
+                            atlas.layout = source.layout_vulcan_fire_end.clone();
                         }
                     },
                 }
@@ -647,27 +633,27 @@ fn handle_enemy_animation(
             EnemyType::DroneMissile => {
                 match enemystate {
                     EnemyState::Move | EnemyState::Idea => {
-                        enemy.image = source3.image_idle.clone();
+                        enemy.image = source.image_missile_idle.clone();
                         if let Some(atlas) = &mut enemy.texture_atlas {
-                            atlas.layout = source3.lay_out_idle.clone();
+                            atlas.layout = source.layout_missile_idle.clone();
                         }
                     },
                     EnemyState::FireStart => {
-                        enemy.image = source3.image_fire_start.clone();
+                        enemy.image = source.image_missile_fire_start.clone();
                         if let Some(atlas) = &mut enemy.texture_atlas {
-                            atlas.layout = source3.lay_out_fire_start.clone();
+                            atlas.layout = source.layout_missile_fire_start.clone();
                         }
                     },
                     EnemyState::FireLoop => {
-                        enemy.image = source3.image_fire_loop.clone();
+                        enemy.image = source.image_missile_fire_loop.clone();
                         if let Some(atlas) = &mut enemy.texture_atlas {
-                            atlas.layout = source3.lay_out_fire_loop.clone();
+                            atlas.layout = source.layout_missile_fire_loop.clone();
                         }
                     },
                     EnemyState::FireEnd => {
-                        enemy.image = source3.image_fire_end.clone();
+                        enemy.image = source.image_missile_fire_end.clone();
                         if let Some(atlas) = &mut enemy.texture_atlas {
-                            atlas.layout = source3.lay_out_fire_end.clone();
+                            atlas.layout = source.layout_missile_fire_end.clone();
                         }
                     },
                 }
@@ -686,7 +672,7 @@ fn handle_enemy_fire(
     mut commands: Commands,
     // asset_server: Res<AssetServer>,
     // mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
-    source: Res<GlobalEnemyBulletTextureAtlas>,
+    source: Res<GlobalEnemyTextureAtlas>,
 ) {
     if enemy_query.is_empty() {
         return;
@@ -716,9 +702,9 @@ fn handle_enemy_fire(
                                         *flag = Fireflag::Done;
                                         commands.spawn( (
                                             Sprite {
-                                                image: source.image_bullet_dronemissile.clone(),
+                                                image: source.image_missile_bullet.clone(),
                                                 texture_atlas: Some(TextureAtlas {
-                                                    layout: source.lay_out_bullet_dronemissile.clone(),
+                                                    layout: source.layout_missile_bullet.clone(),
                                                     index: 0,
                                                 }),
                                                 ..Default::default()
@@ -752,9 +738,9 @@ fn handle_enemy_fire(
                                         *flag = Fireflag::Done;
                                         commands.spawn( (
                                             Sprite {
-                                                image: source.image_bullet_dronevulcan.clone(),
+                                                image: source.image_vulcan_bullet.clone(),
                                                 texture_atlas: Some(TextureAtlas {
-                                                    layout: source.lay_out_bullet_dronevulcan.clone(),
+                                                    layout: source.layout_vulcan_bullet.clone(),
                                                     index: 0,
                                                 }),
                                                 ..Default::default()
