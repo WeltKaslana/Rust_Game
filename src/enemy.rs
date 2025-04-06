@@ -1,16 +1,11 @@
-use bevy::math::vec3;
-use bevy::reflect::Enum;
-use bevy::transform;
 use bevy::{dev_tools::states::*, prelude::*, time::Stopwatch};
-use bevy_ecs_tiled::physics::collider;
-use std::clone;
-use std::{time::Duration};
 use crate::{gamestate::GameState,
     configs::*,character::*};
 use crate::*;
 use rand::Rng;
 use character::AnimationConfig;
 use bevy_rapier2d::prelude::*;
+use std::time::Duration;
 
 pub struct EnemyPlugin;
 

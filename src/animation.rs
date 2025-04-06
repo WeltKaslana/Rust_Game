@@ -116,9 +116,9 @@ fn animate_enemy(
 
     for (   mut aconfig, 
             mut enemy, 
-            mut enemy_state, 
+            enemy_state, 
             enemy_type, 
-            mut patrolstate,
+            patrolstate,
             mut flag) in enemy_query.iter_mut() {
         
         if patrolstate.directionx >= 0.0 {
