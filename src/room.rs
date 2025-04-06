@@ -8,6 +8,8 @@ use bevy_rapier2d::prelude::*;
 use crate::{
     gamestate::GameState,
     character::Character,
+    enemy::set_enemy,
+    resources::*,
 };
 pub struct RoomPlugin;
 
@@ -115,7 +117,7 @@ impl Plugin for RoomPlugin {
             .add_systems(OnEnter(GameState::InGame), load_room)
             .add_systems(Update, switch_map.run_if(in_state(GameState::InGame)))
             .add_systems(Update, (
-                check_collision,
+                // check_collision,
                 evt_object_created,
                 ).run_if(in_state(GameState::InGame)))
             .add_systems(Update, log_transitions::<GameState>);
@@ -233,19 +235,44 @@ fn check_collision(
 fn evt_object_created(
     mut commands: Commands,
     mut object_events: EventReader<TiledObjectCreated>,
-    mut object_query: Query<(&Name, &mut Transform), With<TiledMapObject>>,
+    mut object_query: Query<(&Name, &mut Transform), (With<TiledMapObject>, Without<Character>)>,
+    mut player_query: Query<&mut Transform, (With<Character>, Without<TiledMapObject>)>,
+    source1: Res<GlobalSweeperTextureAtlas>,
+    source2: Res<GlobalDroneVulcanTextureAtlas>,
+    source3: Res<GlobalDroneMissileTextureAtlas>,
 ) {
     for e in object_events.read() {
         let Ok((name, mut transform)) = object_query.get_mut(e.entity) else {
             return;
         };
         info!("=> Received TiledObjectCreated event for object '{}'", name);
-        println!("loc:{:?}",transform.translation.clone());
+        // println!("loc:{:?}",transform.translation.clone());
         //坐标信息不对，可能是地图迁移导致的
-        commands.spawn((
-            Transform::from_translation(transform.translation.clone()),
-            Collider::ball(5.0),
-        ));
+        // 对象的名字是Object(...)
+        // 3.0是缩放比例，700和500是相对于程序坐标系的变异量
+        if name.as_str() == "Object(Player)" {
+            for mut trans in player_query.iter_mut() {
+                trans.translation.x = transform .translation.x * 3.0 - 700.0;
+                trans.translation.y = transform .translation.y * 3.0 - 500.0;
+            }
+        }
+        if name.as_str() == "Object(Enemy)" {
+            set_enemy(
+                0, 
+                Vec2::new(
+                    transform .translation.x * 3.0 - 700.0, 
+                    transform .translation.y * 3.0 - 500.0), 
+                &mut commands, 
+                &source1, 
+                &source2, 
+                &source3);
+        }
+        // commands.spawn((
+        //     Transform::from_translation(
+        //         transform.translation.clone() * 3.0 
+        //         - Vec3::new(700.0, 500.0, 0.0)),
+        //     Collider::ball(5.0),
+        // ));
     }
 }
 

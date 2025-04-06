@@ -329,7 +329,7 @@ fn load_assets (
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
     //根据id选择角色
-    let id = 1;
+    let id = 2;
     let gcta = GlobalCharacterTextureAtlas::init(id, &asset_server, &mut texture_atlas_layouts);
     commands.insert_resource(gcta);
 

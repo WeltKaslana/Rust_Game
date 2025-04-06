@@ -29,6 +29,8 @@ impl Plugin for GameAudioPlugin {
             .add_systems(OnExit(GameState::MainMenu), pause)
             .add_systems(OnEnter(GameState::Home), audio_play_Home)
             .add_systems(OnExit(GameState::Home), pause)
+            .add_systems(OnEnter(GameState::InGame), audio_play_Ingame)
+            .add_systems(OnExit(GameState::InGame), pause)
 
             .add_systems(Update,(
                         audio_fire,
@@ -64,6 +66,17 @@ fn audio_play_Home(
     ));
 
 }
+
+fn audio_play_Ingame(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>, 
+) {
+    commands.spawn((
+        AudioPlayer::new(asset_server.load("AudioClip/Level1 - Let me think about it.wav")),
+        PlaybackSettings::LOOP,
+    ));
+}
+
 fn audio_fire (
     mut events: EventReader<PlayerFireEvent>,
     mut commands: Commands,

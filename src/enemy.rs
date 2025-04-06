@@ -76,7 +76,7 @@ pub struct PatrolState {
 impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_systems(OnEnter(GameState::InGame), set_enemy)
+            // .add_systems(OnEnter(GameState::InGame), setup_enemy)
             .add_systems(
                 Update,
                     (
@@ -93,17 +93,35 @@ impl Plugin for EnemyPlugin {
     }
 }
 
-fn set_enemy(
-    mut commands: Commands,
+fn setup_enemy (
     source1: Res<GlobalSweeperTextureAtlas>,
     source2: Res<GlobalDroneVulcanTextureAtlas>,
     source3: Res<GlobalDroneMissileTextureAtlas>,
+    mut commands: Commands,
+) {
+    set_enemy(2,Vec2::new(0.0, 20.0), &mut commands, &source1, &source2, &source3);
+}
+
+pub fn set_enemy(
+    id : u8,
+    loc : Vec2,
+    commands: &mut Commands,
+    source1: &Res<GlobalSweeperTextureAtlas>,
+    source2: &Res<GlobalDroneVulcanTextureAtlas>,
+    source3: &Res<GlobalDroneMissileTextureAtlas>,
     //asset_server: Res<AssetServer>,
     //mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
     let mut rng = rand::rng();
     let random_index = rng.random_range(0..3);
-    let x=1;
+    let mut x =random_index;
+    match id {
+        0 => { },//随机产生敌人
+        1 => {x = 0;},//产生Sweeper
+        2 => {x = 1;},//产生DroneMissile
+        3 => {x = 2;},//产生DroneVulcan
+        _ => unreachable!(),
+    }
     let random_enemy = match x {
         0 => EnemyType::Sweeper,
         1 => EnemyType::DroneMissile,
@@ -130,7 +148,7 @@ fn set_enemy(
                     }),
                     ..Default::default()
                 },
-                Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(0.0, -200.0, -50.0)),
+                Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(loc.x, loc.y, -50.0)),
                 EnemyState::default(),
                 Enemy,
                 EnemyType::Sweeper,
@@ -146,10 +164,11 @@ fn set_enemy(
                     patrol_duration,
                 },
                 Idleflag::Patrol,
-                Sensor,
+                // Sensor,
                 RigidBody::Dynamic,
                 GravityScale(0.0),
                 Collider::convex_hull(&collider_box).unwrap(),
+                LockedAxes::ROTATION_LOCKED,//防止旋转
                 ActiveEvents::COLLISION_EVENTS,
                 )
             );
@@ -168,7 +187,7 @@ fn set_enemy(
                     }),
                     ..Default::default()
                 },
-                Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(0.0, -200.0, -50.0)),
+                Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(loc.x, loc.y, -50.0)),
                 EnemyState::default(),
                 Enemy,
                 EnemyType::DroneMissile,
@@ -184,10 +203,12 @@ fn set_enemy(
                     patrol_duration,
                 },
                 Idleflag::Patrol,
-                Sensor,
+                // Sensor,
                 RigidBody::Dynamic,
                 GravityScale(0.0),
                 Collider::cuboid(10.0, 10.0),
+                LockedAxes::ROTATION_LOCKED,//防止旋转
+                ActiveEvents::COLLISION_EVENTS,
                 )
             );
             enemy_entity.insert(KinematicCharacterController {
@@ -205,7 +226,7 @@ fn set_enemy(
                     }),
                     ..Default::default()
                 },
-                Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(0.0, -200.0, -50.0)),
+                Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(loc.x, loc.y, -50.0)),
                 EnemyState::default(),
                 Enemy,
                 EnemyType::DroneVulcan,
@@ -221,10 +242,12 @@ fn set_enemy(
                     patrol_duration,
                 },
                 Idleflag::Patrol,
-                Sensor,
+                // Sensor,
                 RigidBody::Dynamic,
                 GravityScale(0.0),
                 Collider::cuboid(10.0, 10.0),
+                LockedAxes::ROTATION_LOCKED,//防止旋转
+                ActiveEvents::COLLISION_EVENTS,
                 )
             );
             enemy_entity.insert(KinematicCharacterController {
@@ -682,6 +705,7 @@ fn handle_enemy_fire(
         let dy = player_transform.translation.y - enemy_transform.translation.y;
         match enemystate {
             EnemyState::FireLoop => {
+                // println!("1");
                 match enemytype {
                     EnemyType::Sweeper => {return;},
                     EnemyType::DroneMissile => {
@@ -758,7 +782,7 @@ fn handle_enemy_fire(
                     },
                 }
             },
-            _=> {return;},
+            _=> {},
         }
     }
 }

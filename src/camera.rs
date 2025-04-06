@@ -37,13 +37,13 @@ fn camera_follow_player(
     }
     let mut camera_transform = camera_query.single_mut();
     let player_transform = player_query.single().translation;
-    let (x, mut y) = (player_transform.x, player_transform.y);
+    let (mut x, mut y) = (player_transform.x, player_transform.y);
     //摄像机限位
-    let mut x = match x {
-        x if x < -50.0 => -50.0,
-        x if x > 50.0 => 50.0,
-        _ => x,
-    };
+    // let mut x = match x {
+    //     x if x < -50.0 => -50.0,
+    //     x if x > 50.0 => 50.0,
+    //     _ => x,
+    // };
     //镜头随开火抖动
     for _ in events.read() {
         x -= 30.0;
