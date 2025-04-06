@@ -181,6 +181,24 @@ fn animate_enemy(
                     }
                 }
             },
+            EnemyType::UnknownGuardianTypeF => {
+                let all = match *enemy_state {
+                    EnemyState::Idea => 1,
+                    EnemyState::Move => 9,
+                    EnemyState::FireLoop => 8,
+                    EnemyState::FireEnd | EnemyState::FireStart => 1,
+                };
+                aconfig.frame_timer.tick(time.delta());
+                if aconfig.frame_timer.just_finished(){
+                    if let Some(atlas) = &mut enemy.texture_atlas {
+                        aconfig.frame_timer = AnimationConfig::timer_from_fps(aconfig.fps2p);
+                        atlas.index = (atlas.index + 1) % all;
+                        if atlas.index == all - 1 {
+                            *flag = Fireflag::Fire;
+                        }
+                    }
+                }
+            },
         }
     }
 }
@@ -211,7 +229,7 @@ fn animate_bullet(
                     }
                 }
             },
-            _=> {
+            EnemyBullet::DroneVulcan=> {
                 let all = 4;
                 aconfig.frame_timer.tick(time.delta());
                 if aconfig.frame_timer.just_finished(){
@@ -221,6 +239,16 @@ fn animate_bullet(
                     }
                 }
             },
+            EnemyBullet::UnknownGuardian => {
+                let all = 4;
+                aconfig.frame_timer.tick(time.delta());
+                if aconfig.frame_timer.just_finished(){
+                    if let Some(atlas) = &mut bullet.texture_atlas {
+                        aconfig.frame_timer = AnimationConfig::timer_from_fps(aconfig.fps2p);
+                        atlas.index = (atlas.index + 1) % all;
+                    }
+                }
+            }
         }
     }
 }

@@ -224,8 +224,6 @@ pub struct GlobalEnemyTextureAtlas {
     pub image_unknown_move: Handle<Image>,
     pub layout_unknown_attack: Handle<TextureAtlasLayout>,
     pub image_unknown_attack: Handle<Image>,
-    pub layout_unknown_fireeffect: Handle<TextureAtlasLayout>,
-    pub image_unknown_fireeffect: Handle<Image>,
     pub layout_unknown_bullet: Handle<TextureAtlasLayout>,
     pub image_unknown_bullet: Handle<Image>,
 }
@@ -269,9 +267,7 @@ impl GlobalEnemyTextureAtlas {
         let layoutunknownmove =  TextureAtlasLayout::from_grid(UVec2::splat(64),9,1,None,None);
         let imageunknownmove = String::from("UnknownGuardian_TypeF_Move.png");
         let layoutunknownattack = TextureAtlasLayout::from_grid(UVec2::splat(64),8,1,None,None);
-        let imageunknownattack = String::from("UnknownGuardian_TypeF_Attack.png");
-        let layoutunknownfireeffect = TextureAtlasLayout::from_grid(UVec2::splat(96),7,1,None,None);
-        let imageunknownfireeffect = String::from("UnknownGuardian_TypeF_Fire_Effect.png");
+        let imageunknownattack = String::from("UnknownGuardian_TypeF_Attack1.png");
         let layoutunknownbullet = TextureAtlasLayout::from_grid(UVec2::splat(32),4,1,None,None);
         let imageunknownbullet = String::from("Entity_Bullet_UnKnownGuardian.png");
 
@@ -311,8 +307,6 @@ impl GlobalEnemyTextureAtlas {
             image_unknown_move: asset_server.load(imageunknownmove),
             layout_unknown_attack: texture_atlas_layouts.add(layoutunknownattack),
             image_unknown_attack: asset_server.load(imageunknownattack),
-            layout_unknown_fireeffect: texture_atlas_layouts.add(layoutunknownfireeffect),
-            image_unknown_fireeffect: asset_server.load(imageunknownfireeffect),
             layout_unknown_bullet: texture_atlas_layouts.add(layoutunknownbullet),
             image_unknown_bullet:asset_server.load(imageunknownbullet),
         }

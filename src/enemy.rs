@@ -45,6 +45,7 @@ pub enum EnemyType {
     Sweeper,
     DroneMissile,
     DroneVulcan,
+    UnknownGuardianTypeF,
 }
 
 #[derive(Component, Default)]
@@ -87,12 +88,12 @@ impl Plugin for EnemyPlugin {
     }
 }
 
-fn setup_enemy (
-    source: Res<GlobalEnemyTextureAtlas>,
-    mut commands: Commands,
-) {
-    set_enemy(2,Vec2::new(0.0, 20.0), &mut commands, &source);
-}
+// fn setup_enemy (
+//     source: Res<GlobalEnemyTextureAtlas>,
+//     mut commands: Commands,
+// ) {
+//     set_enemy(2,Vec2::new(0.0, 20.0), &mut commands, &source);
+// }
 
 pub fn set_enemy(
     id : u8,
@@ -101,19 +102,21 @@ pub fn set_enemy(
     source: &Res<GlobalEnemyTextureAtlas>,
 ) {
     let mut rng = rand::rng();
-    let random_index = rng.random_range(0..3);
+    let random_index = rng.random_range(0..4);
     let mut x =random_index;
     match id {
         0 => { },//随机产生敌人
         1 => {x = 0;},//产生Sweeper
         2 => {x = 1;},//产生DroneMissile
         3 => {x = 2;},//产生DroneVulcan
+        4 => {x = 3;},//产生UnknownGuardian_TypeF
         _ => unreachable!(),
     }
     let random_enemy = match x {
         0 => EnemyType::Sweeper,
         1 => EnemyType::DroneMissile,
         2 => EnemyType::DroneVulcan,
+        3 => EnemyType::UnknownGuardianTypeF,
         _ => unreachable!(),
     };
     
@@ -218,6 +221,45 @@ pub fn set_enemy(
                 EnemyState::default(),
                 Enemy,
                 EnemyType::DroneVulcan,
+                Fireflag::Fire,
+                Health(ENEMY_HEALTH),
+                //Velocity(ENEMY_SPEED),
+                AnimationConfig::new(10),
+                PatrolState {
+                    directionx: 0.0,
+                    directiony: 0.0,
+                    timer1: Stopwatch::new(),
+                    timer2: Stopwatch::new(),
+                    patrol_duration,
+                },
+                Idleflag::Patrol,
+                // Sensor,
+                RigidBody::Dynamic,
+                GravityScale(0.0),
+                Collider::cuboid(10.0, 10.0),
+                LockedAxes::ROTATION_LOCKED,//防止旋转
+                ActiveEvents::COLLISION_EVENTS,
+                )
+            );
+            enemy_entity.insert(KinematicCharacterController {
+                ..Default::default()
+            });
+        },
+        EnemyType::UnknownGuardianTypeF=>{
+            let mut enemy_entity =
+            commands.spawn( (
+                Sprite {
+                    image: source.image_unknown_idle.clone(),
+                    texture_atlas: Some(TextureAtlas {
+                        layout: source.layout_unknown_idle.clone(),
+                        index: 0,
+                    }),
+                    ..Default::default()
+                },
+                Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(loc.x, loc.y, -50.0)),
+                EnemyState::default(),
+                Enemy,
+                EnemyType::UnknownGuardianTypeF,
                 Fireflag::Fire,
                 Health(ENEMY_HEALTH),
                 //Velocity(ENEMY_SPEED),
@@ -431,6 +473,12 @@ fn handle_enemy_move(
 
                     EnemyType::Sweeper => {
 
+                        if dx >= 0.0 {
+                            patrol_state.directionx -= 20.0;
+                        }else {
+                            patrol_state.directionx += 20.0;
+                        }
+                        
                         if dx * patrol_state.directionx < 0.0 {
                             patrol_state.directionx = -1.0 * patrol_state.directionx;
                         }
@@ -474,7 +522,55 @@ fn handle_enemy_move(
                             let direction = Vec2::new(dx,dy).normalize();
                             controller.translation = Some(direction.normalize_or_zero().clone() * ENEMY_SPEED);
                         }
-                    }
+                    },
+
+                    EnemyType::UnknownGuardianTypeF => {
+
+                        if dx >= 0.0 {
+                            patrol_state.directionx -= 50.0;
+                        }else {
+                            patrol_state.directionx += 50.0;
+                        }
+
+                        if distance <= ENEMY_FIRE && dx.abs() >= 30.0 {
+                            
+                            if dx * patrol_state.directionx < 0.0 {
+                                patrol_state.directionx = -1.0 * patrol_state.directionx;
+                            }
+
+                            match *enemystate{
+                                EnemyState::Move => { 
+                                    if atlas.index == 8{
+                                        atlas.index = 0;
+                                        *enemystate = EnemyState::FireLoop;
+                                    }
+                                },
+                                EnemyState::Idea => {
+                                    atlas.index=0;
+                                    *enemystate = EnemyState::FireLoop;
+                                },
+                                _=> { },
+                            }
+                            //fire
+                        } else {
+                            match *enemystate{
+                                EnemyState::Idea => { 
+                                    *enemystate = EnemyState::Move;
+                                },
+                                EnemyState::FireLoop => { 
+                                    if atlas.index == 7 {
+                                        atlas.index=0;
+                                        *enemystate = EnemyState::Move;
+                                    }
+                                },
+                                _=> { },
+                            }
+                            
+                            let direction = Vec2::new(patrol_state.directionx,patrol_state.directiony).normalize();
+                            controller.translation = Some(direction.normalize_or_zero().clone() * ENEMY_SPEED);
+
+                        }
+                    },
                 }
                 
                 *flag = Idleflag::Patrol;
@@ -507,6 +603,12 @@ fn handle_enemy_move(
                                     },
                                     EnemyType::Sweeper =>{
                                         if atlas.index == 12 {
+                                            atlas.index = 0;
+                                            *enemystate = EnemyState::Move;
+                                        }
+                                    },
+                                    EnemyType::UnknownGuardianTypeF => {
+                                        if atlas.index == 7 {
                                             atlas.index = 0;
                                             *enemystate = EnemyState::Move;
                                         }
@@ -653,6 +755,29 @@ fn handle_enemy_animation(
                     },
                 }
             },
+            EnemyType::UnknownGuardianTypeF => {
+                match enemystate {
+                    EnemyState::Idea => { 
+                        enemy.image = source.image_unknown_idle.clone();
+                        if let Some(atlas) = &mut enemy.texture_atlas {
+                            atlas.layout = source.layout_unknown_idle.clone();
+                        }
+                    },
+                    EnemyState::Move => { 
+                        enemy.image = source.image_unknown_move.clone();
+                        if let Some(atlas) = &mut enemy.texture_atlas {
+                            atlas.layout = source.layout_unknown_move.clone();
+                        }
+                    },
+                    EnemyState::FireLoop => { 
+                        enemy.image = source.image_unknown_attack.clone();
+                        if let Some(atlas) = &mut enemy.texture_atlas {
+                            atlas.layout = source.layout_unknown_attack.clone();
+                        }
+                    },
+                    EnemyState::FireEnd | EnemyState::FireStart => { },
+                }
+            }
         }
     }
 }
@@ -688,7 +813,7 @@ fn handle_enemy_fire(
             EnemyState::FireLoop => {
                 // println!("1");
                 match enemytype {
-                    EnemyType::Sweeper => {return;},
+                    EnemyType::Sweeper => { },
                     EnemyType::DroneMissile => {
                         if let Some(atlas) = &enemy.texture_atlas {
                             if atlas.index == 0 {
@@ -761,6 +886,42 @@ fn handle_enemy_fire(
                             }
                         }
                     },
+                    EnemyType::UnknownGuardianTypeF => {
+                        if let Some(atlas) = &enemy.texture_atlas {
+                            if atlas.index == 4 {
+                                match *flag {
+                                    Fireflag::Fire => {
+                                        *flag = Fireflag::Done;
+                                        commands.spawn( (
+                                            Sprite {
+                                                image: source.image_unknown_bullet.clone(),
+                                                texture_atlas: Some(TextureAtlas {
+                                                    layout: source.layout_unknown_bullet.clone(),
+                                                    index: 0,
+                                                }),
+                                                ..Default::default()
+                                            },
+                                            Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(enemy_transform.translation.x, enemy_transform.translation.y, 31.0)),
+                                            EnemyBullet::UnknownGuardian,
+                                            BulletDirection {
+                                                x : dx,
+                                                y : dy,},
+                                            AnimationConfig::new(5),
+                                            Sensor,
+                                            RigidBody::Dynamic,
+                                            GravityScale(0.0),
+                                            Collider::cuboid(6.0, 6.0),
+                                            KinematicCharacterController {
+                                                ..Default::default()
+                                            },
+                                            )
+                                        );
+                                    },
+                                    Fireflag::Done => { }
+                                }
+                            }
+                        }
+                    }
                 }
             },
             _=> {},
