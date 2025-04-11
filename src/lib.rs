@@ -11,6 +11,7 @@ pub mod home;
 pub mod room;
 pub mod enemy;
 pub mod ui;
+pub mod boss;
 
 pub use configs::*;
 pub use resources::*;

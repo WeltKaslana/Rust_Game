@@ -146,7 +146,7 @@ pub fn set_enemy(
                 Fireflag::Done,
                 Health(ENEMY_HEALTH),
                 //Velocity(ENEMY_SPEED),
-                AnimationConfig::new(20),
+                AnimationConfig::new(15),
                 PatrolState {
                     directionx: 0.0,
                     directiony: 0.0,

@@ -35,6 +35,9 @@ pub const ENEMY_ALARM: f32 = 300.0;//该数值为测试数据，实际游玩时�
 pub const ENEMY_FIRE: f32 = 200.0;//该数值为测试数据，实际游玩时应适当调大
 pub const ENEMY_ATTACK: f32 = 75.0;
 
+// Boss
+pub const BOOS_HEALTH: f32 =4000.0;//暂定
+
 // Kd-tree
 pub const KD_TREE_REFRESH_RATE: f32 = 0.1;
 

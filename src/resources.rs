@@ -1,6 +1,7 @@
 use bevy::{dev_tools::states::*, prelude::*};
 use bevy::window::PrimaryWindow;
 
+use crate::boss;
 use crate::gamestate::GameState;
 
 pub struct ResourcesPlugin;
@@ -183,6 +184,9 @@ fn load_assets_enemy (
     let enemy_resources = GlobalEnemyTextureAtlas::init(&asset_server, &mut texture_atlas_layouts);
     commands.insert_resource(enemy_resources);
 
+    let boss_resources = GlobalBossTextureAtlas::init(&asset_server, &mut texture_atlas_layouts);
+    commands.insert_resource(boss_resources);
+
     println!("Enemy Resourse Loaded");
 }
 
@@ -311,4 +315,102 @@ impl GlobalEnemyTextureAtlas {
             image_unknown_bullet:asset_server.load(imageunknownbullet),
         }
     }
+}
+
+#[derive(Resource,Default)]
+pub struct GlobalBossTextureAtlas {
+    pub layout_boss_idle: Handle<TextureAtlasLayout>,
+    pub image_boss_idle: Handle<Image>,//Boss1_Idea
+    pub layout_boss_move: Handle<TextureAtlasLayout>,
+    pub image_boss_move: Handle<Image>,//Boss1_Move
+    pub layout_boss_collide_start: Handle<TextureAtlasLayout>,
+    pub image_boss_collide_start: Handle<Image>,//Boss1_Collide_Start2
+    pub layout_boss_collide_loop: Handle<TextureAtlasLayout>,
+    pub image_boss_collide_loop: Handle<Image>,//Boss1_Collide_Loop
+    pub layout_boss_collide_end: Handle<TextureAtlasLayout>,
+    pub image_boss_collide_end: Handle<Image>,//Boss1_Collide_End
+    pub layout_boss_collide_effect: Handle<TextureAtlasLayout>,
+    pub image_boss_collide_effect: Handle<Image>,//Boss1_Collide_Loop_Effect
+
+    pub layout_weaponmissile_idle: Handle<TextureAtlasLayout>,
+    pub image_weaponmissile_idle: Handle<Image>,//Boss1_Lid_GuidedMissile_Idea
+    pub layout_weaponmissile_fire: Handle<TextureAtlasLayout>,
+    pub image_weaponmissile_fire: Handle<Image>,//Boss1_Lid_GuidedMissile_Fire
+
+    pub layout_weaponlid_idle: Handle<TextureAtlasLayout>,
+    pub image_weaponlid_idle: Handle<Image>,//Boss1_WeaponLid
+    pub layout_weaponlid_fire: Handle<TextureAtlasLayout>,
+    pub image_weaponlid_fire: Handle<Image>,//Boss1_WeaponLid_Fire
+
+    pub layout_weapongun_idle: Handle<TextureAtlasLayout>,
+    pub image_weapongun_idle: Handle<Image>,//Boss1_Weapon1_Idea
+    pub layout_weapongun_fire: Handle<TextureAtlasLayout>,
+    pub image_weapongun_fire: Handle<Image>,//Boss1_Weapon1_Fire
+}
+
+impl GlobalBossTextureAtlas {
+    pub fn init(
+        asset_server: &Res<AssetServer>,
+        texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>,
+    ) -> Self {
+        let layoutbossidle = TextureAtlasLayout::from_grid(UVec2::splat(96),4,1,None,None);
+        let imagebossidle = String::from("Boss1_Idea.png");
+        let layoutbossmove = TextureAtlasLayout::from_grid(UVec2::splat(160), 8, 1, None, None);
+        let imagebossmove = String::from("Boss1_Move.png");
+        let layoutbosscollidestart = TextureAtlasLayout::from_grid(UVec2::splat(160), 6, 2, None, None);
+        let imagebosscollidestart = String::from("Boss1_Collide_Start2.png");//10
+        let layoutbosscollideloop = TextureAtlasLayout::from_grid(UVec2::splat(160), 6, 2, None, None);
+        let imagebosscollideloop = String::from("Boss1_Collide_Loop.png");//8
+        let layoutbosscollideend = TextureAtlasLayout::from_grid(UVec2::splat(160), 2, 1, None, None);
+        let imagebosscollideend = String::from("Boss1_Collide_End.png");
+        let layoutbosscollideeffect = TextureAtlasLayout::from_grid(UVec2::splat(160), 7, 1, None, None);
+        let imagebosscollideeffect = String::from("Boss1_Collide_Loop_Effect.png");
+
+        let layoutweaponmissileidle = TextureAtlasLayout::from_grid(UVec2::splat(128), 1, 1, None, None);
+        let imageweaponmissileidle = String::from("Boss1_Lid_GuidedMissile_Idea.png");
+        let layoutweaponmissilefire = TextureAtlasLayout::from_grid(UVec2::splat(128), 30, 1, None, None);
+        let imageweaponmissilefire = String::from("Boss1_Lid_GuidedMissile_Fire.png");
+
+        let layoutweaponlididle = TextureAtlasLayout::from_grid(UVec2::splat(96), 1, 1, None, None);
+        let imageweaponlididle = String::from("Boss1_WeaponLid.png");
+        let layoutweaponlidfire = TextureAtlasLayout::from_grid(UVec2::splat(128), 7, 1, None, None);
+        let imageweaponlidfire = String::from("Boss1_WeaponLid_Fire.png");
+
+        let layoutweapongunidle = TextureAtlasLayout::from_grid(UVec2::splat(64), 1, 1, None, None);
+        let imageweapongunidle = String::from("Boss1_Weapon1_Idea.png");
+        let layoutweapongunfire = TextureAtlasLayout::from_grid(UVec2::splat(96), 7, 1, None, None);
+        let imageweapongunfire = String::from("Boss1_Weapon1_Fire.png");
+
+        Self {
+            layout_boss_idle: texture_atlas_layouts.add(layoutbossidle),
+            image_boss_idle: asset_server.load(imagebossidle),
+            layout_boss_move: texture_atlas_layouts.add(layoutbossmove),
+            image_boss_move: asset_server.load(imagebossmove),
+            layout_boss_collide_start: texture_atlas_layouts.add(layoutbosscollidestart),
+            image_boss_collide_start: asset_server.load(imagebosscollidestart),
+            layout_boss_collide_loop: texture_atlas_layouts.add(layoutbosscollideloop),
+            image_boss_collide_loop: asset_server.load(imagebosscollideloop),
+            layout_boss_collide_end: texture_atlas_layouts.add(layoutbosscollideend),
+            image_boss_collide_end: asset_server.load(imagebosscollideend),
+            layout_boss_collide_effect: texture_atlas_layouts.add(layoutbosscollideeffect),
+            image_boss_collide_effect: asset_server.load(imagebosscollideeffect),
+
+            layout_weaponmissile_idle: texture_atlas_layouts.add(layoutweaponmissileidle),
+            image_weaponmissile_idle: asset_server.load(imageweaponmissileidle),
+            layout_weaponmissile_fire: texture_atlas_layouts.add(layoutweaponmissilefire),
+            image_weaponmissile_fire: asset_server.load(imageweaponmissilefire),
+
+            layout_weaponlid_idle: texture_atlas_layouts.add(layoutweaponlididle),
+            image_weaponlid_idle: asset_server.load(imageweaponlididle),
+            layout_weaponlid_fire: texture_atlas_layouts.add(layoutweaponlidfire),
+            image_weaponlid_fire: asset_server.load(imageweaponlidfire),
+
+            layout_weapongun_idle: texture_atlas_layouts.add(layoutweapongunidle),
+            image_weapongun_idle: asset_server.load(imageweapongunidle),
+            layout_weapongun_fire: texture_atlas_layouts.add(layoutweapongunfire),
+            image_weapongun_fire: asset_server.load(imageweapongunfire),
+        }
+    }
+
+
 }
