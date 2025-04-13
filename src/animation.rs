@@ -1,7 +1,7 @@
 use bevy::{dev_tools::states::*, log::tracing_subscriber::fmt::time, prelude::*};
 
 use crate::{
-    character::{AnimationConfig, Character, PlayerState }, enemy::{
+    boss::{Boss, BossState, Direction, Health}, character::{AnimationConfig, Character, PlayerState }, enemy::{
         BulletDirection, Enemy, EnemyBullet, EnemyState, EnemyType, Fireflag, PatrolState}, gamestate::GameState, gun::{Bullet, Cursor, Gun, GunFire}, home::{Fridge, FridgeState, Sora, SoraState}, resources::GlobalHomeTextureAtlas
 };
 
@@ -274,10 +274,97 @@ fn flip_player_sprite_x(
 
 
 
-fn flip_boss_sprite_x(
-    
+fn animate_boss(
+    time: Res<Time>,
+    mut boss_query: Query<(
+        &mut AnimationConfig,
+        &mut Sprite,
+        & BossState,
+        & Boss
+    ), With<Boss>>,
 ) {
+    if boss_query.is_empty() {
+        return;
+    }
+    for (mut aconfig, mut boss, bossstate, bosscomponent) in boss_query.iter_mut() {
+        match bosscomponent {
+            Boss::Body => {
+                let all = match bossstate {
+                    BossState::Idea => 4,
+                    BossState::Move => 8,
+                    BossState::CollideStart => 10,
+                    BossState::CollideLoop => 8,
+                    BossState::CollideEnd => 2,
+                    _ => 1,
+                };
+                aconfig.frame_timer.tick(time.delta());
+                if aconfig.frame_timer.just_finished(){
+                    if let Some(atlas) = &mut boss.texture_atlas {
+                        aconfig.frame_timer = AnimationConfig::timer_from_fps(aconfig.fps2p);
+                        atlas.index = (atlas.index + 1) % all;
+                    }
+                }
+            },
+            Boss::Gun => {
+                let all = match bossstate {
+                    BossState::Gunfire => 7,
+                    _ => 1,
+                };
+                aconfig.frame_timer.tick(time.delta());
+                if aconfig.frame_timer.just_finished(){
+                    if let Some(atlas) = &mut boss.texture_atlas {
+                        aconfig.frame_timer = AnimationConfig::timer_from_fps(aconfig.fps2p);
+                        atlas.index = (atlas.index + 1) % all;
+                    }
+                }
 
+            },
+            Boss::Missile => {
+                let all = match bossstate {
+                    BossState::Missilefire => 30,
+                    _ => 1,
+                };
+                aconfig.frame_timer.tick(time.delta());
+                if aconfig.frame_timer.just_finished(){
+                    if let Some(atlas) = &mut boss.texture_atlas {
+                        aconfig.frame_timer = AnimationConfig::timer_from_fps(aconfig.fps2p);
+                        atlas.index = (atlas.index + 1) % all;
+                    }
+                }
+
+            },
+            Boss::Shield => {
+                let all = match bossstate {
+                    BossState::Gunfire => 7,
+                    _ => 1,
+                };
+                aconfig.frame_timer.tick(time.delta());
+                if aconfig.frame_timer.just_finished(){
+                    if let Some(atlas) = &mut boss.texture_atlas {
+                        aconfig.frame_timer = AnimationConfig::timer_from_fps(aconfig.fps2p);
+                        atlas.index = (atlas.index + 1) % all;
+                    }
+                }
+            },
+        }
+    }
+}
+
+fn boss_filpx(
+    mut boss_query: Query<(
+            &mut Sprite,
+            & Direction
+        ), (With<Boss>, With<Health>)>
+) {
+    if boss_query.is_empty() {
+        return;
+    }
+    let (mut boss, direction) = boss_query.single_mut();
+    if direction.x >= 0.0 {
+        boss.flip_x = false;
+    }else {
+        boss.flip_x = true;
+    }
 }
 
 fn flip_gun_sprite_y(
