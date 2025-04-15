@@ -52,7 +52,7 @@ fn audio_play__MainMenu(
 ) {
     commands.spawn((
         AudioPlayer::new(asset_server.load("AudioClip/MainMenu - Takaramonogatari.wav")),
-        PlaybackSettings::LOOP,
+        PlaybackSettings::LOOP.with_volume(Volume::new(0.3)),
     ));
 }
 
@@ -62,7 +62,7 @@ fn audio_play_Home(
 ) {
     commands.spawn((
         AudioPlayer::new(asset_server.load("AudioClip/Angel24 - Cotton Candy Island.wav")),
-        PlaybackSettings::LOOP,
+        PlaybackSettings::LOOP.with_volume(Volume::new(0.3)),
     ));
 
 }
@@ -73,7 +73,7 @@ fn audio_play_Ingame(
 ) {
     commands.spawn((
         AudioPlayer::new(asset_server.load("AudioClip/Level1 - Let me think about it.wav")),
-        PlaybackSettings::LOOP,
+        PlaybackSettings::LOOP.with_volume(Volume::new(0.3)),
     ));
 }
 

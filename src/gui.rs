@@ -113,6 +113,19 @@ fn setup_main_menu(
         },
         Transform::from_scale(Vec3::splat(0.5)).with_translation(Vec3::new(0.0, 100.0, 1.0)),
     ));//标题
+
+    commands.spawn((
+        Sprite {..Default::default()},
+        Text2d::new("Press any key to start!"),
+        TextFont {
+            font: asset_server.load("Fonts/FIXEDSYS-EXCELSIOR-301.ttf"),
+            font_size: 60.0,
+            ..default()
+        },  
+        TextColor(Color::rgb(255.0, 0.0, 255.0)),
+        Transform::from_translation(Vec3::new(0.0, -200.0, 99.0)),
+    ));
+
 }
 
 

@@ -7,7 +7,9 @@ use crate::{
     character::{
         Character,
         Health,
-    }, gamestate::GameState, PLAYER_HEALTH
+        PlayerHurtEvent
+    }, 
+    gamestate::GameState, PLAYER_HEALTH
 };
 
 pub struct UIPlugin;
@@ -24,6 +26,7 @@ pub struct Hurtui;
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut App) {
         app
+        .add_event::<PlayerHurtEvent>()
         .add_systems(OnEnter(GameState::Home), setup_ui_all)
         .add_systems(Update, (
             hurtui,
@@ -59,6 +62,16 @@ fn setup_ui_all (
         Transform::from_scale(Vec3::splat(0.5))
         .with_translation(Vec3::new(loc.x ,loc.y ,90.0) + UI_OFFSET),
         UI,
+    ))
+    .with_child((
+        Text2d::new(format!("{}/{}",PLAYER_HEALTH,PLAYER_HEALTH)),
+        TextFont {
+            font: asset_server.load("Fonts/FIXEDSYS-EXCELSIOR-301.ttf"),
+            font_size: 30.0,
+            ..default()
+        },  
+        TextColor(Color::rgb(255.0, 0.0, 255.0)),
+        Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
     ));
     //缓冲血条
     commands.spawn((
@@ -89,16 +102,10 @@ fn setup_ui_all (
 }
 
 fn update_ui (
-    // mut commands: Commands,
-    //mut Health是暂时测试用的，后续把mut去掉
-    // mut health_query: Query<&mut Health, (With<Character>, Without<UI>, Without<Camera2d>)>, 
-    loc_query: Query<&Transform, (With<Camera2d>, Without<UI>, Without<Character>)>,
-    mut ui_query: Query<&mut Transform, (With<UI>, Without<Camera2d>, Without<Character>)>,
-    //test
-    // keyboard_input: Res<ButtonInput<KeyCode>>,
+    loc_query: Query<&Transform, (With<Camera2d>, Without<UI>, Without<Hurtui>)>,
+    mut ui_query: Query<&mut Transform, (With<UI>, Without<Camera2d>, Without<Hurtui>)>,
+    mut hurtui_query: Query<&mut Transform, (With<Hurtui>, Without<Camera2d>, Without<UI>)>,
 ) {
-    //血条因为缩减时为两边向中间缩减，所以涉及translation的改动，如果分开改变
-    //会被该函数的直接赋值覆盖掉，所以两个函数需要合并
     if loc_query.is_empty() || ui_query.is_empty() {
         return;
     }
@@ -106,9 +113,26 @@ fn update_ui (
     for mut trans in ui_query.iter_mut() {
         trans.translation = Vec3::new(loc.x ,loc.y ,trans.translation.z) + UI_OFFSET;
     }
-    //更新血条效果
+    for mut trans in hurtui_query.iter_mut() {
+        trans.translation = Vec3::new(loc.x ,loc.y ,111.0);
+    }
+}
+fn handle_state_bar(
+    mut commands: Commands,
     //test
-    // let mut health =health_query.single_mut();
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    //mut Health是暂时测试用的，后续把mut去掉
+    loc_query: Query<&Transform, (With<Camera2d>, Without<Bar>, Without<Character>, Without<BufferBar>)>,
+    mut health_query: Query<&mut Health, (With<Character>, Without<Bar>, Without<BufferBar>, Without<Camera2d>)>,
+    mut buffer_query: Query<&mut Transform, (With<BufferBar>, Without<Character>, Without<Bar>, Without<Camera2d>)>,
+    mut bar_query: Query<&mut Transform, (With<Bar>, Without<BufferBar>, Without<Character>, Without<Camera2d>)>,
+    query2: Query<Entity, (With<Hurtui>, Without<Camera2d>)>,
+) {
+    if health_query.is_empty() ||buffer_query.is_empty() || bar_query.is_empty()  || loc_query.is_empty(){
+        return;
+    }
+    //test
+    let mut health =health_query.single_mut();
     // if keyboard_input.pressed(KeyCode::KeyH) {
     //     health.0 -= 5.0;
     // }
@@ -118,32 +142,6 @@ fn update_ui (
     //         health.0 = PLAYER_HEALTH;
     //     }
     // }
-    // 
-    
-}
-fn handle_state_bar(
-    //test
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    //mut Health是暂时测试用的，后续把mut去掉
-    loc_query: Query<&Transform, (With<Camera2d>, Without<Bar>, Without<Character>, Without<BufferBar>)>,
-    mut health_query: Query<&mut Health, (With<Character>, Without<Bar>, Without<BufferBar>, Without<Camera2d>)>,
-    mut buffer_query: Query<&mut Transform, (With<BufferBar>, Without<Character>, Without<Bar>, Without<Camera2d>)>,
-    mut bar_query: Query<&mut Transform, (With<Bar>, Without<BufferBar>, Without<Character>, Without<Camera2d>)>,
-) {
-    if health_query.is_empty() ||buffer_query.is_empty() || bar_query.is_empty()  || loc_query.is_empty(){
-        return;
-    }
-    //test
-    let mut health =health_query.single_mut();
-    if keyboard_input.pressed(KeyCode::KeyH) {
-        health.0 -= 5.0;
-    }
-    if keyboard_input.pressed(KeyCode::KeyJ) {
-        health.0 += 5.0;
-        if health.0 > PLAYER_HEALTH {
-            health.0 = PLAYER_HEALTH;
-        }
-    }
     //
     let mut buffer = buffer_query.single_mut();
     let mut bar = bar_query.single_mut();
@@ -186,6 +184,10 @@ fn handle_state_bar(
             buffer.translation.x += temp;
         }
 
+        for entity in query2.iter() {
+            commands.entity(entity).despawn();
+        }
+
     }
 }
 
@@ -194,14 +196,25 @@ fn hurtui(
     asset_server: Res<AssetServer>,
     query: Query<&Transform, (With<Camera2d>, Without<Hurtui>)>,
     query2: Query<Entity, (With<Hurtui>, Without<Camera2d>)>,
-    // event: EventReader<PlayerHurtEvent>, //后续角色受伤时发出事件，ui响应
+    mut event: EventReader<PlayerHurtEvent>, //后续角色受伤时发出事件，ui响应
     //test
     keyboard_input: Res<ButtonInput<KeyCode>>,
 ) {
     if query.is_empty() {
         return;
     }
-    
+    for _ in event.read() {
+        let trans = query.single().translation.truncate();
+        commands.spawn((
+            Sprite {
+                image: asset_server.load("UI_Hit.png"),
+                ..Default::default()
+            },
+            Transform::from_scale(Vec3::new(1.9, 1.4, 1.9))
+                .with_translation(Vec3::new(trans.x, trans.y, 111.0)),
+            Hurtui,
+        ));     
+    }
     //模拟受伤
     if keyboard_input.pressed(KeyCode::KeyH) {
         let trans = query.single().translation.truncate();

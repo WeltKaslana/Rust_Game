@@ -2,7 +2,7 @@ use bevy::{dev_tools::states::*, log::tracing_subscriber::fmt::time, prelude::*}
 
 use crate::{
     boss::{Boss, BossState, Direction, Health}, character::{AnimationConfig, Character, PlayerState }, enemy::{
-        BulletDirection, Enemy, EnemyBullet, EnemyState, EnemyType, Fireflag, PatrolState}, gamestate::GameState, gun::{Bullet, Cursor, Gun, GunFire}, home::{Fridge, FridgeState, Sora, SoraState}, resources::GlobalHomeTextureAtlas
+        BulletDirection, Enemy, EnemyBullet, EnemyState, EnemyType, Fireflag, PatrolState}, gamestate::GameState, gun::{Bullet, Cursor, Gun, GunFire}, home::{Fridge, FridgeState, Sora, SoraState}, resources::GlobalHomeTextureAtlas, GlobalCharacterTextureAtlas
 };
 
 pub struct AnimationPlugin;
@@ -63,13 +63,15 @@ fn move_template(
 
 fn animate_player(
     time: Res<Time>,
-    mut player_query: Query<(&mut AnimationConfig, &mut Sprite, &PlayerState), With<Character>>,
+    mut player_query: Query<(&mut AnimationConfig, &mut Sprite, &mut PlayerState), With<Character>>,
+    source: Res<GlobalCharacterTextureAtlas>,
 ) {
     if player_query.is_empty() {
         return;
     }
-    let (mut config, mut player, state) = player_query.single_mut();
-    let all = match state {
+    let (mut config, mut player, mut state) = player_query.single_mut();
+    let all = match *state {
+        //得分角色
         PlayerState::Move => 10,
         PlayerState::Idle => 6,
         PlayerState::Jump => 8,
@@ -81,7 +83,7 @@ fn animate_player(
     if config.frame_timer.just_finished(){
         if let Some(atlas) = &mut player.texture_atlas {
             config.frame_timer = AnimationConfig::timer_from_fps(config.fps2p);
-            match state {
+            match *state {
                 PlayerState::Jump => {
                     if atlas.index == 2 {
                         atlas.index = 4;//纹理集莫名其妙少一块
@@ -91,6 +93,26 @@ fn animate_player(
                     }
                 },
                 PlayerState::Jumpover => {},
+
+                PlayerState::Dodge => {
+                    match source.id {
+                        1 => {
+                            //shiroko
+                            atlas.index = atlas.index + 1;
+                            if atlas.index == 12 {
+                                atlas.index = 0;
+                                *state = PlayerState::Jumpover;
+                            }
+                        }
+                        2 => {
+                            //arisu
+                        }
+                        _ => {
+                            //Utaha
+                        }
+                    }
+                },
+
                 _ => {
                     atlas.index = (atlas.index + 1) % all;
                 },

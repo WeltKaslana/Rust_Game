@@ -16,6 +16,8 @@ pub struct GlobalCharacterTextureAtlas {
     pub image_move: Handle<Image>,
     pub lay_out_jump: Handle<TextureAtlasLayout>,
     pub image_jump: Handle<Image>,
+    pub lay_out_skill: Option<Handle<TextureAtlasLayout>>,
+    pub image_skill: Option<Handle<Image>>,
     pub image_gun: Handle<Image>,
     pub id: u8,
 }
@@ -29,28 +31,26 @@ impl GlobalCharacterTextureAtlas {
         let mut layout_move = TextureAtlasLayout::from_grid(UVec2::splat(64),5,2,None,None);
         let mut layout_idle = TextureAtlasLayout::from_grid(UVec2::splat(64),6,1,None,None);
         let mut layout_jump = TextureAtlasLayout::from_grid(UVec2::splat(64),4,2,None,None);
+        let mut layout_skill = TextureAtlasLayout::from_grid(UVec2::splat(96),12,1,None,None);
         let mut path_move = String::from("Shiroko_Move.png");
         let mut path_idle = String::from("Shiroko_Idle.png");
         let mut path_jump = String::from("Shiroko_Jump.png");
+        let mut path_skill = String::from("Shiroko_Dash.png");
         let mut path_gun = String::from("Shiroko_Gun.png");
         match id {
             1 => {//Shiroko
-                println!("Shiroko!");
-                // layout_move = TextureAtlasLayout::from_grid(UVec2::splat(64),5,2,None,None);
-                // layout_idle = TextureAtlasLayout::from_grid(UVec2::splat(64),6,1,None,None);
-                // layout_jump = TextureAtlasLayout::from_grid(UVec2::splat(64),4,2,None,None);
-                // path_move = String::from("Shiroko_move.png");
-                // path_idle = String::from("Shiroko_idle.png");
-                // path_jump = String::from("Shiroko_jump.png");           
+                println!("Shiroko!");        
             }
             2 => {//Arisu
                 println!("Arisu!");
                 layout_move = TextureAtlasLayout::from_grid(UVec2::splat(64),9,2,None,None);
                 layout_idle = TextureAtlasLayout::from_grid(UVec2::splat(64),11,1,None,None);
                 layout_jump = TextureAtlasLayout::from_grid(UVec2::splat(64),4,2,None,None);
+                layout_skill = TextureAtlasLayout::from_grid(UVec2::splat(96),8,2,None,None);
                 path_move = String::from("Arisu_Move.png");
                 path_idle = String::from("Arisu_Idle.png");
                 path_jump = String::from("Arisu_Jump.png"); 
+                path_skill = String::from("Arisu_Shield.png");
                 path_gun =  String::from("Arisu_Gun.png"); 
             }
             3 => {//Utaha
@@ -72,6 +72,8 @@ impl GlobalCharacterTextureAtlas {
             lay_out_jump: texture_atlas_layouts.add(layout_jump),
             image_jump: asset_server.load(path_jump),
             image_gun: asset_server.load(path_gun),
+            lay_out_skill: if id != 3 { Some(texture_atlas_layouts.add(layout_skill)) } else { None },
+            image_skill: if id != 3 { Some(asset_server.load(path_skill)) } else { None },
             id: id,
         }
     }
@@ -167,7 +169,7 @@ fn load_assets (
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
     //根据id选择角色
-    let id = 2;
+    let id = 1;
     let gcta = GlobalCharacterTextureAtlas::init(id, &asset_server, &mut texture_atlas_layouts);
     commands.insert_resource(gcta);
 

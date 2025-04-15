@@ -117,7 +117,7 @@ impl Plugin for RoomPlugin {
             .add_systems(OnEnter(GameState::InGame), load_room)
             .add_systems(Update, switch_map.run_if(in_state(GameState::InGame)))
             .add_systems(Update, (
-                // check_collision,
+                check_collision,
                 evt_object_created,
                 ).run_if(in_state(GameState::InGame)))
             .add_systems(Update, log_transitions::<GameState>);
@@ -151,7 +151,7 @@ fn load_room(
     ));
     mgr.add_map(MapInfos::new(
         &asset_server, 
-        "Boss房1.tmx", 
+        "普通房2.tmx", 
         "A finite orthogonal map with only object colliders", 
         |c| {
             c.insert((
