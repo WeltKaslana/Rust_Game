@@ -51,7 +51,7 @@ fn main() {
         .add_plugins(EnemyPlugin)
         .add_plugins(UIPlugin)
 
-        // .add_plugins(BossPlugin)
+        .add_plugins(BossPlugin)
 
         .add_plugins(RoomPlugin)
 

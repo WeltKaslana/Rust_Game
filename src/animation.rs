@@ -1,7 +1,7 @@
 use bevy::{dev_tools::states::*, log::tracing_subscriber::fmt::time, prelude::*};
 
 use crate::{
-    boss::{Boss, BossState, Direction, Health}, character::{AnimationConfig, Character, PlayerState }, enemy::{
+    boss::{Boss, BossComponent, BossState, Direction, Health}, character::{AnimationConfig, Character, PlayerState }, enemy::{
         BulletDirection, Enemy, EnemyBullet, EnemyState, EnemyType, Fireflag, PatrolState}, gamestate::GameState, gun::{Bullet, Cursor, Gun, GunFire}, home::{Fridge, FridgeState, Sora, SoraState}, resources::GlobalHomeTextureAtlas, GlobalCharacterTextureAtlas
 };
 
@@ -20,8 +20,9 @@ impl Plugin for AnimationPlugin {
                 flip_gun_sprite_y,
                 flip_player_sprite_x,
                 animate_gunfire,
-                animate_bullet,
-                // flip_boss_sprite_x,
+                animate_enemy_bullet,
+                animate_boss,
+                boss_filpx,
             ).run_if(in_state(GameState::InGame)),)
             .add_systems(Update, 
                 (
@@ -225,7 +226,7 @@ fn animate_enemy(
     }
 }
 
-fn animate_bullet(
+fn animate_enemy_bullet(
     time: Res<Time>,
     mut bullet_query : Query<(
         &mut Sprite,
@@ -376,7 +377,7 @@ fn boss_filpx(
     mut boss_query: Query<(
             &mut Sprite,
             & Direction
-        ), (With<Boss>, With<Health>)>
+        ), (With<Boss>, Without<BossComponent>)>
 ) {
     if boss_query.is_empty() {
         return;

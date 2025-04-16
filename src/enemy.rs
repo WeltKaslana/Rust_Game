@@ -1,4 +1,5 @@
 use bevy::{dev_tools::states::*, prelude::*, time::Stopwatch};
+use crate::gun::Bullet;
 use crate::{gamestate::GameState,
     configs::*,character::*};
 use crate::*;
@@ -79,8 +80,8 @@ impl Plugin for EnemyPlugin {
                         handle_enemy_animation,
                         handle_enemy_fire,
                         handle_bullet_move,
-                        handle_enemy_hurt,
                         handle_enemy_death,
+                        handle_enemy_bullet_collision_events,
                 ).run_if(in_state(GameState::InGame))
             )
             .add_systems(Update, log_transitions::<GameState>)
@@ -967,13 +968,48 @@ fn handle_bullet_move(
 }
 
 fn handle_enemy_death(
-     
+     mut commands: Commands,
+     mut enemy_query: Query<(Entity,& Health), With<Enemy>>,
 ) {
-
+    if enemy_query.is_empty() {
+        return;
+    }
+    for (enemy,health) in enemy_query.iter_mut() {
+        if health.0 <= 0.0 {
+            commands.entity(enemy).despawn();
+        }
+    }
 }
 
-fn handle_enemy_hurt(
-     
+fn handle_enemy_bullet_collision_events(
+    mut commands: Commands,
+    player_query: Query<Entity, With<Bullet>>,
+    mut collision_events: EventReader<CollisionEvent>,
+    mut enemy_query: Query<(Entity, &mut Health), With<Enemy>>,
 ) {
+    for collision_event in collision_events.read() {
+        if player_query.is_empty() || enemy_query.is_empty() {
+            return;
+        }
 
+        for (enemy, mut health) in &mut enemy_query.iter_mut() {
+            match collision_event {
+                CollisionEvent::Started(entity1,entity2, _) => {
+                    if entity2.eq(&enemy) {
+                        if let Ok(b) = player_query.get(*entity1) {
+                            commands.entity(*entity1).despawn();
+                            health.0 -= BULLET_DAMAGE;
+                        }
+                    }
+                    if entity1.eq(&enemy) {
+                        if let Ok(b) = player_query.get(*entity2) {
+                            commands.entity(*entity2).despawn();
+                            health.0 -= BULLET_DAMAGE;
+                        }
+                    }
+                },
+                CollisionEvent::Stopped(entity1, entity2, _) => { },
+            }
+        }
+    }
 }
