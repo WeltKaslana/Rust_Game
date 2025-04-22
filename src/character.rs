@@ -86,8 +86,7 @@ impl Plugin for PlayerPlugin {
             .add_systems(
             Update,
                 (
-                    // handle_player_mov,
-                    handle_player_move,
+                    handle_player_move2,
                     handle_player_skills,
                     // handle_play_bullet_collision_events,
             ).run_if(in_state(GameState::Home))
@@ -95,7 +94,7 @@ impl Plugin for PlayerPlugin {
             .add_systems(
                 Update,
                     (
-                        // handle_player_death,
+                        handle_player_death,
                         handle_player_move3,
                         handle_player_skills,
                         // handle_player_enemy_collision_events,
@@ -121,7 +120,7 @@ fn setup_player(
         }),
         ..Default::default()
         },
-        Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(-200.0, -200.0, 30.0)),
+        Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(-200.0, -200.0 + 5.0, 30.0)),
         AnimationConfig::new(13),
         PlayerState::default(),
         Character,
@@ -131,10 +130,12 @@ fn setup_player(
         Velocity(PLAYER_JUMP_SPEED),
         //音效播放间隔计时器
         PlayerTimer(Stopwatch::default()),
-        Collider::cuboid(9.0, 18.0),
+        Collider::cuboid(9.0, 16.5),
+
+        RigidBody::Fixed,
+
         ActiveEvents::COLLISION_EVENTS,
         Sensor,//不加这个部件的话碰撞就会产生实际碰撞效果，否则只会发送碰撞事件而无效果
-        RigidBody::Fixed,
         //后续可以为碰撞体分组
         // CollisionGroups::new(Group::GROUP_1, Group::GROUP_2),
         ));
@@ -197,11 +198,21 @@ fn handle_player_move(
 
     match *player_state {
         PlayerState::Dodge => {
-            if player.flip_x {
-                transform.translation.x -= 10.0;
+            if player.flip_x{
+                if  transform.translation.x - 10.0 > -520.0 {
+                    transform.translation.x -= 10.0;
+                }
+                else {
+                    transform.translation.x = -520.0;
+                }
             }
             else {
-                transform.translation.x += 10.0;
+                if  transform.translation.x + 10.0 < 520.0 {
+                    transform.translation.x += 10.0;
+                }
+                else {
+                    transform.translation.x = 520.0;
+                }
             }
             return;
         },
@@ -215,28 +226,37 @@ fn handle_player_move(
     let right = keyboard_input.pressed(KeyCode::KeyD);
     //到边界的检测缺
     let mut delta = Vec2::ZERO;
+    let mut effect = 1.0;
     if left {
         // println!("left!");
         delta.x -= 0.5;
+        if transform.translation.x + delta.x < -520.0 {
+            effect = 0.0;
+        }
     }
     if right {
         // println!("right!");
         delta.x += 0.5;
+        if transform.translation.x + delta.x > 520.0 {
+            effect = 0.0;
+        }
     }
     if down {
         // println!("down");
         match *player_state {
             PlayerState::Jump => {},
-            _=> {
-                player.image = source.image_jump.clone();
-                player.texture_atlas = Some(TextureAtlas {
-                    layout: source.lay_out_jump.clone(),
-                    index: 0,
-                });
-                *player_state = PlayerState::Jump;
-        
-                transform.translation.y += V.0;
-                V.0 -= PLAYER_GRAVITY;
+            _ => {
+                if transform.translation.y >-200.0 {
+                    player.image = source.image_jump.clone();
+                    player.texture_atlas = Some(TextureAtlas {
+                        layout: source.lay_out_jump.clone(),
+                        index: 0,
+                    });
+                    *player_state = PlayerState::Jump;
+            
+                    transform.translation.y += V.0;
+                    V.0 -= PLAYER_GRAVITY;
+                }
             },
         };    
     }
@@ -260,7 +280,7 @@ fn handle_player_move(
     }
     delta = delta.normalize();
     if delta.is_finite() && (jump || down || left || right) {
-        transform.translation += vec3(delta.x, delta.y, 0.0) * PLAYER_SPEED;
+        transform.translation += vec3(delta.x * effect, delta.y, 0.0) * PLAYER_SPEED;
         //
         transform.translation.z = 30.0;
         //
@@ -297,7 +317,13 @@ fn handle_player_move(
             CollisionEvent::Started(entity1, entity2, _) => {
                 println!("Collision started between {:?} and {:?}", entity1, entity2);
                 if entity1.eq(&entity) || entity2.eq(&entity) {
+                    if V.0.abs()  >= 20.0 {
+                        transform.translation.y -= V.0;
+                        transform.translation.y -= 20.0;
+                    }
+
                     V.0 = 0.0;
+                    transform.translation.y += V.0;
                     match *player_state {
                         PlayerState::Jump => {*player_state = PlayerState::Jumpover;},
                         _ => {},
@@ -377,21 +403,6 @@ fn handle_player_enemy_collision_events(
     // }
 }
 
-fn handle_player_death(
-    player_query: Query<&Health, With<Character>>,
-    mut next_state: ResMut<NextState<GameState>>,
-) {
-    if player_query.is_empty() {
-        return;
-    }
-    let health = player_query.single();
-    if health.0 <= 0.0 {
-        //可以的话加个死亡动画慢动作
-        next_state.set(GameState::OverMenu);//进结算界面
-    }
-}
-
-
 
 fn handle_player_skills(
     // mut commands: Commands,
@@ -458,6 +469,9 @@ fn handle_player_bullet_collision_events(
                     if let Ok(e) = enemy_query.get(*entity2) {
                         commands.entity(*entity2).despawn();
                         health.0 -= ENEMY_DAMAGE * 5.0;
+                        if health.0 <= 0.0 {
+                            health.0 = 0.0;
+                        }
                         events.send(PlayerHurtEvent); 
                     }
                     // commands.entity(*entity2).despawn();
@@ -482,159 +496,205 @@ fn handle_player_bullet_collision_events(
     }
 }
 
+fn handle_player_death(
+    mut player_query: Query<&mut Health, With<Character>>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    if player_query.is_empty() {
+        return;
+    }
+    let mut health = player_query.single_mut();
+    if health.0 <= 0.0 {
+        //可以的话加个死亡动画慢动作
+        health.0 = 0.0;
+        println!("Game Over!");
+        // next_state.set(GameState::OverMenu);//进结算界面
+    }
+}
 
-
-// //移动逻辑在落地后的状态转换判断上有问题
-// fn handle_player_move2(
-//     mut events: EventWriter<PlayerRunEvent>,
-//     mut events2: EventWriter<PlayerJumpEvent>,
-//     mut player_query: Query<(
-//         &mut Sprite, 
-//         &mut Transform,
-//         &mut PlayerState, 
-//         &mut Velocity,
-//         &mut Lastlocy, 
-//         &mut Lastvy, 
-//         &mut KinematicCharacterController,
-//         ), With<Character>>,
-//     keyboard_input: Res<ButtonInput<KeyCode>>,
-//     source: Res<GlobalCharacterTextureAtlas>,
-//     mut collision_events: EventReader<CollisionEvent>,
-// ) {
-//     if player_query.is_empty() {
-//         return;
-//     }
+fn handle_player_move2(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut events: EventWriter<PlayerRunEvent>,
+    mut events2: EventWriter<PlayerJumpEvent>,
+    // mut collision_events: EventReader<CollisionEvent>,
+    mut player_query: Query<(
+        &mut Sprite, 
+        &mut Transform,
+        &mut PlayerState, 
+        &mut Velocity,
+        &mut KinematicCharacterController,
+        ), With<Character>>,
+    flag_query: Query<&KinematicCharacterControllerOutput, With<Character>>,
+    source: Res<GlobalCharacterTextureAtlas>,
     
-//     //之后可以改为自定义的键位，数据存到configs中
-//     let (
-//         mut player, 
-//         mut transform,
-//         mut player_state,
-//         mut V,
-//         mut lasty, 
-//         mut lastvy, 
-//         mut controller
-//         ) = player_query.single_mut();
-//     let jump = keyboard_input.pressed(KeyCode::KeyW) || keyboard_input.pressed(KeyCode::Space);
-//     let left = keyboard_input.pressed(KeyCode::KeyA);
-//     let down = keyboard_input.pressed(KeyCode::KeyS);
-//     let right = keyboard_input.pressed(KeyCode::KeyD);
-//     //到边界的检测缺
-//     let mut delta = Vec2::ZERO;
-//     if left {
-//         // println!("left!");
-//         delta.x -= 0.5;
-//     }
-//     if right {
-//         // println!("right!");
-//         delta.x += 0.5;
-//     }
-//     //
-//     //test
-//     if down {
-//         println!("down");
-//         // delta.y -= 0.5;
-//     }
-//     if jump {
-//         // println!("jump!");
-//         match *player_state {
-//             PlayerState::Jump => {},
-//             _=> {
-//                 player.image = source.image_jump.clone();
-//                 player.texture_atlas = Some(TextureAtlas {
-//                     layout: source.lay_out_jump.clone(),
-//                     index: 0,
-//                 });
-//                 *player_state = PlayerState::Jump;
-//                 events2.send(PlayerJumpEvent);
-//                 V.0 = PLAYER_JUMP_SPEED;
-//                 delta.y = V.0;
-//                 V.0 -= PLAYER_GRAVITY;
-//             },
-//         };
-//     }
-//     //不主动在外面赋值的话当没有按键时translation会变为none导致错误
-//     controller.translation = Some(delta.clone() * PLAYER_SPEED);
-//     if delta.is_finite() && (jump || down || left || right) {
-//         match *player_state {
-//             PlayerState::Move =>{},
-//             PlayerState::Jump =>{},
-//             _ => {
-//                 player.image = source.image_move.clone();
-//                 player.texture_atlas = Some(TextureAtlas {
-//                     layout: source.lay_out_move.clone(),
-//                     index: 1,
-//                 });
-//                 *player_state = PlayerState::Move;
-//             },
-//         };
-//         events.send(PlayerRunEvent);
-        
-//     } else {
-//         match *player_state {
-//             PlayerState::Idle =>{},
-//             PlayerState::Jump =>{},
-//             _ => {
-//                 player.image = source.image_idle.clone();
-//                 player.texture_atlas = Some(TextureAtlas {
-//                     layout: source.lay_out_idle.clone(),
-//                     index: 1,
-//                 });
-//                 *player_state = PlayerState::Idle;
-//             },
-//         };
-//     }
-//     match *player_state {
-//         PlayerState::Jump => {
-//             if let Some(trans) = &mut controller.translation {
-//                 println!("trans{} ; last{} ; V{}", transform.translation.y, lasty.0, lastvy.0);
-//                 if (transform.translation.y - lasty.0).abs() < 0.01 && lastvy.0 < -5.0 {
-//                     V.0 = 0.0;
-//                     match *player_state {
-//                         PlayerState::Jump => {*player_state = PlayerState::Jumpover;},
-//                         _ => {},
-//                     }
-//                 }
-//                 else {
-//                     trans.y += V.0;
-//                     // println!("fall!!!,v={}",V.0);
-//                     V.0 -= PLAYER_GRAVITY;
-//                 }
-//             }
-//         },
-//         _ => {},
-//     }
-//     lasty.0 = transform.translation.y.clone();
-//     lastvy.0 = V.0;
-//     for collision_event in collision_events.read() {
-//         match collision_event {
-//             CollisionEvent::Started(entity1, entity2, _) => {
-//                 // V.0 = 0.0;
-//                 // match *player_state {
-//                 //     PlayerState::Jump => {*player_state = PlayerState::Jumpover;},
-//                 //     _ => {},
-//                 // }
-//                 // return;
-//             }
-//             CollisionEvent::Stopped(entity1, entity2, _) => {
-//                 println!("Collision stopped between {:?} and {:?}", entity1, entity2);
-                
-//                 // player.image = source.image_jump.clone();
-//                 // player.texture_atlas = Some(TextureAtlas {
-//                 //     layout: source.lay_out_jump.clone(),
-//                 //     index: 0,
-//                 // });
-//                 // *player_state = PlayerState::Jump;
-//                 // if let Some(trans) = &mut controller.translation {
-//                 //     trans.y += V.0;
-//                 // }
-//                 // // transform.translation.y += V.0;
-//                 // V.0 -= PLAYER_GRAVITY;
-//                 // return;
-//             }
-//         }
-//     }
-// }
+) {
+    if player_query.is_empty() {
+        return;
+    }
+    
+    //之后可以改为自定义的键位，数据存到configs中
+    let (
+        mut player, 
+        mut transform,
+        mut player_state,
+        mut V,
+        mut controller,
+        ) = player_query.single_mut();
+    let jump = keyboard_input.pressed(KeyCode::KeyW) || keyboard_input.pressed(KeyCode::Space);
+    let left = keyboard_input.pressed(KeyCode::KeyA);
+    let down = keyboard_input.pressed(KeyCode::KeyS);
+    let right = keyboard_input.pressed(KeyCode::KeyD);
+
+    let mut ground = false;
+    let mut d = Vec2::ZERO;
+    let mut e = Vec2::ZERO;
+    for flag in flag_query.iter() {
+        //就角色一个插件
+        ground = flag.grounded.clone();
+        d = flag.desired_translation.clone();
+        e = flag.effective_translation.clone();
+    }
+    //test if grounded
+    // if ground {
+    //     info!("grounded!");
+    // }
+
+    let mut delta = Vec2::ZERO;
+    if left {
+        // println!("left!");
+        delta.x -= 1.0;
+    }
+    if right {
+        // println!("right!");
+        delta.x += 1.0;
+    }
+    //
+    //test
+    if down {
+        println!("down");
+        if ground && transform.translation.y >= -190.0 {
+            transform.translation.y -= 15.0;
+            player.image = source.image_jump.clone();
+            player.texture_atlas = Some(TextureAtlas {
+                layout: source.lay_out_jump.clone(),
+                index: 0,
+            });
+            *player_state = PlayerState::Jump;
+            // delta.y -= 0.5;
+        } 
+    }
+    if jump {
+        // println!("jump!");
+        match *player_state {
+            PlayerState::Jump => {},
+            _=> {
+                player.image = source.image_jump.clone();
+                player.texture_atlas = Some(TextureAtlas {
+                    layout: source.lay_out_jump.clone(),
+                    index: 0,
+                });
+                *player_state = PlayerState::Jump;
+                events2.send(PlayerJumpEvent);
+                V.0 = PLAYER_JUMP_SPEED;
+                delta.y = V.0;
+                // transform.translation.y += V.0;
+
+                V.0 -= PLAYER_GRAVITY;
+            },
+        };
+    }
+    //不主动在外面赋值的话当没有按键时translation会变为none导致错误
+
+    if delta.is_finite() && (jump || down || left || right) {
+        events.send(PlayerRunEvent);
+    }
+    match *player_state {
+        PlayerState::Idle => {
+            if delta.is_finite() && (jump || down || left || right) && ground {
+                player.image = source.image_move.clone();
+                player.texture_atlas = Some(TextureAtlas {
+                    layout: source.lay_out_move.clone(),
+                    index: 1,
+                });
+                *player_state = PlayerState::Move; 
+            }
+            if !ground {
+                player.image = source.image_jump.clone();
+                player.texture_atlas = Some(TextureAtlas {
+                    layout: source.lay_out_jump.clone(),
+                    index: 0,
+                });
+                *player_state = PlayerState::Jump;
+                V.0 -= PLAYER_GRAVITY;
+                delta.y = V.0;
+                // transform.translation.y += V.0;
+                // println!("fall!!!,v={}",V.0);
+            }
+        },
+        PlayerState::Move =>{
+            if !(delta.is_finite() && (jump || down || left || right)) && ground {
+                    player.image = source.image_idle.clone();
+                    player.texture_atlas = Some(TextureAtlas {
+                        layout: source.lay_out_idle.clone(),
+                        index: 1,
+                    });
+                    *player_state = PlayerState::Idle;
+            }
+            if !ground {
+                player.image = source.image_jump.clone();
+                player.texture_atlas = Some(TextureAtlas {
+                    layout: source.lay_out_jump.clone(),
+                    index: 0,
+                });
+                *player_state = PlayerState::Jump;
+                V.0 -= PLAYER_GRAVITY;
+                delta.y = V.0;
+                // transform.translation.y += V.0;
+                // println!("fall!!!,v={}",V.0);
+            }
+        },
+        PlayerState::Jump =>{
+            if ground {
+                V.0 = 0.0;
+                *player_state = PlayerState::Jumpover;
+            } else {
+                delta.y = V.0;
+                // transform.translation.y += V.0;
+                // println!("fall!!!,v={}",V.0);
+                V.0 -= PLAYER_GRAVITY;
+            }
+        },
+        PlayerState::Jumpover => {
+            if delta.is_finite() && (jump || down || left || right) {
+                player.image = source.image_move.clone();
+                player.texture_atlas = Some(TextureAtlas {
+                    layout: source.lay_out_move.clone(),
+                    index: 1,
+                });
+                *player_state = PlayerState::Move; 
+            } else {
+                player.image = source.image_idle.clone();
+                player.texture_atlas = Some(TextureAtlas {
+                    layout: source.lay_out_idle.clone(),
+                    index: 1,
+                });
+                *player_state = PlayerState::Idle; 
+            }
+        },
+        PlayerState::Dodge => {
+            if player.flip_x {
+                delta.x -= 5.0;
+            }
+            else {
+                delta.x += 5.0;
+            }
+            delta.y = 0.0;
+        },
+    }
+    controller.translation = Some(delta.clone() * PLAYER_SPEED);
+}
+    
+
 
 fn handle_player_move3(
     mut events: EventWriter<PlayerRunEvent>,
@@ -646,17 +706,34 @@ fn handle_player_move3(
     gun_query: Query<&Transform, (With<Gun>, Without<Character>)>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     source: Res<GlobalCharacterTextureAtlas>,
+
+    // test: Query<&KinematicCharacterControllerOutput>,
 ) {
     if player_query.is_empty() || gun_query.is_empty() {
         return;
     }
-    
+
+    // 
+    // for m in test.iter() {
+    //     if m.grounded {
+    //         info!("grounded!");
+    //     }
+    //     if keyboard_input.pressed(KeyCode::KeyO) {
+    //         let d = m.desired_translation.clone();
+    //         let e = m.effective_translation.clone();
+    //         let text = format!("d={:?}, e={:?}", d, e);
+    //         info!(text);
+    //     }
+    // }
+
     //之后可以改为自定义的键位，数据存到configs中
     let (
         mut player, 
         mut player_state,
-        mut controller
+        mut controller,
         ) = player_query.single_mut();
+
+        // controller.
 
         match *player_state {
             PlayerState::Dodge => {
@@ -701,7 +778,7 @@ fn handle_player_move3(
                 player.image = source.image_move.clone();
                 player.texture_atlas = Some(TextureAtlas {
                     layout: source.lay_out_move.clone(),
-                    index: 1,
+                    index: 0,
                 });
                 *player_state = PlayerState::Move;
             },
@@ -715,7 +792,7 @@ fn handle_player_move3(
                 player.image = source.image_idle.clone();
                 player.texture_atlas = Some(TextureAtlas {
                     layout: source.lay_out_idle.clone(),
-                    index: 1,
+                    index: 0,
                 });
                 *player_state = PlayerState::Idle;
             },

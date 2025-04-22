@@ -1,8 +1,31 @@
-use bevy::{dev_tools::states::*, log::tracing_subscriber::fmt::time, prelude::*};
+use bevy::{
+    dev_tools::states::*, 
+    log::tracing_subscriber::fmt::time, 
+    prelude::*
+};
 
 use crate::{
-    boss::{Boss, BossComponent, BossState, Direction, Health}, character::{AnimationConfig, Character, PlayerState }, enemy::{
-        BulletDirection, Enemy, EnemyBullet, EnemyState, EnemyType, Fireflag, PatrolState}, gamestate::GameState, gun::{Bullet, Cursor, Gun, GunFire}, home::{Fridge, FridgeState, Sora, SoraState}, resources::GlobalHomeTextureAtlas, GlobalCharacterTextureAtlas
+    boss::{
+        Boss, BossComponent, 
+        BossState, 
+        Direction, 
+        Health
+    }, 
+    character::{
+        AnimationConfig, 
+        Character, 
+        PlayerState 
+    }, 
+    enemy::{
+        BulletDirection, 
+        Enemy, EnemyBullet, 
+        EnemyState, EnemyType, 
+        Fireflag, PatrolState
+    }, 
+    gamestate::GameState, 
+    gun::{Bullet, Cursor, Gun, GunFire, BulletHit}, 
+    home::{Fridge, FridgeState, Sora, SoraState}, 
+    resources::{GlobalHomeTextureAtlas, GlobalCharacterTextureAtlas},
 };
 
 pub struct AnimationPlugin;
@@ -412,13 +435,26 @@ fn flip_gun_sprite_y(
 fn animate_gunfire(
     mut commands: Commands,
     time: Res<Time>,
-    mut Gun_query: Query<(&mut AnimationConfig, &mut Sprite, Entity), With<GunFire>>,
+    mut Gun_query: Query<(&mut AnimationConfig, &mut Sprite, Entity), (With<GunFire>, Without<BulletHit>)>,
+    mut Hit_query: Query<(&mut AnimationConfig, &mut Sprite, Entity), (With<BulletHit>, Without<GunFire>)>,
 ) {
-    if Gun_query.is_empty() {
-        return;
-    }
+    // if Gun_query.is_empty() {
+    //     return;
+    // }
     // let (mut config, mut sprite, entity) = Gun_query.single_mut();
     for (mut config, mut sprite, entity) in &mut Gun_query.iter_mut() {
+        config.frame_timer.tick(time.delta());
+        if config.frame_timer.just_finished(){
+            if let Some(atlas) = &mut sprite.texture_atlas {
+                config.frame_timer = AnimationConfig::timer_from_fps(config.fps2p);
+                atlas.index = atlas.index + 1;
+                if atlas.index == 5 {
+                    commands.entity(entity).despawn();
+                }
+            }
+        }
+    }
+    for (mut config, mut sprite, entity) in &mut Hit_query.iter_mut() {
         config.frame_timer.tick(time.delta());
         if config.frame_timer.just_finished(){
             if let Some(atlas) = &mut sprite.texture_atlas {

@@ -119,21 +119,21 @@
  <tile id="109">
   <objectgroup draworder="index" id="2">
    <object id="1" x="15.4545" y="7.36364">
-    <polygon points="0.181818,0.0909091 -8.09091,8.54545 -15.6364,8.54545 -15.2727,-7.27273 0.545455,-7.18182"/>
+    <polygon points="0.448485,0.0242424 -8.09091,8.54545 -15.4142,8.56767 -15.3616,-7.25051 0.545455,-7.22626"/>
    </object>
   </objectgroup>
  </tile>
  <tile id="110">
   <objectgroup draworder="index" id="2">
-   <object id="1" x="6.45455" y="0.181818">
-    <polygon points="0,0 -6.18182,6.18182 -6.27273,-0.363636"/>
+   <object id="3" x="7" y="0.111111">
+    <polygon points="0,0 -6.97778,6.91111 -6.95556,-0.0888889"/>
    </object>
   </objectgroup>
  </tile>
  <tile id="111">
   <objectgroup draworder="index" id="2">
-   <object id="1" x="9" y="0.181818">
-    <polygon points="0,0 6.72727,6.54545 6.81818,-0.181818"/>
+   <object id="3" x="9.17391" y="0.0869565">
+    <polygon points="0,0 6.78261,6.73913 6.78261,0.0869565"/>
    </object>
   </objectgroup>
  </tile>
@@ -146,29 +146,29 @@
  </tile>
  <tile id="115">
   <objectgroup draworder="index" id="2">
-   <object id="1" x="15.875" y="9.5625">
-    <polygon points="0,0 -6.6875,6.1875 0,6.375"/>
+   <object id="1" x="15.9565" y="9.13043">
+    <polygon points="0,0 -6.73913,6.91304 0.0869565,6.86957"/>
    </object>
   </objectgroup>
  </tile>
  <tile id="116">
   <objectgroup draworder="index" id="2">
-   <object id="1" x="8.375" y="0.5">
-    <polygon points="0,0 -8.0625,8.125 -8.3125,15.3125 7.5625,15.625 7.5625,-0.25"/>
+   <object id="8" x="0.0434783" y="8">
+    <polygon points="0,0 -0.130435,7.78261 16,8.04348 15.8696,-8 8.26087,-7.95652"/>
    </object>
   </objectgroup>
  </tile>
  <tile id="117">
   <objectgroup draworder="index" id="2">
-   <object id="1" x="0.1875" y="0.25">
-    <polygon points="0,0 7.4375,-0.25 15.6875,8.5625 15.75,15.5 -0.125,15.6875"/>
+   <object id="6" x="0.0434783" y="0.173913">
+    <polygon points="0,0 -0.130435,15.7826 15.9565,15.7391 15.8696,8 7.82609,-0.0869565"/>
    </object>
   </objectgroup>
  </tile>
  <tile id="118">
   <objectgroup draworder="index" id="2">
-   <object id="1" x="0.3125" y="9.4375">
-    <polygon points="0,0 6.1875,6.4375 -0.25,6.5625"/>
+   <object id="1" x="0" y="9.02222">
+    <polygon points="0,0 6.91111,6.97778 -0.0444444,7.04444"/>
    </object>
   </objectgroup>
  </tile>
@@ -200,14 +200,14 @@
  <tile id="141">
   <objectgroup draworder="index" id="2">
    <object id="1" x="6.63636" y="0">
-    <polygon points="0,0 -6.72727,6.72727 -6.54545,0.0909091"/>
+    <polygon points="0,0 -6.63838,6.72727 -6.67878,0.00202021"/>
    </object>
   </objectgroup>
  </tile>
  <tile id="144">
   <objectgroup draworder="index" id="2">
    <object id="1" x="9.27273" y="0.454545">
-    <polygon points="0,0 6.54545,6.45455 6.72727,-0.454545"/>
+    <polygon points="0.0666667,-0.377778 6.67878,6.47677 6.72727,-0.454545"/>
    </object>
   </objectgroup>
  </tile>
@@ -218,15 +218,15 @@
  </tile>
  <tile id="147">
   <objectgroup draworder="index" id="2">
-   <object id="1" x="8.5625" y="0.125">
-    <polygon points="0,0 -8,9.25 -8.375,15.6875 7.5625,16.0625 7.3125,-0.375"/>
+   <object id="2" x="0.0869565" y="9.21739">
+    <polygon points="0,0 -0.0434783,6.86957 15.913,6.91304 15.8696,-9.21739 8.73913,-9.13043"/>
    </object>
   </objectgroup>
  </tile>
  <tile id="150">
   <objectgroup draworder="index" id="2">
-   <object id="1" x="7.4375" y="0.1875">
-    <polygon points="0,0 8,9.25 8,15.625 -7.4375,15.8125 -7.3125,-0.25"/>
+   <object id="2" x="7.13043" y="0.0434783">
+    <polygon points="0,0 8.78261,9.30435 8.73913,15.8261 -7.21739,15.9565 -7.13043,-0.130435"/>
    </object>
   </objectgroup>
  </tile>
@@ -262,7 +262,7 @@
  <tile id="173">
   <objectgroup draworder="index" id="2">
    <object id="1" x="0.0909091" y="9.18182">
-    <polygon points="0,0 6.45455,6.90909 0,7"/>
+    <polygon points="0,0 6.45455,6.90909 -0.0666667,6.82222"/>
    </object>
   </objectgroup>
  </tile>
@@ -280,15 +280,15 @@
  </tile>
  <tile id="179">
   <objectgroup draworder="index" id="2">
-   <object id="1" x="0.181818" y="0.454545">
-    <polygon points="0,-0.272727 0.0909091,6 8.36364,15.4545 15.8182,15.5455 15.8182,-0.454545"/>
+   <object id="2" x="0.173913" y="0.0434783">
+    <polygon points="0,0 -0.0434783,6.86957 8.52174,15.913 15.7826,15.9565 15.8261,0.0434783"/>
    </object>
   </objectgroup>
  </tile>
  <tile id="182">
   <objectgroup draworder="index" id="2">
-   <object id="1" x="15.8125" y="0.125">
-    <polygon points="0,0 0,6.75 -8.625,16 -15.8125,16 -4.875,-0.125"/>
+   <object id="2" x="16.0435" y="0.0869565">
+    <polygon points="0,0 -0.130435,6.73913 -8.26087,15.8696 -16,15.913 -15.9565,-0.130435"/>
    </object>
   </objectgroup>
  </tile>
@@ -323,56 +323,56 @@
  <tile id="205">
   <objectgroup draworder="index" id="2">
    <object id="1" x="7" y="0.727273">
-    <polygon points="0.454545,-0.727273 8.63636,8 8.63636,15.0909 -7,15.1818 -6.90909,-0.818182"/>
+    <polygon points="0.454545,-0.727273 8.92525,7.86667 8.99192,15.2465 -6.97778,15.204 -6.90909,-0.818182"/>
    </object>
   </objectgroup>
  </tile>
  <tile id="206">
   <objectgroup draworder="index" id="2">
-   <object id="1" x="0" y="9.18182">
-    <polygon points="0,0 6.45455,6.54545 0.0909091,6.63636"/>
+   <object id="3" x="0.0222222" y="9.02222">
+    <polygon points="0,0 6.93333,6.93333 -0.0222222,7"/>
    </object>
   </objectgroup>
  </tile>
  <tile id="207">
   <objectgroup draworder="index" id="2">
-   <object id="1" x="15.7273" y="9.27273">
-    <polygon points="0,0 -6.54545,6.72727 0,6.72727"/>
+   <object id="3" x="16.0222" y="9.06667">
+    <polygon points="0,0 -7.04444,6.88889 -0.0222222,6.93333"/>
    </object>
   </objectgroup>
  </tile>
  <tile id="208">
   <objectgroup draworder="index" id="2">
    <object id="1" x="8.72727" y="0.181818">
-    <polygon points="0,0 -8.54545,8.54545 -8.72727,15.6364 7.18182,16.0909 7.09091,-0.181818"/>
+    <polygon points="-0.0444444,-0.133333 -8.65656,8.30101 -8.68283,15.8142 7.27071,15.8687 7.22424,-0.181818"/>
    </object>
   </objectgroup>
  </tile>
  <tile id="211">
   <objectgroup draworder="index" id="2">
-   <object id="1" x="9.27273" y="0">
-    <polygon points="0,0 6.36364,6.63636 6.63636,0"/>
+   <object id="1" x="9.30435" y="0.130435">
+    <polygon points="0,0 6.69565,6.78261 6.69565,-0.0869565"/>
    </object>
   </objectgroup>
  </tile>
  <tile id="212">
   <objectgroup draworder="index" id="2">
-   <object id="1" x="0.272727" y="7.54545">
-    <polygon points="0,0 8.18182,8.18182 15.4545,8.27273 15.6364,-7.63636 -0.181818,-7.54545"/>
+   <object id="3" x="0.0434783" y="0.130435">
+    <polygon points="0,0 -0.0434783,7.56522 8.08696,15.8696 16,15.9565 15.913,-0.130435"/>
    </object>
   </objectgroup>
  </tile>
  <tile id="213">
   <objectgroup draworder="index" id="2">
-   <object id="1" x="0" y="15.6364">
-    <polygon points="0,0 7.81818,0.181818 15.8182,-8.27273 15.9091,-15.7273 -0.181818,-15.7273"/>
+   <object id="3" x="15.9565" y="0.130435">
+    <polygon points="0,0 -0.0434783,7.21739 -8.65217,15.8261 -15.9565,15.913 -16,-0.130435"/>
    </object>
   </objectgroup>
  </tile>
  <tile id="214">
   <objectgroup draworder="index" id="2">
-   <object id="1" x="6.63636" y="0.181818">
-    <polygon points="0,0 -6.54545,6.63636 -6.63636,-0.181818"/>
+   <object id="1" x="6.91304" y="0">
+    <polygon points="0,0 -6.82609,6.78261 -6.91304,0"/>
    </object>
   </objectgroup>
  </tile>

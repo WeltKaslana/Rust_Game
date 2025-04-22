@@ -1,15 +1,16 @@
-use bevy::{color::palettes::css::{BLUE, GREEN, RED}, dev_tools::states::*, ecs::{component::ComponentId, query, system::EntityCommands, world::DeferredWorld
-                }, math::Vec3, prelude::*, transform};
+use bevy::{
+    color::palettes::css::{BLUE, GREEN, RED}, 
+    dev_tools::states::*, 
+    ecs::{component::ComponentId, query, system::EntityCommands, world::DeferredWorld}, 
+    math::Vec3, prelude::*, 
+    transform};
 use bevy_ecs_tiled::{prelude::*,};
 // use bevy_ecs_tilemap::{map::TilemapSize, TilemapBundle};
 
-use bevy_rapier2d::prelude::*;
+use bevy_rapier2d::{prelude::*};
 
 use crate::{
-    gamestate::GameState,
-    character::Character,
-    enemy::set_enemy,
-    resources::*,
+    character::Character, enemy::set_enemy, gamestate::GameState, gun::Bullet, resources::*
 };
 pub struct RoomPlugin;
 
@@ -118,7 +119,9 @@ impl Plugin for RoomPlugin {
             .add_systems(Update, switch_map.run_if(in_state(GameState::InGame)))
             .add_systems(Update, (
                 check_collision,
+                // check_contact,
                 evt_object_created,
+                evt_map_created,
                 ).run_if(in_state(GameState::InGame)))
             .add_systems(Update, log_transitions::<GameState>);
     }
@@ -204,21 +207,8 @@ fn switch_map(
 }
 
 fn check_collision(
-    // mut commands:Commands,
     mut collision_events: EventReader<CollisionEvent>,
-    // mut q: Query<Entity,(With<Collider>,Without<RigidBody>)>,
 ) {
-    
-    // if q.is_empty(){
-    //     return;
-    // }
-    // for e in q.iter_mut() {
-    //     commands.entity(e).insert(RigidBody::Dynamic)
-    //         .insert(GravityScale(0.0))
-    //         .insert(Sensor);
-        
-    //     // println!("over!");
-    // }
     for collision_event in collision_events.read() {
         println!("collision happen!");
         match collision_event {
@@ -231,7 +221,17 @@ fn check_collision(
         }
     }
 }
-
+fn check_contact(
+    q: Query<(&RapierContextSimulation)>,
+    b: Query<Entity, With<Bullet>>,
+) {
+    for r in q.iter() {
+        for bu in b.iter() {
+            
+        }
+        // r.contact_pairs_with(context_colliders, rigidbody_set, collider)
+    }
+}
 fn evt_object_created(
     mut commands: Commands,
     mut object_events: EventReader<TiledObjectCreated>,
@@ -250,8 +250,8 @@ fn evt_object_created(
         // 3.0是缩放比例，700和500是相对于程序坐标系的变异量
         if name.as_str() == "Object(Player)" {
             for mut trans in player_query.iter_mut() {
-                trans.translation.x = transform .translation.x * 3.0 - 700.0;
-                trans.translation.y = transform .translation.y * 3.0 - 500.0;
+                trans.translation.x = (transform .translation - 200.0).x * 3.0;
+                trans.translation.y = (transform .translation.y - 180.0) * -3.0;
             }
         }
         if name.as_str() == "Object(Enemy)" {
@@ -263,16 +263,30 @@ fn evt_object_created(
                 &mut commands, 
                 &source);
         }
-        // commands.spawn((
-        //     Transform::from_translation(
-        //         transform.translation.clone() * 3.0 
-        //         - Vec3::new(700.0, 500.0, 0.0)),
-        //     Collider::ball(5.0),
-        // ));
     }
 }
 
+fn evt_map_created (
+    mut commands: Commands,
+    mut map_events: EventReader<TiledMapCreated>,
+    mut q: Query<Entity,(With<Collider>, Without<RigidBody>, Without<Bullet>, Without<Character>)>,
+) {
+    //为瓦片添加属性
+    for _ in map_events.read() {
+        if q.is_empty(){
+            return;
+        }
+        for e in q.iter_mut() {
+            commands.entity(e)
+                .insert(RigidBody::Fixed)
+                .insert(LockedAxes::TRANSLATION_LOCKED);
+                // .insert(ActiveEvents::COLLISION_EVENTS)
+                // .insert(GravityScale(0.0));
+                // .insert(Sensor);
+        }
+    }
 
+}
 
 
 

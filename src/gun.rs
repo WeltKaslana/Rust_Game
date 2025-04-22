@@ -37,6 +37,9 @@ pub struct GunFire;
 pub struct Bullet;
 
 #[derive(Component)]
+pub struct BulletHit;
+
+#[derive(Component)]
 pub struct SpawnInstant(Instant);
 
 #[derive(Component)]
@@ -242,7 +245,10 @@ fn handle_gun_fire(
                 ..default()
             },
             Transform {
-                translation: vec3(gun_pos.x, gun_pos.y, 1.0),
+                translation: vec3(
+                    gun_pos.x + bullet_direction.x * 50.0, 
+                    gun_pos.y + bullet_direction.y * 50.0, 
+                    1.0),
                 rotation: Quat::from_rotation_z(dir.y.atan2(dir.x)),
                 scale: Vec3::splat(2.5),
             },
@@ -251,6 +257,11 @@ fn handle_gun_fire(
             SpawnInstant(Instant::now()),
             //碰撞体
             Collider::cuboid(2.0, 1.0),
+
+            RigidBody::Dynamic,
+            GravityScale(0.0),
+            ColliderMassProperties::Mass(1000.0),
+            LockedAxes::ROTATION_LOCKED,
             // Sensor,
             // CollisionGroups::new(Group::GROUP_3, Group::GROUP_2),
             ActiveEvents::COLLISION_EVENTS,
@@ -273,12 +284,53 @@ fn handle_bullet_move(
 
 fn despawn_old_bullets(
     mut commands: Commands,
-    bullet_query: Query<(&SpawnInstant, Entity), With<Bullet>>,
+    bullet_query: Query<(&SpawnInstant, Entity, &Transform), With<Bullet>>,
+    mut collision_events: EventReader<CollisionEvent>,
+    source: Res<GlobalCharacterTextureAtlas>,
 ) {
-    for (instant, e) in bullet_query.iter() {
+    for (instant, e, trans) in bullet_query.iter() {
         if instant.0.elapsed().as_secs_f32() > BULLET_TIME_SECS {
             // println!("Despawning bullet!");
             commands.entity(e).despawn();
+        }
+    }
+    for collision_event in collision_events.read() {
+        match collision_event {
+            CollisionEvent::Started(entity1, entity2, _) => {
+                let mut flag = false;
+                let mut trans = Vec3::splat(-100.0);
+                if let Ok((instant, e, transf)) = bullet_query.get(*entity1) {
+                    commands.entity(*entity1).despawn();
+                    trans = transf.translation;
+                    flag = true;
+                }
+                if let Ok((instant, e, transf)) = bullet_query.get(*entity2) {
+                    commands.entity(*entity2).despawn();
+                    trans = transf.translation;
+                    flag = true;
+                }
+                if flag {
+                    //产生子弹消失的特效
+                    commands.spawn((
+                        Sprite {
+                            image: source.image_gun_hit.clone(),
+                            texture_atlas: Some(TextureAtlas {
+                                layout: source.lay_out_gun_hit.clone(),
+                                index: 0,
+                            }),
+                            ..default()
+                        },
+                        Transform {
+                            translation: trans,
+                            scale: Vec3::splat(2.5),
+                            ..default()
+                        },
+                        AnimationConfig::new(15),
+                        BulletHit,
+                    ));
+                }
+            },
+            _ => {},
         }
     }
 }

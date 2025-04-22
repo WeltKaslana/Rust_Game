@@ -1,9 +1,9 @@
-use bevy::{dev_tools::states::*, prelude::*};
+use bevy::{dev_tools::states::*, ecs::query, prelude::*};
 use crate::{gamestate::GameState,
             character::{AnimationConfig, Character},
             resources::GlobalHomeTextureAtlas,
             };
-use bevy_rapier2d::prelude::*;
+use bevy_rapier2d::{prelude::*, rapier::prelude::{RigidBodyMassProps, RigidBodyType}};
 
 pub struct HomePlugin;
 //小空叫Sora
@@ -29,13 +29,15 @@ pub enum FridgeState {
 
 #[derive(Component)]
 pub struct Home;
+#[derive(Component)]
+pub struct Wall;
 
 impl Plugin for HomePlugin {
     fn build(&self, app: &mut App) {
         app
             .add_systems(Update, log_transitions::<GameState>)
             .add_systems(OnEnter(GameState::Home), setup)
-            .add_systems(Update, check_state.run_if(in_state(GameState::Home)))
+            .add_systems(Update, (check_state, update_wall).run_if(in_state(GameState::Home)))
             .add_systems(OnExit(GameState::Home), cleanup);
     }
 }
@@ -143,18 +145,51 @@ fn setup(
             image: asset_server.load("Billboard.png"),
             ..Default::default()
             },
-            Transform::from_scale(Vec3::splat(3.0)).with_translation(Vec3::new(75.0, -170.0, -0.5)),
+            Transform::from_scale(Vec3::splat(3.0)).with_translation(Vec3::new(75.0, -170.0 + 300.0, -0.5)),
             Home,
             //test
             Collider::cuboid(15.0, 18.0),
+            ColliderMassProperties::Mass(100.0),
             // CollisionGroups::new(Group::GROUP_2, Group::ALL),
             RigidBody::Dynamic,
+            LockedAxes::TRANSLATION_LOCKED_X,
+            GravityScale(5.0),
             // Sensor,
             ));
-    //地板
+    //地板和墙
+    // let joint = FixedJointBuilder::new().local_anchor1(Vec2::new(-750.0, 500.0));
+    commands.spawn((
+        Collider::cuboid(200.0, 500.0),
+        RigidBody::Dynamic,
+        ColliderMassProperties::Mass(10.0),
+        LockedAxes::TRANSLATION_LOCKED,
+        // GravityScale(0.0),
+        // Sensor,
+        // CollisionGroups::new(Group::GROUP_2, Group::ALL),
+        // ImpulseJoint::new(parentid, joint),
+        Transform::from_translation(Vec3::new(-750.0, 260.0, 0.0)),
+        Wall,
+        Home,
+        ));
+    commands.spawn((
+        Collider::cuboid(200.0, 500.0),
+        RigidBody::Dynamic,
+        ColliderMassProperties::Mass(1000.0),
+        LockedAxes::TRANSLATION_LOCKED,
+        // GravityScale(0.0),
+        // Sensor,
+        // CollisionGroups::new(Group::GROUP_2, Group::ALL),
+        Transform::from_translation(Vec3::new(750.0, 260.0, 0.0)),
+        Wall,
+        Home,
+        ));
     commands.spawn((
         Collider::cuboid(2400.0, 25.0),
         RigidBody::Dynamic,
+        ColliderMassProperties::Mass(1000.0),
+        // LockedAxes::TRANSLATION_LOCKED,
+        // GravityScale(0.0),
+        // Sensor,
         // CollisionGroups::new(Group::GROUP_2, Group::ALL),
         Transform::from_translation(Vec3::new(0.0, -270.0, 0.0)),
         Home,
@@ -162,19 +197,20 @@ fn setup(
     commands.spawn((
         Collider::cuboid(2400.0, 1.0),
         RigidBody::Dynamic,
+        // GravityScale(0.0),
+        // Sensor,
         Transform::from_translation(Vec3::new(0.0, -295.0, 10.0)),
         Home,
         ));
     commands.spawn((
-            Collider::cuboid(2400.0, 5.0),
-            RigidBody::Fixed,
-            Transform::from_translation(Vec3::new(0.0, -296.0, 10.0)),
-            Home,
-            ));
+        Collider::cuboid(2400.0, 5.0),
+        RigidBody::Fixed,
+        Transform::from_translation(Vec3::new(0.0, -296.0, 10.0)),
+        Home,
+        ));
+
 }
 fn check_state(
-    // asset_server: Res<AssetServer>,
-    // mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     player_query: Query<&Transform, (With<Character>, Without<Sora>, Without<Fridge>)>,
     mut sora_query: Query<(&Transform, &mut Sprite, &mut SoraState), (With<Sora>, Without<Fridge>, Without<Character>)>,
@@ -192,6 +228,9 @@ fn check_state(
     //小空
     if (sora_transform.translation.x - player_pos.x).abs() < 100.0 {
         // println!("activate Sora!");
+        if keyboard_input.just_pressed(KeyCode::KeyE) {
+            println!("Menu!");
+        }
         match *sora_state {
             SoraState::Loop => {
                 sora_sprite.image = source.Sora_image_awake.clone();
@@ -251,7 +290,19 @@ fn check_state(
         }
     }
  }
-fn cleanup(
+ fn update_wall (
+    mut query: Query<&mut Transform, With<Wall>>,
+ ) {
+    for mut transform in &mut query {
+        if transform.translation.x < 0.0 {
+            transform.translation.x = -749.0;
+        }
+        else {
+            transform.translation.x = 749.0;
+        }
+    }
+ }
+ fn cleanup(
     mut commands: Commands, 
     mut menu_items_query: Query<Entity, With<Home>>) {
     for parent in &mut menu_items_query {

@@ -15,7 +15,9 @@ bevy_ecs_tiled = { version = "0.6.0", features = [
 ]}
 bevy_ecs_tilemap = "0.15.0"
 bevy_framepace = "0.18.1"
-bevy_rapier2d = "0.29.0"
+bevy_rapier2d = { version = "0.29.0", features = [
+    "picking-backend",
+]}
 rand = "0.9.0"
 
 

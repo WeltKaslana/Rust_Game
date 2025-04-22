@@ -19,6 +19,8 @@ pub struct GlobalCharacterTextureAtlas {
     pub lay_out_skill: Option<Handle<TextureAtlasLayout>>,
     pub image_skill: Option<Handle<Image>>,
     pub image_gun: Handle<Image>,
+    pub lay_out_gun_hit: Handle<TextureAtlasLayout>,
+    pub image_gun_hit: Handle<Image>,
     pub id: u8,
 }
 
@@ -32,11 +34,14 @@ impl GlobalCharacterTextureAtlas {
         let mut layout_idle = TextureAtlasLayout::from_grid(UVec2::splat(64),6,1,None,None);
         let mut layout_jump = TextureAtlasLayout::from_grid(UVec2::splat(64),4,2,None,None);
         let mut layout_skill = TextureAtlasLayout::from_grid(UVec2::splat(96),12,1,None,None);
+        let mut layout_gun_hit = TextureAtlasLayout::from_grid(UVec2::splat(32),6,1,None,None);
         let mut path_move = String::from("Shiroko_Move.png");
         let mut path_idle = String::from("Shiroko_Idle.png");
         let mut path_jump = String::from("Shiroko_Jump.png");
         let mut path_skill = String::from("Shiroko_Dash.png");
         let mut path_gun = String::from("Shiroko_Gun.png");
+        let mut path_gun_hit = String::from("Shiroko_Hit_Effect.png");
+        
         match id {
             1 => {//Shiroko
                 println!("Shiroko!");        
@@ -47,11 +52,13 @@ impl GlobalCharacterTextureAtlas {
                 layout_idle = TextureAtlasLayout::from_grid(UVec2::splat(64),11,1,None,None);
                 layout_jump = TextureAtlasLayout::from_grid(UVec2::splat(64),4,2,None,None);
                 layout_skill = TextureAtlasLayout::from_grid(UVec2::splat(96),8,2,None,None);
+                layout_gun_hit = TextureAtlasLayout::from_grid(UVec2::splat(128),7,1,None,None);
                 path_move = String::from("Arisu_Move.png");
                 path_idle = String::from("Arisu_Idle.png");
                 path_jump = String::from("Arisu_Jump.png"); 
                 path_skill = String::from("Arisu_Shield.png");
                 path_gun =  String::from("Arisu_Gun.png"); 
+                path_gun_hit = String::from("Arisu_Hit_Effect.png");
             }
             3 => {//Utaha
                 println!("Utaha!");
@@ -71,6 +78,8 @@ impl GlobalCharacterTextureAtlas {
             image_move: asset_server.load(path_move),
             lay_out_jump: texture_atlas_layouts.add(layout_jump),
             image_jump: asset_server.load(path_jump),
+            lay_out_gun_hit: texture_atlas_layouts.add(layout_gun_hit),
+            image_gun_hit: asset_server.load(path_gun_hit),
             image_gun: asset_server.load(path_gun),
             lay_out_skill: if id != 3 { Some(texture_atlas_layouts.add(layout_skill)) } else { None },
             image_skill: if id != 3 { Some(asset_server.load(path_skill)) } else { None },

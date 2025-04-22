@@ -73,7 +73,7 @@ fn setup_boss (
     source: Res<GlobalBossTextureAtlas>,
     mut commands: Commands,
 ) {
-    set_boss(Vec2::new(0.0, 0.0), &mut commands, &source);
+    set_boss(Vec2::new(-130.0, 140.0), &mut commands, &source);
 }
 
 pub fn set_boss(
