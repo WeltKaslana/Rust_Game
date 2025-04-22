@@ -1,7 +1,7 @@
 use bevy::{
     dev_tools::states::*, 
     log::tracing_subscriber::fmt::time, 
-    prelude::*
+    prelude::*, transform
 };
 
 use crate::{
@@ -9,7 +9,7 @@ use crate::{
         Boss, BossComponent, 
         BossState, 
         Direction, 
-        Health
+        Health, Skillflag, BossDeathEffect
     }, 
     character::{
         AnimationConfig, 
@@ -17,15 +17,12 @@ use crate::{
         PlayerState 
     }, 
     enemy::{
-        BulletDirection, 
-        Enemy, EnemyBullet, 
-        EnemyState, EnemyType, 
-        Fireflag, PatrolState
+        BulletDirection, Enemy, EnemyBullet, EnemyDeathEffect, EnemyState, EnemyType, Fireflag, PatrolState
     }, 
     gamestate::GameState, 
-    gun::{Bullet, Cursor, Gun, GunFire, BulletHit}, 
+    gun::{Bullet, BulletHit, Cursor, Gun, GunFire}, 
     home::{Fridge, FridgeState, Sora, SoraState}, 
-    resources::{GlobalHomeTextureAtlas, GlobalCharacterTextureAtlas},
+    resources::{GlobalCharacterTextureAtlas, GlobalHomeTextureAtlas},
 };
 
 pub struct AnimationPlugin;
@@ -46,6 +43,7 @@ impl Plugin for AnimationPlugin {
                 animate_enemy_bullet,
                 animate_boss,
                 boss_filpx,
+                death_effect,
             ).run_if(in_state(GameState::InGame)),)
             .add_systems(Update, 
                 (
@@ -326,13 +324,14 @@ fn animate_boss(
         &mut AnimationConfig,
         &mut Sprite,
         & BossState,
-        & Boss
+        & Boss,
+        &mut Skillflag,
     ), With<Boss>>,
 ) {
     if boss_query.is_empty() {
         return;
     }
-    for (mut aconfig, mut boss, bossstate, bosscomponent) in boss_query.iter_mut() {
+    for (mut aconfig, mut boss, bossstate, bosscomponent, mut fireflag) in boss_query.iter_mut() {
         match bosscomponent {
             Boss::Body => {
                 let all = match bossstate {
@@ -361,6 +360,7 @@ fn animate_boss(
                     if let Some(atlas) = &mut boss.texture_atlas {
                         aconfig.frame_timer = AnimationConfig::timer_from_fps(aconfig.fps2p);
                         atlas.index = (atlas.index + 1) % all;
+                        fireflag.0 = 0;
                     }
                 }
 
@@ -375,6 +375,7 @@ fn animate_boss(
                     if let Some(atlas) = &mut boss.texture_atlas {
                         aconfig.frame_timer = AnimationConfig::timer_from_fps(aconfig.fps2p);
                         atlas.index = (atlas.index + 1) % all;
+                        fireflag.0 = 0;
                     }
                 }
 
@@ -398,11 +399,16 @@ fn animate_boss(
 
 fn boss_filpx(
     mut boss_query: Query<(
-            &mut Sprite,
-            & Direction
-        ), (With<Boss>, Without<BossComponent>)>
+        &mut Sprite,
+        & Direction
+    ), (With<Boss>, Without<BossComponent>)>,
+    mut bosscomponent_query: Query<(
+        &mut Sprite,
+        &mut Transform,
+        & Boss
+    ),(With<Boss>, With<BossComponent>)>,
 ) {
-    if boss_query.is_empty() {
+    if boss_query.is_empty() || bosscomponent_query.is_empty() {
         return;
     }
     let (mut boss, direction) = boss_query.single_mut();
@@ -410,6 +416,69 @@ fn boss_filpx(
         boss.flip_x = false;
     }else {
         boss.flip_x = true;
+    }
+    for (mut bosscomponent, mut transform, component) in bosscomponent_query.iter_mut() {
+        if direction.x >= 0.0 {
+            bosscomponent.flip_x = false;
+            match component {
+                Boss::Gun => {
+                    bosscomponent.flip_y = false;
+                    transform.translation.x = -25.0;
+                },
+                _=> { },
+            }
+        }else {
+            bosscomponent.flip_x = true;
+            match component {
+                Boss::Gun => {
+                    bosscomponent.flip_x = false;
+                    bosscomponent.flip_y = true;
+                    transform.translation.x = 25.0;
+                },
+                _=> { },
+            }
+        }
+    }
+    
+}
+
+fn death_effect(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut enemy_effect_quey: Query<(Entity, &mut Sprite, &mut AnimationConfig), (With<EnemyDeathEffect>, Without<BossDeathEffect>)>,
+    mut boss_effect_query: Query<(Entity, &mut Sprite, &mut AnimationConfig), (With<BossDeathEffect>, Without<EnemyDeathEffect>)>,
+) {
+    if !enemy_effect_quey.is_empty() {
+        for (entity, mut sprite, mut aconfig) in enemy_effect_quey.iter_mut() {
+            let all = 7;
+            aconfig.frame_timer.tick(time.delta());
+            if aconfig.frame_timer.just_finished(){
+                if let Some(atlas) = &mut sprite.texture_atlas {
+                    if atlas.index == all - 1 {
+                        commands.entity(entity).despawn();
+                        continue;
+                    }
+                    aconfig.frame_timer = AnimationConfig::timer_from_fps(aconfig.fps2p);
+                    atlas.index = (atlas.index + 1) % all;
+                }
+            }
+        }
+    }
+
+    if !boss_effect_query.is_empty() {
+        let (entity, mut sprite, mut aconfig) = boss_effect_query.single_mut();
+        let all = 8;
+            aconfig.frame_timer.tick(time.delta());
+            if aconfig.frame_timer.just_finished(){
+                if let Some(atlas) = &mut sprite.texture_atlas {
+                    if atlas.index == all - 1 {
+                        commands.entity(entity).despawn();
+                        return;
+                    }
+                    aconfig.frame_timer = AnimationConfig::timer_from_fps(aconfig.fps2p);
+                    atlas.index = (atlas.index + 1) % all;
+                }
+            }
     }
 }
 

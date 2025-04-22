@@ -1,7 +1,9 @@
+use bevy::audio::Source;
 use bevy::render::texture;
 use bevy::state::commands;
 use bevy::transform;
 use bevy::{dev_tools::states::*, prelude::*, time::Stopwatch};
+use crate::enemy::Fireflag;
 use crate::{gamestate::GameState,
     configs::*,character::*};
 use crate::*;
@@ -9,6 +11,7 @@ use rand::Rng;
 use character::AnimationConfig;
 use bevy_rapier2d::prelude::*;
 use std::time::Duration;
+use std::f32::consts::PI;
 
 pub struct BossPlugin;
 
@@ -22,6 +25,9 @@ pub enum Boss {
 
 #[derive(Component)]
 pub struct BossComponent;
+
+#[derive(Component)]
+pub struct BossDeathEffect;
 
 #[derive(Component)]
 pub enum BossState {
@@ -62,6 +68,8 @@ impl Plugin for BossPlugin {
                         handle_boss_skill,
                         handle_bossbullet,
                         handle_bossbullet_move,
+                        handle_bossgun_rotation,
+                        handle_boss_death,
                 ).run_if(in_state(GameState::InGame))
             )
             .add_systems(Update, log_transitions::<GameState>)
@@ -113,8 +121,7 @@ pub fn set_boss(
         KinematicCharacterController {
             ..Default::default()
         },
-
-
+        ColliderMassProperties::Mass(1500.0),
         )
     );
 
@@ -133,6 +140,10 @@ pub fn set_boss(
             Boss::Missile,
             BossState::Idea,
             AnimationConfig::new(15),
+            Timer{
+                timer1: Stopwatch::new(),
+            },
+            Skillflag(0),
         )
     );//导弹仓
 
@@ -151,6 +162,10 @@ pub fn set_boss(
             Boss::Shield,
             BossState::Idea,
             AnimationConfig::new(15),
+            Timer{
+                timer1: Stopwatch::new(),
+            },
+            Skillflag(0),
         )
     );//机枪盖
 
@@ -169,6 +184,10 @@ pub fn set_boss(
             Boss::Gun,
             BossState::Idea,
             AnimationConfig::new(15),
+            Timer{
+                timer1: Stopwatch::new(),
+            },
+            Skillflag(0),
         )
     );//机枪
 }
@@ -399,9 +418,9 @@ fn handle_boss_skill(
                         if atlas.index == 7 {
                             atlas.index = 0;
                             *bossstate = BossState::CollideEnd;
+                            timer.timer1.reset();
                         }
                     }
-                    timer.timer1.reset();
                 }
             },
             BossState::CollideEnd => {
@@ -424,13 +443,168 @@ fn handle_boss_skill(
 }
 
 fn handle_bossbullet(
-
+    mut commands: Commands,
+    //source: &Res<GlobalBossbulletTextureAtlas>,
+    mut bosscomponent_query: Query<(
+        &mut Sprite,
+        &mut BossState,
+        & Boss,
+        &mut Timer,
+        &mut Skillflag,
+    ), (With<Boss>, With<BossComponent>, Without<Character>)>,
+    mut play_query: Query<& Transform, (With<Character>, Without<Boss>, Without<BossComponent>)>,
+    mut boss_query: Query<(
+        & Transform,
+        &mut Skillflag,
+        & Direction
+    ), (With<Boss>, Without<BossComponent>, Without<Character>)>,
+    time: Res<Time>,
 ) {
-    
+    if bosscomponent_query.is_empty() || play_query.is_empty() || boss_query.is_empty() {
+        return;
+    }
+
+    let (boss_transform, mut flag, boss_direction) = boss_query.single_mut();
+    let player_transform = play_query.single_mut();
+
+    for (mut boss_component, mut component_state, component, mut timer, mut fireflag) in bosscomponent_query.iter_mut() {
+        match component {
+            Boss::Gun => {
+                match *component_state {
+                    BossState::Gunfire => {
+                        if let Some(atlas) = &mut boss_component.texture_atlas {
+                            if atlas.index == 6 && fireflag.0 == 0 {
+                                fireflag.0 = 1;
+                                //commands.spawn(bundle);
+                            }
+                        }
+                        timer.timer1.tick(time.delta());
+                        if timer.timer1.elapsed() >= Duration::from_millis(1000) {
+                            if let Some(atlas) = &mut boss_component.texture_atlas {
+                                if atlas.index == 6 {
+                                    atlas.index = 0;
+                                    timer.timer1.reset();
+                                    *component_state = BossState::Idea;
+                                    flag.0 = 0;
+                                }
+                            }
+                        }
+                    },
+                    _=> { },
+                }
+            },
+            Boss::Shield => {
+                match *component_state {
+                    BossState::Gunfire => {
+                        timer.timer1.tick(time.delta());
+                        if timer.timer1.elapsed() >= Duration::from_millis(1000) {
+                            if let Some(atlas) = &mut boss_component.texture_atlas {
+                                if atlas.index == 6 {
+                                    atlas.index = 0;
+                                    timer.timer1.reset();
+                                    *component_state = BossState::Idea;
+                                }
+                            }
+                        }
+                    },
+                    _=> { },
+                }
+            },
+            Boss::Missile => {
+                match *component_state {
+                    BossState::Missilefire => {
+                        if let Some(atlas) = &mut boss_component.texture_atlas {
+                            if atlas.index == 19 && fireflag.0 == 0 {
+                                fireflag.0 = 1;
+                                //commands.spawn();
+                            }else if atlas.index == 20 && fireflag.0 == 0 {
+                                fireflag.0 = 1;
+                                //commands.spawn();
+                            }else if atlas.index == 21 && fireflag.0 == 0 {
+                                fireflag.0 = 1;
+                                //commands.spawn();
+                            }else if atlas.index == 29 {
+                                atlas.index = 0;
+                                *component_state = BossState::Idea;
+                                flag.0 = 0;
+                            }
+                        }
+                    },
+                    _=> { },
+                }
+            },
+            _=> { },
+        }
+    }
+
+
+
 }
 
 fn handle_bossbullet_move(
 
 ) {
 
+}
+
+fn handle_bossgun_rotation(
+    mut gun_query: Query<(
+        &mut Transform,
+        & Boss
+    ), (With<Boss>, With<BossComponent>, Without<Character>)>,
+    player_query : Query<& Transform, (With<Character>, Without<Boss>, Without<BossComponent>)>,
+    boss_query :Query<(& Transform, & Direction), (With<Boss>, Without<BossComponent>, Without<Character>)>,
+) {
+    if gun_query.is_empty() || player_query.is_empty() || boss_query.is_empty() {
+        return;
+    }
+    let playtransfrom = player_query.single();
+    let (bosstransform, direction) = boss_query.single();
+    let mut dx =playtransfrom.translation.x - bosstransform.translation.x;
+    let dy =playtransfrom.translation.y - bosstransform.translation.y;
+    if direction.x >= 0.0 {
+        dx = dx + 25.0;
+    }else {
+        dx = dx - 25.0;
+    }
+    let angle = (dy).atan2(dx);
+    // if direction.x <= 0.0 {
+    //     angle = angle + PI;
+    // }
+    for (mut componenttransform, component) in gun_query.iter_mut() {
+        match component {
+            Boss::Gun => {
+                componenttransform.rotation = Quat::from_rotation_z(angle);
+            },
+            _=> { },
+        }
+    }
+}
+
+fn handle_boss_death(
+    mut commands: Commands,
+    mut boss_query: Query<(Entity, & Transform, & Health), (With<Boss>, Without<BossComponent>)>,
+    source: Res<GlobalBossTextureAtlas>,
+) {
+    if boss_query.is_empty() {
+        return;
+    }
+    let (entity, loc, health) = boss_query.single_mut();
+    if health.0 <= 0.0 {
+        commands.entity(entity).despawn();
+        commands.spawn( (
+            Sprite {
+                image: source.image_death.clone(),
+                texture_atlas: Some(TextureAtlas {
+                    layout: source.layout_death.clone(),
+                    index: 0,
+                }),
+                ..Default::default()
+            },
+            Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(loc.translation.x, loc.translation.y, -50.0)),
+            AnimationConfig::new(10),
+            BossDeathEffect,
+        )
+        );
+    }
 }

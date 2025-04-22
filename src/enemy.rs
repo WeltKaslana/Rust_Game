@@ -14,6 +14,9 @@ pub struct EnemyPlugin;
 pub struct Enemy;
 
 #[derive(Component)]
+pub struct EnemyDeathEffect;
+
+#[derive(Component)]
 pub enum EnemyBullet {
     DroneMissile,
     DroneVulcan,
@@ -167,6 +170,7 @@ pub fn set_enemy(
             enemy_entity.insert(KinematicCharacterController {
                 ..Default::default()
             });
+            enemy_entity.insert(ColliderMassProperties::Mass(10.0));
         },
         EnemyType::DroneMissile=>{
             let mut enemy_entity =
@@ -206,6 +210,7 @@ pub fn set_enemy(
             enemy_entity.insert(KinematicCharacterController {
                 ..Default::default()
             });
+            enemy_entity.insert(ColliderMassProperties::Mass(10.0));
         },
         EnemyType::DroneVulcan=>{
             let mut enemy_entity =
@@ -245,6 +250,7 @@ pub fn set_enemy(
             enemy_entity.insert(KinematicCharacterController {
                 ..Default::default()
             });
+            enemy_entity.insert(ColliderMassProperties::Mass(10.0));
         },
         EnemyType::UnknownGuardianTypeF=>{
             let mut enemy_entity =
@@ -284,6 +290,7 @@ pub fn set_enemy(
             enemy_entity.insert(KinematicCharacterController {
                 ..Default::default()
             });
+            enemy_entity.insert(ColliderMassProperties::Mass(10.0));
         },
     }
 }
@@ -968,15 +975,30 @@ fn handle_bullet_move(
 }
 
 fn handle_enemy_death(
-     mut commands: Commands,
-     mut enemy_query: Query<(Entity,& Health), With<Enemy>>,
+    mut commands: Commands,
+    mut enemy_query: Query<(Entity, & Health, & Transform), With<Enemy>>,
+    source: Res<GlobalEnemyTextureAtlas>,
 ) {
     if enemy_query.is_empty() {
         return;
     }
-    for (enemy,health) in enemy_query.iter_mut() {
+    for (enemy,health, loc) in enemy_query.iter_mut() {
         if health.0 <= 0.0 {
             commands.entity(enemy).despawn();
+            commands.spawn( (
+                Sprite {
+                    image: source.image_death.clone(),
+                    texture_atlas: Some(TextureAtlas {
+                        layout: source.layout_death.clone(),
+                        index: 0,
+                    }),
+                    ..Default::default()
+                },
+                Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(loc.translation.x, loc.translation.y, -50.0)),
+                AnimationConfig::new(10),
+                EnemyDeathEffect,
+            )
+            );
         }
     }
 }
@@ -997,13 +1019,13 @@ fn handle_enemy_bullet_collision_events(
                 CollisionEvent::Started(entity1,entity2, _) => {
                     if entity2.eq(&enemy) {
                         if let Ok(b) = player_query.get(*entity1) {
-                            commands.entity(*entity1).despawn();
+                            // commands.entity(*entity1).despawn();
                             health.0 -= BULLET_DAMAGE;
                         }
                     }
                     if entity1.eq(&enemy) {
                         if let Ok(b) = player_query.get(*entity2) {
-                            commands.entity(*entity2).despawn();
+                            // commands.entity(*entity2).despawn();
                             health.0 -= BULLET_DAMAGE;
                         }
                     }
