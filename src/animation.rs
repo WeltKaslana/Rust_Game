@@ -43,7 +43,7 @@ impl Plugin for AnimationPlugin {
                 animate_enemy_bullet,
                 animate_boss,
                 boss_filpx,
-                death_effect,
+                enemyboss_death_effect,
             ).run_if(in_state(GameState::InGame)),)
             .add_systems(Update, 
                 (
@@ -184,6 +184,7 @@ fn animate_enemy(
                     if let Some(atlas) = &mut enemy.texture_atlas {
                         aconfig.frame_timer = AnimationConfig::timer_from_fps(aconfig.fps2p);
                         atlas.index = (atlas.index + 1) % all;
+                        *flag = Fireflag::Fire;
                     }
                 }
             },
@@ -442,7 +443,7 @@ fn boss_filpx(
     
 }
 
-fn death_effect(
+fn enemyboss_death_effect(
     mut commands: Commands,
     time: Res<Time>,
     mut enemy_effect_quey: Query<(Entity, &mut Sprite, &mut AnimationConfig), (With<EnemyDeathEffect>, Without<BossDeathEffect>)>,

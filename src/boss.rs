@@ -5,7 +5,7 @@ use bevy::transform;
 use bevy::{dev_tools::states::*, prelude::*, time::Stopwatch};
 use crate::enemy::Fireflag;
 use crate::{gamestate::GameState,
-    configs::*,character::*};
+    configs::*,character::*, gun::Bullet};
 use crate::*;
 use rand::Rng;
 use character::AnimationConfig;
@@ -28,6 +28,9 @@ pub struct BossComponent;
 
 #[derive(Component)]
 pub struct BossDeathEffect;
+
+#[derive(Component)]
+pub struct BossBullet;
 
 #[derive(Component)]
 pub enum BossState {
@@ -54,7 +57,8 @@ pub struct Skillflag(pub u8);
 
 #[derive(Component)]
 pub struct Timer {
-    pub timer1: Stopwatch
+    pub timer1: Stopwatch,
+    pub timer2: Stopwatch,
 }
 
 impl Plugin for BossPlugin {
@@ -66,9 +70,10 @@ impl Plugin for BossPlugin {
                     (
                         handle_boss_animation,
                         handle_boss_skill,
-                        handle_bossbullet,
+                        handle_bossbullet_setup,
                         handle_bossbullet_move,
                         handle_bossgun_rotation,
+                        handle_boss_hurt,
                         handle_boss_death,
                 ).run_if(in_state(GameState::InGame))
             )
@@ -110,6 +115,7 @@ pub fn set_boss(
         },
         Timer{
             timer1: Stopwatch::new(),
+            timer2: Stopwatch::new(),
         },
         AnimationConfig::new(15),
 
@@ -142,6 +148,7 @@ pub fn set_boss(
             AnimationConfig::new(15),
             Timer{
                 timer1: Stopwatch::new(),
+                timer2: Stopwatch::new(),
             },
             Skillflag(0),
         )
@@ -164,6 +171,7 @@ pub fn set_boss(
             AnimationConfig::new(15),
             Timer{
                 timer1: Stopwatch::new(),
+                timer2: Stopwatch::new(),
             },
             Skillflag(0),
         )
@@ -186,6 +194,7 @@ pub fn set_boss(
             AnimationConfig::new(15),
             Timer{
                 timer1: Stopwatch::new(),
+                timer2: Stopwatch::new(),
             },
             Skillflag(0),
         )
@@ -317,7 +326,7 @@ fn handle_boss_skill(
         return;
     }
     let (mut boss, bossloc,mut bossstate, health, mut timer, mut direction, mut flag, mut controller) = boss_query.single_mut();
-    let (playerloc) = play_query.single_mut();
+    let playerloc = play_query.single_mut();
     let dx = playerloc.translation.x - bossloc.translation.x;
     let dy = playerloc.translation.y - bossloc.translation.y;
     let mut rng = rand::rng();
@@ -438,11 +447,298 @@ fn handle_boss_skill(
             BossState::Missilefire => { },
         }
     } else {
-
+        match *bossstate {
+            BossState::Idea => {
+                timer.timer1.tick(time.delta());
+                if timer.timer1.elapsed() >= Duration::from_millis(300) {
+                    if let Some(atlas) = &mut boss.texture_atlas {
+                        if atlas.index == 3 {
+                            atlas.index = 0;
+                            timer.timer1.reset();
+                            let random_index = rng.random_range(0..100);
+                            match random_index {
+                                0..5 => {//继续停留
+                                    *bossstate = BossState::Idea;
+                                },
+                                5..45 => {//冲撞技能
+                                    *bossstate = BossState::CollideStart;
+                                    direction.x = dx;
+                                    direction.y = dy;
+                                },
+                                45..75 => {//机枪开火
+                                    *bossstate = BossState::Idea;
+                                    for (mut bosscomponent, mut componentstate, component) in bosscomponent_query.iter_mut() {
+                                        match component {
+                                            Boss::Gun => {
+                                                match *componentstate {
+                                                    BossState::Gunfire => { },
+                                                    _=>{
+                                                        *componentstate = BossState::Gunfire;
+                                                        if let Some(componentatlas) = &mut bosscomponent.texture_atlas {
+                                                            componentatlas.index = 0;
+                                                        }
+                                                    },
+                                                }
+                                            },
+                                            Boss::Shield => {
+                                                match *componentstate {
+                                                    BossState::Gunfire => { },
+                                                    _=>{
+                                                        *componentstate = BossState::Gunfire;
+                                                        if let Some(componentatlas) = &mut bosscomponent.texture_atlas {
+                                                            componentatlas.index = 0;
+                                                        }
+                                                    },
+                                                }
+                                            },
+                                            _=> { },
+                                        }
+                                    }
+                                },
+                                75..100 => {//导弹开火
+                                    *bossstate = BossState::Idea;
+                                    for (mut bosscomponent, mut componentstate, component) in bosscomponent_query.iter_mut() {
+                                        match component {
+                                            Boss::Missile => {
+                                                match *componentstate {
+                                                    BossState::Missilefire => { },
+                                                    _=>{
+                                                        *componentstate = BossState::Missilefire;
+                                                        if let Some(componentatlas) = &mut bosscomponent.texture_atlas {
+                                                            componentatlas.index = 0;
+                                                        }
+                                                    },
+                                                }
+                                            },
+                                            _=> { },
+                                        }
+                                    }
+                                },
+                                _=> {timer.timer1.reset();},
+                            }
+                        }
+                    }
+                }
+            },
+            BossState::Move => { },
+            BossState::CollideStart => {
+                let dir =Vec2::new(direction.x, direction.y).normalize();
+                controller.translation =  Some(dir.normalize_or_zero().clone() * BOSS_CHARGE_SPEED);
+                if let Some(atlas) = &mut boss.texture_atlas {
+                    if atlas.index == 9 {
+                        atlas.index = 0;
+                        *bossstate = BossState::CollideLoop;
+                    }
+                }
+                timer.timer1.tick(time.delta());
+                if timer.timer1.elapsed() >= Duration::from_millis(300) {
+                    timer.timer1.reset();
+                    let random_index = rng.random_range(0..100);
+                    match random_index {
+                        0..5 => {//继续停留
+                        },
+                        5..15 => {//冲撞技能
+                        },
+                        15..65 => {//机枪开火
+                            for (mut bosscomponent, mut componentstate, component) in bosscomponent_query.iter_mut() {
+                                match component {
+                                    Boss::Gun => {
+                                        match *componentstate {
+                                            BossState::Gunfire => { },
+                                            _=>{
+                                                *componentstate = BossState::Gunfire;
+                                                if let Some(componentatlas) = &mut bosscomponent.texture_atlas {
+                                                    componentatlas.index = 0;
+                                                }
+                                            },
+                                        }
+                                    },
+                                    Boss::Shield => {
+                                        match *componentstate {
+                                            BossState::Gunfire => { },
+                                            _=>{
+                                                *componentstate = BossState::Gunfire;
+                                                if let Some(componentatlas) = &mut bosscomponent.texture_atlas {
+                                                    componentatlas.index = 0;
+                                                }
+                                            },
+                                        }
+                                    },
+                                    _=> { },
+                                }
+                            }
+                        },
+                        65..100 => {//导弹开火
+                            for (mut bosscomponent, mut componentstate, component) in bosscomponent_query.iter_mut() {
+                                match component {
+                                    Boss::Missile => {
+                                        match *componentstate {
+                                            BossState::Missilefire => { },
+                                            _=>{
+                                                *componentstate = BossState::Missilefire;
+                                                if let Some(componentatlas) = &mut bosscomponent.texture_atlas {
+                                                    componentatlas.index = 0;
+                                                }
+                                            },
+                                        }
+                                    },
+                                    _=> { },
+                                }
+                            }
+                        },
+                        _=> {timer.timer1.reset();},
+                    }
+                }
+            },
+            BossState::CollideLoop => {
+                let dir =Vec2::new(direction.x, direction.y).normalize();
+                controller.translation =  Some(dir.normalize_or_zero().clone() * BOSS_CHARGE_SPEED);
+                timer.timer2.tick(time.delta());
+                if timer.timer2.elapsed() >= Duration::from_millis(1000) {
+                    if let Some(atlas) = &mut boss.texture_atlas {
+                        if atlas.index == 7 {
+                            atlas.index = 0;
+                            *bossstate = BossState::CollideEnd;
+                            timer.timer2.reset();
+                        }
+                    }
+                }
+                timer.timer1.tick(time.delta());
+                if timer.timer1.elapsed() >= Duration::from_millis(300) {
+                    timer.timer1.reset();
+                    let random_index = rng.random_range(0..100);
+                    match random_index {
+                        0..5 => {//继续停留
+                        },
+                        5..15 => {//冲撞技能
+                        },
+                        15..65 => {//机枪开火
+                            for (mut bosscomponent, mut componentstate, component) in bosscomponent_query.iter_mut() {
+                                match component {
+                                    Boss::Gun => {
+                                        match *componentstate {
+                                            BossState::Gunfire => { },
+                                            _=>{
+                                                *componentstate = BossState::Gunfire;
+                                                if let Some(componentatlas) = &mut bosscomponent.texture_atlas {
+                                                    componentatlas.index = 0;
+                                                }
+                                            },
+                                        }
+                                    },
+                                    Boss::Shield => {
+                                        match *componentstate {
+                                            BossState::Gunfire => { },
+                                            _=>{
+                                                *componentstate = BossState::Gunfire;
+                                                if let Some(componentatlas) = &mut bosscomponent.texture_atlas {
+                                                    componentatlas.index = 0;
+                                                }
+                                            },
+                                        }
+                                    },
+                                    _=> { },
+                                }
+                            }
+                        },
+                        65..100 => {//导弹开火
+                            for (mut bosscomponent, mut componentstate, component) in bosscomponent_query.iter_mut() {
+                                match component {
+                                    Boss::Missile => {
+                                        match *componentstate {
+                                            BossState::Missilefire => { },
+                                            _=>{
+                                                *componentstate = BossState::Missilefire;
+                                                if let Some(componentatlas) = &mut bosscomponent.texture_atlas {
+                                                    componentatlas.index = 0;
+                                                }
+                                            },
+                                        }
+                                    },
+                                    _=> { },
+                                }
+                            }
+                        },
+                        _=> {timer.timer1.reset();},
+                    }
+                }
+            },
+            BossState::CollideEnd => {
+                let dir =Vec2::new(direction.x, direction.y).normalize();
+                controller.translation =  Some(dir.normalize_or_zero().clone() * BOSS_CHARGE_SPEED);
+                if let Some(atlas) = &mut boss.texture_atlas {
+                    if atlas.index == 1 {
+                        atlas.index = 0;
+                        *bossstate = BossState::Idea;
+                    }
+                }
+                timer.timer1.tick(time.delta());
+                if timer.timer1.elapsed() >= Duration::from_millis(300) {
+                    timer.timer1.reset();
+                    let random_index = rng.random_range(0..100);
+                    match random_index {
+                        0..5 => {//继续停留
+                        },
+                        5..15 => {//冲撞技能
+                        },
+                        15..65 => {//机枪开火
+                            for (mut bosscomponent, mut componentstate, component) in bosscomponent_query.iter_mut() {
+                                match component {
+                                    Boss::Gun => {
+                                        match *componentstate {
+                                            BossState::Gunfire => { },
+                                            _=>{
+                                                *componentstate = BossState::Gunfire;
+                                                if let Some(componentatlas) = &mut bosscomponent.texture_atlas {
+                                                    componentatlas.index = 0;
+                                                }
+                                            },
+                                        }
+                                    },
+                                    Boss::Shield => {
+                                        match *componentstate {
+                                            BossState::Gunfire => { },
+                                            _=>{
+                                                *componentstate = BossState::Gunfire;
+                                                if let Some(componentatlas) = &mut bosscomponent.texture_atlas {
+                                                    componentatlas.index = 0;
+                                                }
+                                            },
+                                        }
+                                    },
+                                    _=> { },
+                                }
+                            }
+                        },
+                        65..100 => {//导弹开火
+                            for (mut bosscomponent, mut componentstate, component) in bosscomponent_query.iter_mut() {
+                                match component {
+                                    Boss::Missile => {
+                                        match *componentstate {
+                                            BossState::Missilefire => { },
+                                            _=>{
+                                                *componentstate = BossState::Missilefire;
+                                                if let Some(componentatlas) = &mut bosscomponent.texture_atlas {
+                                                    componentatlas.index = 0;
+                                                }
+                                            },
+                                        }
+                                    },
+                                    _=> { },
+                                }
+                            }
+                        },
+                        _=> {timer.timer1.reset();},
+                    }
+                }
+            },
+            BossState::Gunfire => { },
+            BossState::Missilefire => { },
+        }
     }
 }
 
-fn handle_bossbullet(
+fn handle_bossbullet_setup(
     mut commands: Commands,
     //source: &Res<GlobalBossbulletTextureAtlas>,
     mut bosscomponent_query: Query<(
@@ -536,9 +832,6 @@ fn handle_bossbullet(
             _=> { },
         }
     }
-
-
-
 }
 
 fn handle_bossbullet_move(
@@ -584,6 +877,7 @@ fn handle_bossgun_rotation(
 fn handle_boss_death(
     mut commands: Commands,
     mut boss_query: Query<(Entity, & Transform, & Health), (With<Boss>, Without<BossComponent>)>,
+    mut bosscomponent_query: Query<Entity, (With<Boss>, With<BossComponent>)>,
     source: Res<GlobalBossTextureAtlas>,
 ) {
     if boss_query.is_empty() {
@@ -592,6 +886,9 @@ fn handle_boss_death(
     let (entity, loc, health) = boss_query.single_mut();
     if health.0 <= 0.0 {
         commands.entity(entity).despawn();
+        for bosscomponent in bosscomponent_query.iter_mut(){ 
+            commands.entity(bosscomponent).despawn();
+        }
         commands.spawn( (
             Sprite {
                 image: source.image_death.clone(),
@@ -607,4 +904,35 @@ fn handle_boss_death(
         )
         );
     }
+}
+
+fn handle_boss_hurt(
+    mut commands: Commands,
+    player_query: Query<Entity, With<Bullet>>,
+    mut collision_events: EventReader<CollisionEvent>,
+    mut boss_query: Query<(Entity, &mut Health), (With<Boss>, Without<BossComponent>)>,
+) {
+    if player_query.is_empty() || boss_query.is_empty() {
+        return;
+    }
+    for collision_event in collision_events.read() {
+        let (boss, mut health) =  boss_query.single_mut();
+            match collision_event {
+                CollisionEvent::Started(entity1,entity2, _) => {
+                    if entity2.eq(&boss) {
+                        if let Ok(b) = player_query.get(*entity1) {
+                            // commands.entity(*entity1).despawn();
+                            health.0 -= BULLET_DAMAGE;
+                        }
+                    }
+                    if entity1.eq(&boss) {
+                        if let Ok(b) = player_query.get(*entity2) {
+                            // commands.entity(*entity2).despawn();
+                            health.0 -= BULLET_DAMAGE;
+                        }
+                    }
+                },
+                CollisionEvent::Stopped(entity1, entity2, _) => { },
+            }
+        }
 }

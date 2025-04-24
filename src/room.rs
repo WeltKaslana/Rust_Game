@@ -118,7 +118,7 @@ impl Plugin for RoomPlugin {
             .add_systems(OnEnter(GameState::InGame), load_room)
             .add_systems(Update, switch_map.run_if(in_state(GameState::InGame)))
             .add_systems(Update, (
-                check_collision,
+                // check_collision,
                 // check_contact,
                 evt_object_created,
                 evt_map_created,

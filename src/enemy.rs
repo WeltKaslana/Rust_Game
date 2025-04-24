@@ -82,6 +82,7 @@ impl Plugin for EnemyPlugin {
                         handle_enemy_move,
                         handle_enemy_animation,
                         handle_enemy_fire,
+                        handle_sweeper_hit,
                         handle_bullet_move,
                         handle_enemy_death,
                         handle_enemy_bullet_collision_events,
@@ -147,7 +148,7 @@ pub fn set_enemy(
                 EnemyState::default(),
                 Enemy,
                 EnemyType::Sweeper,
-                Fireflag::Done,
+                Fireflag::Fire,
                 Health(ENEMY_HEALTH),
                 //Velocity(ENEMY_SPEED),
                 AnimationConfig::new(15),
@@ -1032,6 +1033,66 @@ fn handle_enemy_bullet_collision_events(
                 },
                 CollisionEvent::Stopped(entity1, entity2, _) => { },
             }
+        }
+    }
+}
+
+fn handle_sweeper_hit(
+    mut player_query: Query<(
+        &mut crate::character::Health,
+        & Transform
+    ), (With<Character>, Without<Enemy>)>,
+    mut enemy_query: Query<(
+        & Sprite,
+        & Transform,
+        & EnemyType,
+        & EnemyState,
+        &mut Fireflag,
+        & PatrolState,
+    ), (With<Enemy>, Without<Character>)>,
+) {
+    if player_query.is_empty() || enemy_query.is_empty() {
+        return;
+    }
+    let (mut health, playertransform) = player_query.single_mut();
+    for (enemy, enemytransform, enemytype, enemystate, mut flag, direction) in enemy_query.iter_mut() {
+        match enemytype {
+            EnemyType::Sweeper => {
+                match enemystate {
+                    EnemyState::FireLoop => {
+                        if let Some(atlas) = &enemy.texture_atlas {
+                            let dx = playertransform.translation.x - enemytransform.translation.x;
+                            let dy = playertransform.translation.y - enemytransform.translation.y;
+                            if (atlas.index >= 4 && atlas.index <= 5) || atlas.index == 8 || atlas.index == 10 || atlas.index == 12 {
+                                if direction.directionx >= 0.0 {
+                                    if dx >= 0.0 && dx.abs() <= ENEMY_ATTACK && dy <= ENEMY_ATTACK-50.0 && dy >= 25.0-ENEMY_ATTACK {
+                                        match *flag {
+                                            Fireflag::Fire => {
+                                                *flag = Fireflag::Done;
+                                                health.0 -=ENEMY_DAMAGE;
+                                            },
+                                            Fireflag::Done => {continue;}
+                                        }
+                                    }
+                                }else {
+                                    if dx < 0.0 && dx.abs() <= ENEMY_ATTACK && dy <= ENEMY_ATTACK-50.0 && dy >= 25.0-ENEMY_ATTACK {
+                                        match *flag {
+                                            Fireflag::Fire => {
+                                                *flag = Fireflag::Done;
+                                                health.0 -=ENEMY_DAMAGE;
+                                            },
+                                            Fireflag::Done => {continue;}
+                                        }
+                                    }
+                                }
+                            }
+                            else {continue;}
+                        }
+                    },
+                    _=> {continue;}
+                }
+            },
+            _=> {continue;}
         }
     }
 }
