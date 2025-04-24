@@ -149,3 +149,77 @@
 //         }
 //     }
 // }
+
+fn update_ui (
+    loc_query: Query<&Transform, (With<Camera2d>, Without<UI>, Without<Hurtui>)>,
+    // mut ui_query: Query<&mut Transform, (With<UI>, Without<Camera2d>, Without<Hurtui>)>,
+    mut hurtui_query: Query<&mut Transform, (With<Hurtui>, Without<Camera2d>, Without<UI>)>,
+) {
+    if loc_query.is_empty() {
+        return;
+    }
+    let loc = loc_query.single().translation.truncate();
+    // for mut trans in ui_query.iter_mut() {
+    //     trans.translation = Vec3::new(loc.x ,loc.y ,trans.translation.z) + UI_OFFSET;
+    // }
+    for mut trans in hurtui_query.iter_mut() {
+        trans.translation = Vec3::new(loc.x ,loc.y ,111.0);
+    }
+}
+
+// #[derive(Default, Debug, Clone, Reflect)]
+// #[reflect(Default, Debug)]
+// struct MyCustomPhysicsBackend;
+
+// // This one will just spawn an entity with a `MyCustomPhysicsComponent` Component,
+// // at the center of where the Tiled collider is.
+// impl TiledPhysicsBackend for MyCustomPhysicsBackend {
+//     fn spawn_colliders(
+//         &self,
+//         commands: &mut Commands,
+//         _tiled_map: &TiledMap,
+//         _filter: &TiledNameFilter,
+//         collider: &TiledCollider,
+//     ) -> Vec<TiledColliderSpawnInfos> {
+//         match collider {
+//             TiledCollider::Object {
+//                 layer_id: _,
+//                 object_id: _,
+//             } => {
+//                 vec![TiledColliderSpawnInfos {
+//                     name: String::from("Custom[Object]"),
+//                     entity: commands
+//                         .spawn(MyCustomPhysicsComponent(Color::from(BLUE)))
+//                         .id(),
+//                     transform: Transform::default(),
+//                 }]
+//             }
+//             TiledCollider::TilesLayer { layer_id: _ } => {
+//                 vec![TiledColliderSpawnInfos {
+//                     name: String::from("Custom[TilesLayer]"),
+//                     entity: commands
+//                         .spawn(MyCustomPhysicsComponent(Color::from(RED)))
+//                         .id(),
+//                     transform: Transform::default(),
+//                 }]
+//             }
+//         }
+//     }
+// }
+
+// // For debugging purpose, we will also add a 2D mesh where the collider is.
+// #[derive(Component)]
+// #[component(on_add = on_physics_component_added)]
+// struct MyCustomPhysicsComponent(pub Color);
+
+// fn on_physics_component_added(mut world: DeferredWorld, entity: Entity, _: ComponentId) {
+//     let color = world.get::<MyCustomPhysicsComponent>(entity).unwrap().0;
+//     let mesh = world
+//         .resource_mut::<Assets<Mesh>>()
+//         .add(Rectangle::from_length(32.));
+//     let material = world.resource_mut::<Assets<ColorMaterial>>().add(color);
+//     world
+//         .commands()
+//         .entity(entity)
+//         .insert((Mesh2d(mesh), MeshMaterial2d(material)));
+// }

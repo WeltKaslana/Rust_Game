@@ -30,7 +30,7 @@ impl Plugin for UIPlugin {
         .add_systems(OnEnter(GameState::Home), setup_ui_all)
         .add_systems(Update, (
             hurtui,
-            update_ui,
+            // update_ui,
             handle_state_bar,
         ))
         .add_systems(Update, log_transitions::<GameState>);
@@ -101,22 +101,7 @@ fn setup_ui_all (
     ));
 }
 
-fn update_ui (
-    loc_query: Query<&Transform, (With<Camera2d>, Without<UI>, Without<Hurtui>)>,
-    mut ui_query: Query<&mut Transform, (With<UI>, Without<Camera2d>, Without<Hurtui>)>,
-    mut hurtui_query: Query<&mut Transform, (With<Hurtui>, Without<Camera2d>, Without<UI>)>,
-) {
-    if loc_query.is_empty() || ui_query.is_empty() {
-        return;
-    }
-    let loc = loc_query.single().translation.truncate();
-    for mut trans in ui_query.iter_mut() {
-        trans.translation = Vec3::new(loc.x ,loc.y ,trans.translation.z) + UI_OFFSET;
-    }
-    for mut trans in hurtui_query.iter_mut() {
-        trans.translation = Vec3::new(loc.x ,loc.y ,111.0);
-    }
-}
+
 fn handle_state_bar(
     mut commands: Commands,
     loc_query: Query<&Transform, (With<Camera2d>, Without<Bar>, Without<Character>, Without<BufferBar>)>,
@@ -125,14 +110,11 @@ fn handle_state_bar(
     mut bar_query: Query<&mut Transform, (With<Bar>, Without<BufferBar>, Without<Character>, Without<Camera2d>)>,
     mut text_query: Query<&mut Text2d>,//后续可能文本框不止这一个，需要加限制过滤
     query2: Query<Entity, (With<Hurtui>, Without<Camera2d>)>,
-
+    mut ui_query: Query<&mut Transform, (With<UI>, Without<Camera2d>, Without<BufferBar>, Without<Bar>, Without<Character>)>,
 ) {
     if health_query.is_empty() ||buffer_query.is_empty() || bar_query.is_empty() || loc_query.is_empty(){
         return;
     }
-    
-
-
     let health =health_query.single();
 
     if !text_query.is_empty() {
@@ -149,6 +131,11 @@ fn handle_state_bar(
     unsafe {
         buffer.translation = Vec3::new(loc.x + buffer_offset, loc.y , buffer.translation.z) + UI_OFFSET;
         bar.translation = Vec3::new(loc.x + bar_offset, loc.y , bar.translation.z) + UI_OFFSET;  
+    }
+
+    //血条框位置
+    for mut trans in ui_query.iter_mut() {
+        trans.translation = Vec3::new(loc.x ,loc.y ,trans.translation.z) + UI_OFFSET;
     }
 
     //血条控制
@@ -193,45 +180,26 @@ fn handle_state_bar(
 fn hurtui(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    query: Query<&Transform, (With<Camera2d>, Without<Hurtui>)>,
-    query2: Query<Entity, (With<Hurtui>, Without<Camera2d>)>,
+    loc_query: Query<&Transform, (With<Camera2d>, Without<Hurtui>)>,
+    mut hurtui_query: Query<&mut Transform, (With<Hurtui>, Without<Camera2d>)>,
     mut event: EventReader<PlayerHurtEvent>, //后续角色受伤时发出事件，ui响应
-    //test
-    keyboard_input: Res<ButtonInput<KeyCode>>,
 ) {
-    if query.is_empty() {
+    if loc_query.is_empty() {
         return;
     }
+    let loc = loc_query.single().translation.truncate();
     for _ in event.read() {
-        let trans = query.single().translation.truncate();
         commands.spawn((
             Sprite {
                 image: asset_server.load("UI_Hit.png"),
                 ..Default::default()
             },
             Transform::from_scale(Vec3::new(1.9, 1.4, 1.9))
-                .with_translation(Vec3::new(trans.x, trans.y, 111.0)),
+                .with_translation(Vec3::new(loc.x, loc.y, 111.0)),
             Hurtui,
         ));     
     }
-    //模拟受伤
-    // if keyboard_input.pressed(KeyCode::KeyH) {
-    //     let trans = query.single().translation.truncate();
-    //     commands.spawn((
-    //         Sprite {
-    //             image: asset_server.load("UI_Hit.png"),
-    //             ..Default::default()
-    //         },
-    //         Transform::from_scale(Vec3::new(1.9, 1.4, 1.9))
-    //             .with_translation(Vec3::new(trans.x, trans.y, 111.0)),
-    //         Hurtui,
-    //     ));
-    // }
-    //测试消失
-    // if keyboard_input.pressed(KeyCode::KeyJ) {
-    //     for entity in query2.iter() {
-    //         commands.entity(entity).despawn();
-    //     }
-    // }
-    
+    for mut trans in hurtui_query.iter_mut() {
+        trans.translation = Vec3::new(loc.x ,loc.y ,111.0);
+    }
 }

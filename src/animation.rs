@@ -1,7 +1,7 @@
 use bevy::{
     dev_tools::states::*, 
     log::tracing_subscriber::fmt::time, 
-    prelude::*, transform
+    prelude::*,
 };
 
 use crate::{
@@ -9,7 +9,10 @@ use crate::{
         Boss, BossComponent, 
         BossState, 
         Direction, 
-        Health, Skillflag, BossDeathEffect
+        Health, 
+        Skillflag, 
+        BossDeathEffect,
+        set_boss,
     }, 
     character::{
         AnimationConfig, 
@@ -17,12 +20,17 @@ use crate::{
         PlayerState 
     }, 
     enemy::{
-        BulletDirection, Enemy, EnemyBullet, EnemyDeathEffect, EnemyState, EnemyType, Fireflag, PatrolState
+        BulletDirection, Enemy, EnemyBullet, EnemyDeathEffect, 
+        EnemyState, EnemyType, Fireflag, PatrolState, set_enemy,
     }, 
     gamestate::GameState, 
     gun::{Bullet, BulletHit, Cursor, Gun, GunFire}, 
     home::{Fridge, FridgeState, Sora, SoraState}, 
-    resources::{GlobalCharacterTextureAtlas, GlobalHomeTextureAtlas},
+    room::EnemyBorn,
+    resources::{
+        GlobalCharacterTextureAtlas, GlobalHomeTextureAtlas, 
+        GlobalEnemyTextureAtlas, GlobalBossTextureAtlas,
+    },
 };
 
 pub struct AnimationPlugin;
@@ -36,6 +44,7 @@ impl Plugin for AnimationPlugin {
             Update,
             (
                 animate_player,
+                animate_enemy_born,
                 animate_enemy,
                 flip_gun_sprite_y,
                 flip_player_sprite_x,
@@ -142,6 +151,59 @@ fn animate_player(
         }
     }
 
+}
+
+fn animate_enemy_born(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut e_query: Query<(&mut Transform, &mut AnimationConfig, &mut Sprite, Entity), (With<EnemyBorn>, With<Enemy>, Without<BossComponent>)>,
+    mut b_query: Query<(&mut Transform, &mut AnimationConfig, &mut Sprite, Entity), (With<EnemyBorn>, With<BossComponent>, Without<Enemy>)>,
+    source1: Res<GlobalEnemyTextureAtlas>,
+    source2: Res<GlobalBossTextureAtlas>,
+) {
+    //小怪
+    for (mut trans, mut config, mut enemy, e) in e_query.iter_mut() {
+        config.frame_timer.tick(time.delta());
+        if config.frame_timer.just_finished(){
+            if let Some(atlas) = &mut enemy.texture_atlas {
+                config.frame_timer = AnimationConfig::timer_from_fps(config.fps2p);
+                atlas.index += 1;
+                if atlas.index == 12 {
+                    //产生敌人
+                    atlas.index = 0;
+                    commands.entity(e).despawn();
+                    set_enemy(
+                        0, 
+                        Vec2::new(
+                            trans.translation.x, 
+                            trans.translation.y), 
+                        &mut commands, 
+                        &source1);
+                }
+            }
+        }
+    }
+    for (mut trans, mut config, mut boss, e) in b_query.iter_mut() {
+        config.frame_timer.tick(time.delta());
+        if config.frame_timer.just_finished(){
+            if let Some(atlas) = &mut boss.texture_atlas {
+                config.frame_timer = AnimationConfig::timer_from_fps(config.fps2p);
+                atlas.index += 1;
+                if atlas.index == 12 {
+                    //产生敌人
+                    atlas.index = 0;
+                    commands.entity(e).despawn();
+                    set_boss(
+                        Vec2::new(
+                            trans.translation.x, 
+                            trans.translation.y), 
+                        &mut commands, 
+                        &source2);
+                    println!("boss born!");
+                }
+            }
+        }
+    }
 }
 
 fn animate_enemy(

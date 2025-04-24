@@ -246,8 +246,8 @@ fn handle_gun_fire(
             },
             Transform {
                 translation: vec3(
-                    gun_pos.x + bullet_direction.x * 50.0, 
-                    gun_pos.y + bullet_direction.y * 50.0, 
+                    gun_pos.x + bullet_direction.x * 80.0, 
+                    gun_pos.y + bullet_direction.y * 80.0, 
                     1.0),
                 rotation: Quat::from_rotation_z(dir.y.atan2(dir.x)),
                 scale: Vec3::splat(2.5),
@@ -288,12 +288,12 @@ fn despawn_old_bullets(
     mut collision_events: EventReader<CollisionEvent>,
     source: Res<GlobalCharacterTextureAtlas>,
 ) {
-    // for (instant, e, trans) in bullet_query.iter() {
-    //     if instant.0.elapsed().as_secs_f32() > BULLET_TIME_SECS {
-    //         // println!("Despawning bullet!");
-    //         commands.entity(e).despawn();
-    //     }
-    // }
+    for (instant, e, trans) in bullet_query.iter() {
+        if instant.0.elapsed().as_secs_f32() > BULLET_TIME_SECS {
+            // println!("Despawning bullet!");
+            commands.entity(e).despawn();
+        }
+    }
     for collision_event in collision_events.read() {
         match collision_event {
             CollisionEvent::Started(entity1, entity2, _) => {

@@ -4,6 +4,7 @@ use crate::{
     gamestate::GameState,
     character::Character,
     home::Home,
+    room::AssetsManager,
 };
 
 pub struct GuiPlugin;
@@ -20,6 +21,7 @@ impl Plugin for GuiPlugin {
             Update,
             handle_main_menu_buttons.run_if(in_state(GameState::MainMenu)),
         )
+        .add_systems(Update, handle_stop_menu)
         .add_systems(Update, (animation1::<LeftSlide1>, animation1::<LeftSlide2>, animation2::<RightSlide1>, animation2::<RightSlide2>).run_if(in_state(GameState::MainMenu)))
         .add_systems(Update, statetransition)
         .add_systems(Update, log_transitions::<GameState>);
@@ -188,6 +190,7 @@ fn statetransition(
     mut transition_query: Query<(&mut Transform, Entity), (With<Transition>, Without<Camera2d>)>,
     camera_query: Query<&Transform, (With<Camera2d>, Without<Transition>)>,
     state: Res<State<GameState>>,
+    mut mgr: ResMut<AssetsManager>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
     if transition_query.is_empty() || camera_query.is_empty() {
@@ -200,21 +203,30 @@ fn statetransition(
     let delta = transform.translation.x - x;
 
     // println!("delta: {}", delta);
+    match *state.get() {
+        GameState::MainMenu if delta >= 400.0 && delta < 420.0 => {
+            next_state.set(GameState::Home);
+            info!("transition to Home!");
+        },
+        GameState::Home if delta >= 400.0 && delta < 420.0 => {
+            next_state.set(GameState::Loading);
+            mgr.cycle_map(&mut commands);
+            info!("transition to loading!");
+        },
+        GameState::Loading if delta >= 800.0 => {
+            next_state.set(GameState::InGame);
+            info!("transition to game!");
+        },
 
-    if delta >= 400.0 && delta < 420.0 {
-        match *state.get() {
-            GameState::MainMenu => {
-                next_state.set(GameState::Home);
-                info!("transition to Home!");
-            },
-            GameState::Home => {
-                next_state.set(GameState::Loading);
-                info!("transition to loding!");
-            },
-            _ => {}
-        }
-        transform.translation.y = trans.y;
+        GameState::InGame if delta >= 400.0 && delta < 420.0 => {
+            next_state.set(GameState::Loading);
+            mgr.cycle_map(&mut commands);
+            info!("transition to loading!");
+        },
+
+        _ => {}
     }
+
     if delta > 2400.0 {
         commands.entity(e).despawn_recursive();
         info!("translation deleted!");
@@ -228,3 +240,39 @@ fn despawn_main_menu(
     }
 }
 
+//待完善
+fn handle_stop_menu(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    state: Res<State<GameState>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    match *state.get() {
+        GameState::MainMenu => {
+
+        },
+        GameState::Loading => {
+
+        },
+        GameState::OverMenu => {
+
+        },
+        GameState::Stop => {
+            if keyboard_input.just_pressed(KeyCode::Escape) {
+                println!("resume!");
+
+
+                
+            }
+        },
+        _ => {//进入暂停菜单
+            if keyboard_input.just_pressed(KeyCode::Escape) {
+                println!("have a break!");
+
+
+
+            }
+        },
+    }
+}

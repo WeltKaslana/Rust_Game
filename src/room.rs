@@ -1,24 +1,24 @@
 use bevy::{
-    color::palettes::css::{BLUE, GREEN, RED}, 
-    dev_tools::states::*, 
-    ecs::{component::ComponentId, query, system::EntityCommands, world::DeferredWorld}, 
-    math::Vec3, prelude::*, 
-    transform};
+    animation::transition, color::palettes::css::{BLUE, GREEN, RED}, dev_tools::states::*, ecs::{component::ComponentId, system::EntityCommands, world::DeferredWorld}, math::{Vec3, VectorSpace}, prelude::* 
+    };
 use bevy_ecs_tiled::{prelude::*,};
 // use bevy_ecs_tilemap::{map::TilemapSize, TilemapBundle};
 
 use bevy_rapier2d::{prelude::*};
 
 use crate::{
-    character::Character, enemy::set_enemy, gamestate::GameState, gun::Bullet, resources::*
+    boss::{self, BossComponent}, character::{AnimationConfig, Character}, enemy::Enemy, gamestate::GameState, gui::Transition, gun::Bullet, resources::*
 };
 pub struct RoomPlugin;
+
+#[derive(Component)]
+pub struct EnemyBorn;
 
 ////test
 pub type MapInfosCallback = fn(&mut EntityCommands);
 
 pub struct MapInfos {
-    asset: Handle<TiledMap>,
+    pub asset: Handle<TiledMap>,
     path: String,
     description: String,
     callback: MapInfosCallback,
@@ -42,10 +42,10 @@ impl MapInfos {
 
 #[derive(Resource)]
 pub struct AssetsManager {
-    map_assets: Vec<MapInfos>,
+    pub map_assets: Vec<MapInfos>,
     map_entity: Option<Entity>,
     text_entity: Entity,
-    map_index: usize,
+    pub map_index: usize,
 }
 
 impl AssetsManager {
@@ -117,19 +117,18 @@ impl Plugin for RoomPlugin {
 
             // .add_systems(OnEnter(GameState::InGame), load_room)
             .add_systems(Update, switch_map.run_if(in_state(GameState::InGame)))
-            // .add_systems(Update, (
-            //     // check_collision,
-            //     // check_contact,
-            //     evt_object_created,
-            //     evt_map_created,
-            //     ).run_if(in_state(GameState::InGame)))
-            .add_systems(OnEnter(GameState::Loading), load_room)
+
+            // .add_systems(OnEnter(GameState::Loading), load_room)
+            .add_systems(Startup, load_room)
             .add_systems(Update, (
                 // check_collision,
                 // check_contact,
                 evt_object_created,
                 evt_map_created,
                 ).run_if(in_state(GameState::Loading)))
+            .add_systems(Update, (
+                check_ifcomplete,
+            ).run_if(in_state(GameState::InGame)))
             .add_systems(Update, log_transitions::<GameState>);
     }
 }   
@@ -179,27 +178,27 @@ fn load_room(
             ));
         },
     ));
-    mgr.add_map(MapInfos::new(
-        &asset_server, 
-        "boss房2.tmx", 
-        "A finite orthogonal map with only object colliders", 
-        |c| {
-            c.insert((
-                TiledMapAnchor::Center,
-                TiledPhysicsSettings::<TiledPhysicsRapierBackend> {
-                    objects_filter: TiledName::All,
-                    // objects_layer_filter: TiledName::Names(vec![String::from("1")]),
-                    // tiles_objects_filter: TiledName::Names(vec![String::from("platform1")]),
-                    //用来过滤图块层
-                    // tiles_layer_filter: TiledName::Names(vec![String::from("decoration")]),
-                    //用来过滤指定图块层中的图块，对象层同理
-                    tiles_objects_filter: TiledName::All,
-                    ..default()
-                },
-            ));
-        },
-    ));
-    mgr.cycle_map(&mut commands);
+    // mgr.add_map(MapInfos::new(
+    //     &asset_server, 
+    //     "boss房2.tmx", 
+    //     "A finite orthogonal map with only object colliders", 
+    //     |c| {
+    //         c.insert((
+    //             TiledMapAnchor::Center,
+    //             TiledPhysicsSettings::<TiledPhysicsRapierBackend> {
+    //                 objects_filter: TiledName::All,
+    //                 // objects_layer_filter: TiledName::Names(vec![String::from("1")]),
+    //                 // tiles_objects_filter: TiledName::Names(vec![String::from("platform1")]),
+    //                 //用来过滤图块层
+    //                 // tiles_layer_filter: TiledName::Names(vec![String::from("decoration")]),
+    //                 //用来过滤指定图块层中的图块，对象层同理
+    //                 tiles_objects_filter: TiledName::All,
+    //                 ..default()
+    //             },
+    //         ));
+    //     },
+    // ));
+    // mgr.cycle_map(&mut commands);
     commands.insert_resource(mgr);
 }
 
@@ -241,12 +240,30 @@ fn check_contact(
 }
 fn evt_object_created(
     mut commands: Commands,
+    //敌人诞生动画还没加入到resources中，后续完善了就改用source2调用图片
+    asset_server: Res<AssetServer>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+
     mut object_events: EventReader<TiledObjectCreated>,
     mut object_query: Query<(&Name, &mut Transform), (With<TiledMapObject>, Without<Character>)>,
     mut player_query: Query<&mut Transform, (With<Character>, Without<TiledMapObject>)>,
-    source: Res<GlobalEnemyTextureAtlas>,
-    mut next_state: ResMut<NextState<GameState>>,
+    source: Res<AssetsManager>,
+    maps: Res<Assets<TiledMap>>,
+    // source: Res<GlobalEnemyTextureAtlas>,
+    // source2: Res<GlobalEnemyTextureAtlas>,
+    // mut next_state: ResMut<NextState<GameState>>,
+    
 ) {
+    let mut size = Vec2::ZERO;
+    let index = if source.map_index > 0 {source.map_index - 1} else {source.map_assets.len() - 1};
+    let map = source.map_assets[index].asset.clone();
+    if let Some(temp) = maps.get(&map) {
+        size.x = temp.tilemap_size.x as f32;
+        size.y = temp.tilemap_size.y as f32;
+        // println!("size:{}, {}", temp.tilemap_size.x,temp.tilemap_size.y);
+    };
+    size *= 8.0;
+
     for e in object_events.read() {
         let Ok((name, mut transform)) = object_query.get_mut(e.entity) else {
             return;
@@ -258,20 +275,53 @@ fn evt_object_created(
         // 3.0是缩放比例，700和500是相对于程序坐标系的变异量
         if name.as_str() == "Object(Player)" {
             for mut trans in player_query.iter_mut() {
-                trans.translation.x = (transform .translation - 200.0).x * 3.0;
-                trans.translation.y = (transform .translation.y - 180.0) * -3.0;
+                trans.translation.x = (transform .translation.x - size.x) * 3.0;
+                trans.translation.y = (transform .translation.y - size.y) * 3.0;
             }
         }
         if name.as_str() == "Object(Enemy)" {
-            set_enemy(
-                0, 
-                Vec2::new(
-                    transform .translation.x * 3.0 - 700.0, 
-                    transform .translation.y * 3.0 - 500.0), 
-                &mut commands, 
-                &source);
+            let layout_born = TextureAtlasLayout::from_grid(UVec2::splat(48),12,1,None,None);
+            commands.spawn((
+                Sprite {
+                    image: asset_server.load("Entity_Spawn.png"),//后续改用source2
+                    texture_atlas: Some(TextureAtlas {
+                        layout: texture_atlas_layouts.add(layout_born),
+                        index: 0,
+                    }),
+                    ..Default::default()
+                },
+                Transform::from_translation(Vec3::new(
+                    (transform .translation.x - size.x) * 3.0, 
+                    (transform .translation.y - size.y) * 3.0, 
+                    0.0)).with_scale(Vec3::splat(2.5)),
+                AnimationConfig::new(15),
+                Enemy,
+                EnemyBorn,
+            ));
             info!("enemy created! ");
-            next_state.set(GameState::InGame);
+            // next_state.set(GameState::InGame);
+        }
+        if name.as_str() == "Object(Boss)" {
+            let layout_born = TextureAtlasLayout::from_grid(UVec2::splat(48),12,1,None,None);
+            commands.spawn((
+                Sprite {
+                    image: asset_server.load("Entity_Spawn.png"),//后续改用source2
+                    texture_atlas: Some(TextureAtlas {
+                        layout: texture_atlas_layouts.add(layout_born),
+                        index: 0,
+                    }),
+                    ..Default::default()
+                },
+                Transform::from_translation(Vec3::new(
+                    (transform .translation.x - size.x) * 3.0, 
+                    (transform .translation.y - size.y) * 3.0, 
+                    0.0)).with_scale(Vec3::splat(2.5)),
+                AnimationConfig::new(15),
+                BossComponent,
+                EnemyBorn,
+            ));
+            info!("boss created! ");
+            // next_state.set(GameState::InGame);
         }
     }
 
@@ -300,63 +350,36 @@ fn evt_map_created (
 
 }
 
+fn check_ifcomplete(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,//test
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    enemyclear_query1: Query<Entity, (With<Enemy>, Without<EnemyBorn>, Without<BossComponent>)>,
+    enemyclear_query2: Query<Entity, (With<EnemyBorn>, Without<Enemy>, Without<BossComponent>)>,
+    bossclear_query: Query<Entity, (With<BossComponent>, Without<EnemyBorn>, Without<Enemy>)>,
+    transition_query: Query<Entity, (With<Transition>, Without<Enemy>)>,
+    camera_query: Query<&Transform, With<Camera2d>>,
+) {
+    if enemyclear_query1.is_empty() && enemyclear_query2.is_empty() && bossclear_query.is_empty() {
+        println!("你过关!");
+        if keyboard_input.just_pressed(KeyCode::KeyE) && transition_query.is_empty() {
+            for trans in camera_query.iter() {
+                commands.spawn((
+                    Sprite {
+                        image: asset_server.load("Menu_Transition1.png"),
+                        ..Default::default()
+                    },
+                    Transform::from_scale(Vec3::new(0.7,0.7,0.5))
+                        .with_translation(Vec3::new(trans.translation.x-3200.0, trans.translation.y, 100.0)),
+                    Transition,
+                ));                     
+            }
+        }
+
+    }
+
+}
 
 
 
-// #[derive(Default, Debug, Clone, Reflect)]
-// #[reflect(Default, Debug)]
-// struct MyCustomPhysicsBackend;
-
-// // This one will just spawn an entity with a `MyCustomPhysicsComponent` Component,
-// // at the center of where the Tiled collider is.
-// impl TiledPhysicsBackend for MyCustomPhysicsBackend {
-//     fn spawn_colliders(
-//         &self,
-//         commands: &mut Commands,
-//         _tiled_map: &TiledMap,
-//         _filter: &TiledNameFilter,
-//         collider: &TiledCollider,
-//     ) -> Vec<TiledColliderSpawnInfos> {
-//         match collider {
-//             TiledCollider::Object {
-//                 layer_id: _,
-//                 object_id: _,
-//             } => {
-//                 vec![TiledColliderSpawnInfos {
-//                     name: String::from("Custom[Object]"),
-//                     entity: commands
-//                         .spawn(MyCustomPhysicsComponent(Color::from(BLUE)))
-//                         .id(),
-//                     transform: Transform::default(),
-//                 }]
-//             }
-//             TiledCollider::TilesLayer { layer_id: _ } => {
-//                 vec![TiledColliderSpawnInfos {
-//                     name: String::from("Custom[TilesLayer]"),
-//                     entity: commands
-//                         .spawn(MyCustomPhysicsComponent(Color::from(RED)))
-//                         .id(),
-//                     transform: Transform::default(),
-//                 }]
-//             }
-//         }
-//     }
-// }
-
-// // For debugging purpose, we will also add a 2D mesh where the collider is.
-// #[derive(Component)]
-// #[component(on_add = on_physics_component_added)]
-// struct MyCustomPhysicsComponent(pub Color);
-
-// fn on_physics_component_added(mut world: DeferredWorld, entity: Entity, _: ComponentId) {
-//     let color = world.get::<MyCustomPhysicsComponent>(entity).unwrap().0;
-//     let mesh = world
-//         .resource_mut::<Assets<Mesh>>()
-//         .add(Rectangle::from_length(32.));
-//     let material = world.resource_mut::<Assets<ColorMaterial>>().add(color);
-//     world
-//         .commands()
-//         .entity(entity)
-//         .insert((Mesh2d(mesh), MeshMaterial2d(material)));
-// }
 

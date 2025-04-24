@@ -64,7 +64,7 @@ pub struct Timer {
 impl Plugin for BossPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_systems(OnEnter(GameState::InGame), setup_boss)
+            // .add_systems(OnEnter(GameState::InGame), setup_boss)
             .add_systems(
                 Update,
                     (

@@ -3,7 +3,7 @@ use bevy::window::CursorOptions;
 use bevy_framepace::{FramepacePlugin, Limiter};
 
 
-use demo::boss::BossPlugin;
+
 use demo::gamestate::GameState;
 use demo::gui::GuiPlugin;
 use demo::camera::FollowCameraPlugin;
@@ -14,8 +14,8 @@ use demo::resources::ResourcesPlugin;
 use demo::audio::GameAudioPlugin;
 use demo::home::HomePlugin;
 use demo::enemy::EnemyPlugin;
+use demo::boss::BossPlugin;
 use demo::ui::UIPlugin;
-
 use demo::room::RoomPlugin;
 
 fn main() {
@@ -51,7 +51,7 @@ fn main() {
         .add_plugins(EnemyPlugin)
         .add_plugins(UIPlugin)
 
-        // .add_plugins(BossPlugin)
+        .add_plugins(BossPlugin)
 
         .add_plugins(RoomPlugin)
 

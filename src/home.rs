@@ -219,7 +219,7 @@ fn check_state(
     mut sora_query: Query<(&Transform, &mut Sprite, &mut SoraState), (With<Sora>, Without<Fridge>, Without<Character>)>,
     mut fridge_query: Query<(&Transform, &mut Sprite, &mut FridgeState), (With<Fridge>, Without<Character>, Without<Sora>)>,
     source: Res<GlobalHomeTextureAtlas>,
-    mut next_state: ResMut<NextState<GameState>>,
+    // mut next_state: ResMut<NextState<GameState>>,
 
     camera_query: Query<&Transform, With<Camera2d>>,
     transition_query: Query<&mut Transform, (With<Transition>, Without<Character>, Without<Fridge>, Without<Sora>, Without<Camera2d>)>,
