@@ -1,7 +1,5 @@
 use bevy::{dev_tools::states::*, ecs::query, prelude::*};
-use crate::{gamestate::GameState,
-            character::{AnimationConfig, Character},
-            resources::GlobalHomeTextureAtlas,
+use crate::{camera, character::{AnimationConfig, Character}, gamestate::GameState, gui::Transition, resources::GlobalHomeTextureAtlas
             };
 use bevy_rapier2d::{prelude::*, rapier::prelude::{RigidBodyMassProps, RigidBodyType}};
 
@@ -37,7 +35,10 @@ impl Plugin for HomePlugin {
         app
             .add_systems(Update, log_transitions::<GameState>)
             .add_systems(OnEnter(GameState::Home), setup)
-            .add_systems(Update, (check_state, update_wall).run_if(in_state(GameState::Home)))
+            .add_systems(Update, (
+                check_state, 
+                update_wall,
+            ).run_if(in_state(GameState::Home)))
             .add_systems(OnExit(GameState::Home), cleanup);
     }
 }
@@ -219,6 +220,9 @@ fn check_state(
     mut fridge_query: Query<(&Transform, &mut Sprite, &mut FridgeState), (With<Fridge>, Without<Character>, Without<Sora>)>,
     source: Res<GlobalHomeTextureAtlas>,
     mut next_state: ResMut<NextState<GameState>>,
+
+    camera_query: Query<&Transform, With<Camera2d>>,
+    transition_query: Query<&mut Transform, (With<Transition>, Without<Character>, Without<Fridge>, Without<Sora>, Without<Camera2d>)>,
  ) {
     if player_query.is_empty() || sora_query.is_empty() || fridge_query.is_empty() {
         // println!("empty1!");
@@ -272,18 +276,24 @@ fn check_state(
                 *fridge_state = FridgeState::Open;
             },
             FridgeState::Open => {
-                if keyboard_input.just_pressed(KeyCode::KeyE) {
-                    println!("Game Start!");
-                    // commands.spawn((
-                    //     Sprite {
-                    //         image: asset_server.load("Collapse.png"),
-                    //         ..Default::default()
-                    //     },
-                    //     Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)).with_scale(Vec3::splat(4.0)),
-                    // ));
+                if keyboard_input.just_pressed(KeyCode::KeyE) && transition_query.is_empty() {
+                    info!("Game Start!");
+                    //test
+                    for trans in camera_query.iter() {
+                        commands.spawn((
+                            Sprite {
+                                image: asset_server.load("Menu_Transition1.png"),
+                                ..Default::default()
+                            },
+                            Transform::from_scale(Vec3::new(0.7,0.7,0.5))
+                                .with_translation(Vec3::new(trans.translation.x-3200.0, trans.translation.y, 100.0)),
+                            Transition,
+                        ));                     
+                    }
+
                     //为了测试，先将状态转换到游戏中，游戏初始化状态之后再设置
                     // next_state.set(GameState::InGame);
-                    next_state.set(GameState::Loading);
+                    // next_state.set(GameState::Loading);
                 }                                                                       
             }
             _ => {},
@@ -299,6 +309,9 @@ fn check_state(
         }
     }
  }
+
+
+
  fn update_wall (
     mut query: Query<&mut Transform, With<Wall>>,
  ) {

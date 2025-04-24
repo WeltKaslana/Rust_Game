@@ -38,7 +38,7 @@ pub const ENEMY_FIRE: f32 = 200.0;//该数值为测试数据，实际游玩时�
 pub const ENEMY_ATTACK: f32 = 75.0;
 
 // Boss
-pub const BOOS_HEALTH: f32 = 4000.0;//暂定
+pub const BOOS_HEALTH: f32 = 2000.0;//暂定
 pub const BOSS_CHARGE_SPEED: f32 = 2.0 * 240.0 / fps as f32;
 
 // Kd-tree

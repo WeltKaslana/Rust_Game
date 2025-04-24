@@ -21,8 +21,7 @@ impl Plugin for GuiPlugin {
             handle_main_menu_buttons.run_if(in_state(GameState::MainMenu)),
         )
         .add_systems(Update, (animation1::<LeftSlide1>, animation1::<LeftSlide2>, animation2::<RightSlide1>, animation2::<RightSlide2>).run_if(in_state(GameState::MainMenu)))
-        .add_systems(Update, statetransition.run_if(in_state(GameState::MainMenu)))
-        .add_systems(Update, statetransition.run_if(in_state(GameState::Home)))
+        .add_systems(Update, statetransition)
         .add_systems(Update, log_transitions::<GameState>);
     }
 }
@@ -136,41 +135,91 @@ fn handle_main_menu_buttons(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    transition_query: Query<Entity, With<Transition>>,
+    transition_query: Query<Entity, (With<Transition>, Without<Camera2d>)>,
+
+    camera_query: Query<&Transform, (With<Camera2d>, Without<Transition>)>,
 ) {
+
+    if camera_query.is_empty() {
+        return;
+    }
+
     if  keyboard_input.pressed(KeyCode::KeyK) && transition_query.is_empty() {
         println!("Working!");
+
+        let trans = camera_query.single().translation;
+
         commands.spawn((
             Sprite {
                 image: asset_server.load("Menu_Transition1.png"),
                 ..Default::default()
             },
-            Transform::from_scale(Vec3::new(0.7,0.7,0.5)).with_translation(Vec3::new(-3200.0, 0.0, 100.0)),
+            // Transform::from_scale(Vec3::new(0.7,0.7,0.5)).with_translation(Vec3::new(-3200.0, 0.0, 100.0)),
+            Transform::from_scale(Vec3::new(0.7,0.7,0.5))
+                .with_translation(Vec3::new(trans.x-3200.0, trans.y, 100.0)),
             Transition,
             Home,
         )); 
     }
 }
 
+// fn statetransition(
+//     mut commands: Commands, 
+//     mut transition_query: Query<(&mut Transform, Entity), With<Transition>>,
+//     mut next_state: ResMut<NextState<GameState>>,
+// ) {
+//     if transition_query.is_empty() {
+//         return;
+//     }
+//     let (mut transform, e) = transition_query.single_mut();
+//     transform.translation.x += 20.0;
+//     if transform.translation.x == 400.0 {
+//         transform.translation.y -= 100.0;
+//         next_state.set(GameState::Home);
+//     }
+//     if transform.translation.x > 2400.0 {
+//         commands.entity(e).despawn_recursive();
+//     }
+// }
+
+// 状态切换和切换动画控制
 fn statetransition(
     mut commands: Commands, 
-    mut transition_query: Query<(&mut Transform, Entity), With<Transition>>,
+    mut transition_query: Query<(&mut Transform, Entity), (With<Transition>, Without<Camera2d>)>,
+    camera_query: Query<&Transform, (With<Camera2d>, Without<Transition>)>,
+    state: Res<State<GameState>>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
-    if transition_query.is_empty() {
+    if transition_query.is_empty() || camera_query.is_empty() {
         return;
     }
     let (mut transform, e) = transition_query.single_mut();
+    let trans = camera_query.single().translation;
+    let x = trans.x;
     transform.translation.x += 20.0;
-    if transform.translation.x == 400.0 {
-        transform.translation.y -= 100.0;
-        next_state.set(GameState::Home);
+    let delta = transform.translation.x - x;
+
+    // println!("delta: {}", delta);
+
+    if delta >= 400.0 && delta < 420.0 {
+        match *state.get() {
+            GameState::MainMenu => {
+                next_state.set(GameState::Home);
+                info!("transition to Home!");
+            },
+            GameState::Home => {
+                next_state.set(GameState::Loading);
+                info!("transition to loding!");
+            },
+            _ => {}
+        }
+        transform.translation.y = trans.y;
     }
-    if transform.translation.x > 2400.0 {
+    if delta > 2400.0 {
         commands.entity(e).despawn_recursive();
+        info!("translation deleted!");
     }
 }
-
 fn despawn_main_menu(
     mut commands: Commands, 
     mut menu_items_query: Query<Entity, (With<Sprite>, Without<Transition>)>) {

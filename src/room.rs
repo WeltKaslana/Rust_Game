@@ -125,6 +125,8 @@ impl Plugin for RoomPlugin {
             //     ).run_if(in_state(GameState::InGame)))
             .add_systems(OnEnter(GameState::Loading), load_room)
             .add_systems(Update, (
+                // check_collision,
+                // check_contact,
                 evt_object_created,
                 evt_map_created,
                 ).run_if(in_state(GameState::Loading)))

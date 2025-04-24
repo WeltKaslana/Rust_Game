@@ -241,6 +241,9 @@ pub struct GlobalEnemyTextureAtlas {
     pub image_unknown_attack: Handle<Image>,
     pub layout_unknown_bullet: Handle<TextureAtlasLayout>,
     pub image_unknown_bullet: Handle<Image>,
+
+    pub layout_death: Handle<TextureAtlasLayout>,
+    pub image_death: Handle<Image>,
 }
 
 impl GlobalEnemyTextureAtlas {
@@ -286,6 +289,9 @@ impl GlobalEnemyTextureAtlas {
         let layoutunknownbullet = TextureAtlasLayout::from_grid(UVec2::splat(32),4,1,None,None);
         let imageunknownbullet = String::from("Entity_Bullet_UnKnownGuardian.png");
 
+        let layoutdeath = TextureAtlasLayout::from_grid(UVec2::splat(96), 7, 1, None,None);
+        let imagedeath = String::from("Entity_Defeated.png");
+
         Self {
             layout_sweeper_idle: texture_atlas_layouts.add(layoutsweeperidle),
             image_sweeper_idle: asset_server.load(imagesweeperidle),
@@ -323,7 +329,10 @@ impl GlobalEnemyTextureAtlas {
             layout_unknown_attack: texture_atlas_layouts.add(layoutunknownattack),
             image_unknown_attack: asset_server.load(imageunknownattack),
             layout_unknown_bullet: texture_atlas_layouts.add(layoutunknownbullet),
-            image_unknown_bullet:asset_server.load(imageunknownbullet),
+            image_unknown_bullet: asset_server.load(imageunknownbullet),
+
+            layout_death: texture_atlas_layouts.add(layoutdeath),
+            image_death: asset_server.load(imagedeath),
         }
     }
 }
@@ -357,6 +366,9 @@ pub struct GlobalBossTextureAtlas {
     pub image_weapongun_idle: Handle<Image>,//Boss1_Weapon1_Idea
     pub layout_weapongun_fire: Handle<TextureAtlasLayout>,
     pub image_weapongun_fire: Handle<Image>,//Boss1_Weapon1_Fire
+
+    pub layout_death: Handle<TextureAtlasLayout>,
+    pub image_death: Handle<Image>,
 }
 
 impl GlobalBossTextureAtlas {
@@ -392,6 +404,9 @@ impl GlobalBossTextureAtlas {
         let layoutweapongunfire = TextureAtlasLayout::from_grid(UVec2::splat(96), 7, 1, None, None);
         let imageweapongunfire = String::from("Boss1_Weapon1_Fire.png");
 
+        let layoutdeath = TextureAtlasLayout::from_grid(UVec2::splat(128), 8, 1, None, None);
+        let imagedeath = String::from("Entity_Boss_Defeated.png");
+
         Self {
             layout_boss_idle: texture_atlas_layouts.add(layoutbossidle),
             image_boss_idle: asset_server.load(imagebossidle),
@@ -420,6 +435,9 @@ impl GlobalBossTextureAtlas {
             image_weapongun_idle: asset_server.load(imageweapongunidle),
             layout_weapongun_fire: texture_atlas_layouts.add(layoutweapongunfire),
             image_weapongun_fire: asset_server.load(imageweapongunfire),
+
+            layout_death: texture_atlas_layouts.add(layoutdeath),
+            image_death: asset_server.load(imagedeath),
         }
     }
 
