@@ -997,13 +997,13 @@ fn handle_enemy_bullet_collision_events(
                 CollisionEvent::Started(entity1,entity2, _) => {
                     if entity2.eq(&enemy) {
                         if let Ok(b) = player_query.get(*entity1) {
-                            commands.entity(*entity1).despawn();
+                            // commands.entity(*entity1).despawn();
                             health.0 -= BULLET_DAMAGE;
                         }
                     }
                     if entity1.eq(&enemy) {
                         if let Ok(b) = player_query.get(*entity2) {
-                            commands.entity(*entity2).despawn();
+                            // commands.entity(*entity2).despawn();
                             health.0 -= BULLET_DAMAGE;
                         }
                     }

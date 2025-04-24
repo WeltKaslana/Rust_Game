@@ -211,6 +211,8 @@ fn setup(
 
 }
 fn check_state(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     player_query: Query<&Transform, (With<Character>, Without<Sora>, Without<Fridge>)>,
     mut sora_query: Query<(&Transform, &mut Sprite, &mut SoraState), (With<Sora>, Without<Fridge>, Without<Character>)>,
@@ -272,10 +274,17 @@ fn check_state(
             FridgeState::Open => {
                 if keyboard_input.just_pressed(KeyCode::KeyE) {
                     println!("Game Start!");
-                    // to do: change game state to GameState::InGame
+                    // commands.spawn((
+                    //     Sprite {
+                    //         image: asset_server.load("Collapse.png"),
+                    //         ..Default::default()
+                    //     },
+                    //     Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)).with_scale(Vec3::splat(4.0)),
+                    // ));
                     //为了测试，先将状态转换到游戏中，游戏初始化状态之后再设置
-                    next_state.set(GameState::InGame);
-                }
+                    // next_state.set(GameState::InGame);
+                    next_state.set(GameState::Loading);
+                }                                                                       
             }
             _ => {},
         }

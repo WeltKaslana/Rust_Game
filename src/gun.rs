@@ -288,12 +288,12 @@ fn despawn_old_bullets(
     mut collision_events: EventReader<CollisionEvent>,
     source: Res<GlobalCharacterTextureAtlas>,
 ) {
-    for (instant, e, trans) in bullet_query.iter() {
-        if instant.0.elapsed().as_secs_f32() > BULLET_TIME_SECS {
-            // println!("Despawning bullet!");
-            commands.entity(e).despawn();
-        }
-    }
+    // for (instant, e, trans) in bullet_query.iter() {
+    //     if instant.0.elapsed().as_secs_f32() > BULLET_TIME_SECS {
+    //         // println!("Despawning bullet!");
+    //         commands.entity(e).despawn();
+    //     }
+    // }
     for collision_event in collision_events.read() {
         match collision_event {
             CollisionEvent::Started(entity1, entity2, _) => {

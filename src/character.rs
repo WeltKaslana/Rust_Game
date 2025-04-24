@@ -452,7 +452,7 @@ fn handle_player_skills(
 fn handle_player_bullet_collision_events(
     mut commands: Commands,
     mut events: EventWriter<PlayerHurtEvent>,
-    mut player_query: Query<(Entity, &mut Health), With<Character>>,
+    mut player_query: Query<(Entity, &mut Health, &PlayerState), With<Character>>,
     mut collision_events: EventReader<CollisionEvent>,
     enemy_query: Query<Entity, With<EnemyBullet>>,
 ) {
@@ -461,14 +461,20 @@ fn handle_player_bullet_collision_events(
             return;
         }
 
-        let (player, mut health) = player_query.single_mut();
+        let (player, mut health, state) = player_query.single_mut();
         
         match collision_event {
             CollisionEvent::Started(entity1, entity2, _) => {
                 if entity1.eq(&player) {
                     if let Ok(e) = enemy_query.get(*entity2) {
-                        commands.entity(*entity2).despawn();
-                        health.0 -= ENEMY_DAMAGE * 5.0;
+                        
+                        match state {
+                            PlayerState::Dodge => {},
+                            _ => {
+                                commands.entity(*entity2).despawn();
+                                health.0 -= ENEMY_DAMAGE * 5.0;
+                            },
+                        }
                         if health.0 <= 0.0 {
                             health.0 = 0.0;
                         }
@@ -480,8 +486,14 @@ fn handle_player_bullet_collision_events(
                 }  
                 if entity2.eq(&player) {
                     if let Ok(e) = enemy_query.get(*entity1) {
-                        commands.entity(*entity1).despawn();
-                        health.0 -= ENEMY_DAMAGE * 5.0;
+                        
+                        match state {
+                            PlayerState::Dodge => {},
+                            _ => {
+                                commands.entity(*entity1).despawn();
+                                health.0 -= ENEMY_DAMAGE * 5.0;
+                            },
+                        }
                         events.send(PlayerHurtEvent); 
                     }
                     // commands.entity(*entity1).despawn();

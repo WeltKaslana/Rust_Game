@@ -1,7 +1,10 @@
 use bevy::{dev_tools::states::*, diagnostic::FrameTimeDiagnosticsPlugin, prelude::*, state::{self, commands}, transform};
 
-use crate::{gamestate::GameState,
-            character::Character,};
+use crate::{
+    gamestate::GameState,
+    character::Character,
+    home::Home,
+};
 
 pub struct GuiPlugin;
 #[derive(Component)]
@@ -144,6 +147,7 @@ fn handle_main_menu_buttons(
             },
             Transform::from_scale(Vec3::new(0.7,0.7,0.5)).with_translation(Vec3::new(-3200.0, 0.0, 100.0)),
             Transition,
+            Home,
         )); 
     }
 }

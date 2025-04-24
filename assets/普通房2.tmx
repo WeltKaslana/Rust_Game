@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="40" height="20" tilewidth="16" tileheight="16" infinite="0" nextlayerid="5" nextobjectid="9">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="40" height="20" tilewidth="16" tileheight="16" infinite="0" nextlayerid="5" nextobjectid="10">
  <tileset firstgid="1" source="地图.tsx"/>
  <layer id="1" name="bg" width="40" height="20">
   <data encoding="csv">
@@ -74,16 +74,13 @@
 </data>
  </layer>
  <objectgroup id="4" name="对象层 1">
-  <object id="1" name="Enemy" x="315.86" y="111.453">
+  <object id="1" name="Boss" x="315.86" y="111.453">
    <point/>
   </object>
   <object id="3" name="Enemy" x="228.773" y="72.6478">
    <point/>
   </object>
   <object id="4" name="Enemy" x="69.9404" y="74.0015">
-   <point/>
-  </object>
-  <object id="5" name="Player" x="80.3187" y="267.127">
    <point/>
   </object>
   <object id="6" name="Enemy" x="345.641" y="270.286">
@@ -93,6 +90,12 @@
    <point/>
   </object>
   <object id="8" name="Enemy" x="513.949" y="259.908">
+   <point/>
+  </object>
+  <object id="9" name="Enemy" x="371.31" y="170.771">
+   <point/>
+  </object>
+  <object id="5" name="Player" x="80.3187" y="267.127">
    <point/>
   </object>
  </objectgroup>

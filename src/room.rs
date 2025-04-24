@@ -115,14 +115,19 @@ impl Plugin for RoomPlugin {
             .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
             .add_plugins(RapierDebugRenderPlugin::default())
 
-            .add_systems(OnEnter(GameState::InGame), load_room)
+            // .add_systems(OnEnter(GameState::InGame), load_room)
             .add_systems(Update, switch_map.run_if(in_state(GameState::InGame)))
+            // .add_systems(Update, (
+            //     // check_collision,
+            //     // check_contact,
+            //     evt_object_created,
+            //     evt_map_created,
+            //     ).run_if(in_state(GameState::InGame)))
+            .add_systems(OnEnter(GameState::Loading), load_room)
             .add_systems(Update, (
-                check_collision,
-                // check_contact,
                 evt_object_created,
                 evt_map_created,
-                ).run_if(in_state(GameState::InGame)))
+                ).run_if(in_state(GameState::Loading)))
             .add_systems(Update, log_transitions::<GameState>);
     }
 }   
@@ -238,6 +243,7 @@ fn evt_object_created(
     mut object_query: Query<(&Name, &mut Transform), (With<TiledMapObject>, Without<Character>)>,
     mut player_query: Query<&mut Transform, (With<Character>, Without<TiledMapObject>)>,
     source: Res<GlobalEnemyTextureAtlas>,
+    mut next_state: ResMut<NextState<GameState>>,
 ) {
     for e in object_events.read() {
         let Ok((name, mut transform)) = object_query.get_mut(e.entity) else {
@@ -262,14 +268,18 @@ fn evt_object_created(
                     transform .translation.y * 3.0 - 500.0), 
                 &mut commands, 
                 &source);
+            info!("enemy created! ");
+            next_state.set(GameState::InGame);
         }
     }
+
 }
 
 fn evt_map_created (
     mut commands: Commands,
     mut map_events: EventReader<TiledMapCreated>,
     mut q: Query<Entity,(With<Collider>, Without<RigidBody>, Without<Bullet>, Without<Character>)>,
+
 ) {
     //为瓦片添加属性
     for _ in map_events.read() {
