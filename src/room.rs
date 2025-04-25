@@ -140,7 +140,7 @@ fn load_room(
     
     mgr.add_map(MapInfos::new(
         &asset_server, 
-        "普通房1.tmx", 
+        "普通房2.tmx", 
         "A finite orthogonal map with only object colliders", 
         |c| {
             c.insert((
@@ -160,7 +160,7 @@ fn load_room(
     ));
     mgr.add_map(MapInfos::new(
         &asset_server, 
-        "普通房2.tmx", 
+        "普通房1.tmx", 
         "A finite orthogonal map with only object colliders", 
         |c| {
             c.insert((
@@ -355,13 +355,13 @@ fn check_ifcomplete(
     asset_server: Res<AssetServer>,//test
     keyboard_input: Res<ButtonInput<KeyCode>>,
     enemyclear_query1: Query<Entity, (With<Enemy>, Without<EnemyBorn>, Without<BossComponent>)>,
-    enemyclear_query2: Query<Entity, (With<EnemyBorn>, Without<Enemy>, Without<BossComponent>)>,
+    enemyclear_query2: Query<Entity, (With<EnemyBorn>)>,
     bossclear_query: Query<Entity, (With<BossComponent>, Without<EnemyBorn>, Without<Enemy>)>,
     transition_query: Query<Entity, (With<Transition>, Without<Enemy>)>,
     camera_query: Query<&Transform, With<Camera2d>>,
 ) {
     if enemyclear_query1.is_empty() && enemyclear_query2.is_empty() && bossclear_query.is_empty() {
-        // println!("你过关!");
+        println! ("你过关!");
         if keyboard_input.just_pressed(KeyCode::KeyE) && transition_query.is_empty() {
             for trans in camera_query.iter() {
                 commands.spawn((

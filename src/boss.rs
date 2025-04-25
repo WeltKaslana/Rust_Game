@@ -124,9 +124,11 @@ pub fn set_boss(
         LockedAxes::ROTATION_LOCKED,//防止旋转
         ActiveEvents::COLLISION_EVENTS,
         KinematicCharacterController {
+            filter_groups: Some(CollisionGroups::new(Group::GROUP_3, Group::GROUP_4)),
             ..Default::default()
         },
-        ColliderMassProperties::Mass(1500.0),
+        ColliderMassProperties::Mass(15000.0),
+        CollisionGroups::new(Group::GROUP_3, Group::GROUP_4),
         )
     );
 

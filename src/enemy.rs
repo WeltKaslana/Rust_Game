@@ -174,9 +174,13 @@ pub fn set_enemy(
                 )
             );
             enemy_entity.insert(KinematicCharacterController {
+                filter_groups: Some(CollisionGroups::new(Group::GROUP_3, Group::GROUP_4)),
                 ..Default::default()
             });
-            enemy_entity.insert(ColliderMassProperties::Mass(10.0));
+            enemy_entity.insert((
+                ColliderMassProperties::Mass(150.0),
+                CollisionGroups::new(Group::GROUP_3, Group::GROUP_4),
+            ));
         },
         EnemyType::DroneMissile=>{
             let mut enemy_entity =
@@ -214,9 +218,13 @@ pub fn set_enemy(
                 )
             );
             enemy_entity.insert(KinematicCharacterController {
+                filter_groups: Some(CollisionGroups::new(Group::GROUP_3, Group::GROUP_4)),
                 ..Default::default()
             });
-            enemy_entity.insert(ColliderMassProperties::Mass(10.0));
+            enemy_entity.insert((
+                ColliderMassProperties::Mass(150.0),
+                CollisionGroups::new(Group::GROUP_3, Group::GROUP_4),
+            ));
         },
         EnemyType::DroneVulcan=>{
             let mut enemy_entity =
@@ -254,9 +262,13 @@ pub fn set_enemy(
                 )
             );
             enemy_entity.insert(KinematicCharacterController {
+                filter_groups: Some(CollisionGroups::new(Group::GROUP_3, Group::GROUP_4)),
                 ..Default::default()
             });
-            enemy_entity.insert(ColliderMassProperties::Mass(10.0));
+            enemy_entity.insert((
+                ColliderMassProperties::Mass(150.0),
+                CollisionGroups::new(Group::GROUP_3, Group::GROUP_4),
+            ));
         },
         EnemyType::UnknownGuardianTypeF=>{
             let mut enemy_entity =
@@ -294,9 +306,13 @@ pub fn set_enemy(
                 )
             );
             enemy_entity.insert(KinematicCharacterController {
+                filter_groups: Some(CollisionGroups::new(Group::GROUP_3, Group::GROUP_4)),
                 ..Default::default()
             });
-            enemy_entity.insert(ColliderMassProperties::Mass(10.0));
+            enemy_entity.insert((
+                ColliderMassProperties::Mass(150.0),
+                CollisionGroups::new(Group::GROUP_3, Group::GROUP_4),
+            ));
         },
     }
 }

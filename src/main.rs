@@ -50,9 +50,7 @@ fn main() {
         .add_plugins(HomePlugin)
         .add_plugins(EnemyPlugin)
         .add_plugins(UIPlugin)
-
         .add_plugins(BossPlugin)
-
         .add_plugins(RoomPlugin)
 
         .insert_state(GameState::MainMenu)

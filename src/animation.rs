@@ -3,7 +3,7 @@ use bevy::{
     log::tracing_subscriber::fmt::time, 
     prelude::*,
 };
-
+use bevy_rapier2d::prelude::*;
 use crate::{
     boss::{
         Boss, BossComponent, 
@@ -94,13 +94,18 @@ fn move_template(
 
 fn animate_player(
     time: Res<Time>,
-    mut player_query: Query<(&mut AnimationConfig, &mut Sprite, &mut PlayerState), With<Character>>,
+    mut player_query: Query<(
+        &mut AnimationConfig, 
+        &mut Sprite, 
+        &mut PlayerState, 
+        &mut KinematicCharacterController,
+    ), With<Character>>,
     source: Res<GlobalCharacterTextureAtlas>,
 ) {
     if player_query.is_empty() {
         return;
     }
-    let (mut config, mut player, mut state) = player_query.single_mut();
+    let (mut config, mut player, mut state, mut controller) = player_query.single_mut();
     let all = match *state {
         //得分角色
         PlayerState::Move => 10,
@@ -133,6 +138,7 @@ fn animate_player(
                             if atlas.index == 12 {
                                 atlas.index = 0;
                                 *state = PlayerState::Jumpover;
+                                controller.filter_groups = None;
                             }
                         }
                         2 => {

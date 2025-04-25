@@ -133,11 +133,11 @@ fn setup_player(
         Collider::cuboid(9.0, 16.5),
 
         RigidBody::Fixed,
+        ColliderMassProperties::Mass(150.0),
 
         ActiveEvents::COLLISION_EVENTS,
         Sensor,//不加这个部件的话碰撞就会产生实际碰撞效果，否则只会发送碰撞事件而无效果
         //后续可以为碰撞体分组
-        // CollisionGroups::new(Group::GROUP_1, Group::GROUP_2),
         ));
 
         // //尝试插入运动部件
@@ -408,10 +408,8 @@ fn handle_player_skills(
     // mut commands: Commands,
     mut player_query: Query<(
         &mut Sprite, 
-        &mut Transform, 
         &mut PlayerState, 
         &mut KinematicCharacterController,
-        Entity,
     ), With<Character>>,
     // transform_query: Query<&Transform, Without<Character>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
@@ -421,12 +419,15 @@ fn handle_player_skills(
         return;
     }
     if keyboard_input.just_pressed(KeyCode::ShiftLeft) {
-        for (mut player, mut transform, mut player_state, mut kinematic_character_controller, entity) in player_query.iter_mut() {
+        for (mut player, mut player_state, mut controller) in player_query.iter_mut() {
             match *player_state {
                 PlayerState::Jump => {},
                 PlayerState::Dodge => {},
                 _ => {
                     *player_state = PlayerState::Dodge;
+                    //使得玩家不与敌人产生碰撞
+                    controller.filter_groups = Some(CollisionGroups::new(Group::GROUP_1, Group::GROUP_2));
+
                     if let Some(image) = source.image_skill.clone() {
                         player.image = image;
                     } else {
@@ -695,10 +696,10 @@ fn handle_player_move2(
         },
         PlayerState::Dodge => {
             if player.flip_x {
-                delta.x -= 5.0;
+                delta.x -= 2.0;
             }
             else {
-                delta.x += 5.0;
+                delta.x += 2.0;
             }
             delta.y = 0.0;
         },
