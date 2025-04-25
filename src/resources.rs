@@ -244,6 +244,9 @@ pub struct GlobalEnemyTextureAtlas {
 
     pub layout_death: Handle<TextureAtlasLayout>,
     pub image_death: Handle<Image>,
+
+    pub layout_born: Handle<TextureAtlasLayout>,
+    pub image_bron: Handle<Image>,
 }
 
 impl GlobalEnemyTextureAtlas {
@@ -292,6 +295,9 @@ impl GlobalEnemyTextureAtlas {
         let layoutdeath = TextureAtlasLayout::from_grid(UVec2::splat(96), 7, 1, None,None);
         let imagedeath = String::from("Entity_Defeated.png");
 
+        let layoutborn = TextureAtlasLayout::from_grid(UVec2::splat(48), 12, 1, None,None);
+        let imagebeon = String::from("Entity_Spawn.png");
+
         Self {
             layout_sweeper_idle: texture_atlas_layouts.add(layoutsweeperidle),
             image_sweeper_idle: asset_server.load(imagesweeperidle),
@@ -333,6 +339,9 @@ impl GlobalEnemyTextureAtlas {
 
             layout_death: texture_atlas_layouts.add(layoutdeath),
             image_death: asset_server.load(imagedeath),
+
+            layout_born: texture_atlas_layouts.add(layoutborn),
+            image_bron: asset_server.load(imagebeon),
         }
     }
 }

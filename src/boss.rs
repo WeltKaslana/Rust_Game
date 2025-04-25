@@ -3,15 +3,13 @@ use bevy::render::texture;
 use bevy::state::commands;
 use bevy::transform;
 use bevy::{dev_tools::states::*, prelude::*, time::Stopwatch};
-use crate::enemy::Fireflag;
 use crate::{gamestate::GameState,
-    configs::*,character::*, gun::Bullet};
+    configs::*,character::*, gun::Bullet, enemy::*};
 use crate::*;
 use rand::Rng;
 use character::AnimationConfig;
 use bevy_rapier2d::prelude::*;
 use std::time::Duration;
-use std::f32::consts::PI;
 
 pub struct BossPlugin;
 
@@ -71,10 +69,10 @@ impl Plugin for BossPlugin {
                         handle_boss_animation,
                         handle_boss_skill,
                         handle_bossbullet_setup,
-                        handle_bossbullet_move,
                         handle_bossgun_rotation,
                         handle_boss_hurt,
                         handle_boss_death,
+                        handle_boss_charge_hurt,
                 ).run_if(in_state(GameState::InGame))
             )
             .add_systems(Update, log_transitions::<GameState>)
@@ -118,9 +116,10 @@ pub fn set_boss(
             timer2: Stopwatch::new(),
         },
         AnimationConfig::new(15),
-
-        RigidBody::Fixed,
-        // GravityScale(0.0),
+    ));
+    boss.insert((
+        RigidBody::Dynamic,
+        GravityScale(0.0),
         Collider::ball(33.0),
         LockedAxes::ROTATION_LOCKED,//防止旋转
         ActiveEvents::COLLISION_EVENTS,
@@ -145,7 +144,7 @@ pub fn set_boss(
             BossComponent,
             Boss::Missile,
             BossState::Idea,
-            AnimationConfig::new(15),
+            AnimationConfig::new(10),
             Timer{
                 timer1: Stopwatch::new(),
                 timer2: Stopwatch::new(),
@@ -168,7 +167,7 @@ pub fn set_boss(
             BossComponent,
             Boss::Shield,
             BossState::Idea,
-            AnimationConfig::new(15),
+            AnimationConfig::new(30),
             Timer{
                 timer1: Stopwatch::new(),
                 timer2: Stopwatch::new(),
@@ -191,7 +190,7 @@ pub fn set_boss(
             BossComponent,
             Boss::Gun,
             BossState::Idea,
-            AnimationConfig::new(15),
+            AnimationConfig::new(30),
             Timer{
                 timer1: Stopwatch::new(),
                 timer2: Stopwatch::new(),
@@ -755,6 +754,7 @@ fn handle_bossbullet_setup(
         & Direction
     ), (With<Boss>, Without<BossComponent>, Without<Character>)>,
     time: Res<Time>,
+    source: Res<GlobalEnemyTextureAtlas>,
 ) {
     if bosscomponent_query.is_empty() || play_query.is_empty() || boss_query.is_empty() {
         return;
@@ -771,7 +771,53 @@ fn handle_bossbullet_setup(
                         if let Some(atlas) = &mut boss_component.texture_atlas {
                             if atlas.index == 6 && fireflag.0 == 0 {
                                 fireflag.0 = 1;
-                                //commands.spawn(bundle);
+                                if boss_direction.x >= 0.0 {
+                                    commands.spawn( (
+                                        Sprite {
+                                            image: source.image_unknown_bullet.clone(),
+                                            texture_atlas: Some(TextureAtlas {
+                                                layout: source.layout_unknown_bullet.clone(),
+                                                index: 0,
+                                            }),
+                                            ..Default::default()
+                                        },
+                                        Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(boss_transform.translation.x - 25.0, boss_transform.translation.y, 31.0)),
+                                        EnemyBullet::UnknownGuardian,
+                                        BulletDirection {
+                                            x : player_transform.translation.x - boss_transform.translation.x + 25.0,
+                                            y : player_transform.translation.y - boss_transform.translation.y,},
+                                        AnimationConfig::new(5),
+                                        Sensor,
+                                        RigidBody::Dynamic,
+                                        GravityScale(0.0),
+                                        Collider::cuboid(6.0, 6.0),
+                                        ActiveEvents::COLLISION_EVENTS,
+                                        )
+                                    );
+                                } else {
+                                    commands.spawn( (
+                                        Sprite {
+                                            image: source.image_unknown_bullet.clone(),
+                                            texture_atlas: Some(TextureAtlas {
+                                                layout: source.layout_unknown_bullet.clone(),
+                                                index: 0,
+                                            }),
+                                            ..Default::default()
+                                        },
+                                        Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(boss_transform.translation.x + 25.0 , boss_transform.translation.y, 31.0)),
+                                        EnemyBullet::UnknownGuardian,
+                                        BulletDirection {
+                                            x : player_transform.translation.x - boss_transform.translation.x - 25.0,
+                                            y : player_transform.translation.y - boss_transform.translation.y,},
+                                        AnimationConfig::new(5),
+                                        Sensor,
+                                        RigidBody::Dynamic,
+                                        GravityScale(0.0),
+                                        Collider::cuboid(6.0, 6.0),
+                                        ActiveEvents::COLLISION_EVENTS,
+                                        )
+                                    );
+                                }
                             }
                         }
                         timer.timer1.tick(time.delta());
@@ -810,15 +856,55 @@ fn handle_bossbullet_setup(
                 match *component_state {
                     BossState::Missilefire => {
                         if let Some(atlas) = &mut boss_component.texture_atlas {
-                            if atlas.index == 19 && fireflag.0 == 0 {
+                            if (atlas.index == 19 || atlas.index ==20 || atlas.index ==21) && fireflag.0 == 0 {
                                 fireflag.0 = 1;
-                                //commands.spawn();
-                            }else if atlas.index == 20 && fireflag.0 == 0 {
-                                fireflag.0 = 1;
-                                //commands.spawn();
-                            }else if atlas.index == 21 && fireflag.0 == 0 {
-                                fireflag.0 = 1;
-                                //commands.spawn();
+                                if boss_direction.x >= 0.0 {
+                                    commands.spawn( (
+                                        Sprite {
+                                            image: source.image_missile_bullet.clone(),
+                                            texture_atlas: Some(TextureAtlas {
+                                                layout: source.layout_missile_bullet.clone(),
+                                                index: 0,
+                                            }),
+                                            ..Default::default()
+                                        },
+                                        Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(boss_transform.translation.x, boss_transform.translation.y + 40.0, 31.0)),
+                                        EnemyBullet::DroneMissile,
+                                        BulletDirection {
+                                            x : 10.0,
+                                            y : 10.0,},
+                                        AnimationConfig::new(5),
+                                        Sensor,
+                                        RigidBody::Dynamic,
+                                        GravityScale(0.0),
+                                        Collider::cuboid(11.0, 5.0),
+                                        ActiveEvents::COLLISION_EVENTS,
+                                        )
+                                    );
+                                } else {
+                                    commands.spawn( (
+                                        Sprite {
+                                            image: source.image_missile_bullet.clone(),
+                                            texture_atlas: Some(TextureAtlas {
+                                                layout: source.layout_missile_bullet.clone(),
+                                                index: 0,
+                                            }),
+                                            ..Default::default()
+                                        },
+                                        Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(boss_transform.translation.x, boss_transform.translation.y + 40.0, 31.0)),
+                                        EnemyBullet::DroneMissile,
+                                        BulletDirection {
+                                            x : -10.0,
+                                            y : 10.0,},
+                                        AnimationConfig::new(5),
+                                        Sensor,
+                                        RigidBody::Dynamic,
+                                        GravityScale(0.0),
+                                        Collider::cuboid(11.0, 5.0),
+                                        ActiveEvents::COLLISION_EVENTS,
+                                        )
+                                    );
+                                }
                             }else if atlas.index == 29 {
                                 atlas.index = 0;
                                 *component_state = BossState::Idea;
@@ -832,12 +918,6 @@ fn handle_bossbullet_setup(
             _=> { },
         }
     }
-}
-
-fn handle_bossbullet_move(
-
-) {
-
 }
 
 fn handle_bossgun_rotation(
@@ -907,7 +987,7 @@ fn handle_boss_death(
 }
 
 fn handle_boss_hurt(
-    mut commands: Commands,
+    // mut commands: Commands,
     player_query: Query<Entity, With<Bullet>>,
     mut collision_events: EventReader<CollisionEvent>,
     mut boss_query: Query<(Entity, &mut Health), (With<Boss>, Without<BossComponent>)>,
@@ -935,4 +1015,34 @@ fn handle_boss_hurt(
                 CollisionEvent::Stopped(entity1, entity2, _) => { },
             }
         }
+}
+
+fn handle_boss_charge_hurt(
+    mut play_query: Query<(& Transform, &mut character::Health, & PlayerState), (With<Character>, Without<Boss>, Without<BossComponent>)>,
+    boss_query :Query<(& Transform, & BossState), (With<Boss>, Without<BossComponent>, Without<Character>)>,
+    mut events: EventWriter<PlayerHurtEvent>,
+) {
+    if boss_query.is_empty() || play_query.is_empty() {
+        return;
+    }
+    let (bossloc, bossstate) = boss_query.single();
+    let (playerloc, mut health, playerstate) = play_query.single_mut();
+
+    let dx =playerloc.translation.x - bossloc.translation.x;
+    let dy =playerloc.translation.y - bossloc.translation.y;
+    
+    match bossstate {
+        BossState::CollideStart | BossState::CollideLoop | BossState::CollideEnd => {
+            match playerstate {
+                PlayerState::Dodge => { },
+                _=> {
+                    if (dx * dx + dy * dy).sqrt() <= 100.0 {
+                        health.0 -= ENEMY_DAMAGE / 2.0;
+                        events.send(PlayerHurtEvent);
+                    }
+                }
+            }
+        },
+        _=> { },
+    }
 }

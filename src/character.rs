@@ -471,7 +471,7 @@ fn handle_player_bullet_collision_events(
                         match state {
                             PlayerState::Dodge => {},
                             _ => {
-                                commands.entity(*entity2).despawn();
+                                // commands.entity(*entity2).despawn();
                                 health.0 -= ENEMY_DAMAGE * 5.0;
                             },
                         }
@@ -490,7 +490,7 @@ fn handle_player_bullet_collision_events(
                         match state {
                             PlayerState::Dodge => {},
                             _ => {
-                                commands.entity(*entity1).despawn();
+                                // commands.entity(*entity1).despawn();
                                 health.0 -= ENEMY_DAMAGE * 5.0;
                             },
                         }

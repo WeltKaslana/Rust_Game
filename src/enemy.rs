@@ -1,7 +1,11 @@
 use bevy::{dev_tools::states::*, prelude::*, time::Stopwatch};
+use crate::boss::Boss;
 use crate::gun::Bullet;
 use crate::{gamestate::GameState,
-    configs::*,character::*};
+    configs::*, 
+    character::*, 
+    gun::BulletHit
+};
 use crate::*;
 use rand::Rng;
 use character::AnimationConfig;
@@ -86,6 +90,7 @@ impl Plugin for EnemyPlugin {
                         handle_bullet_move,
                         handle_enemy_death,
                         handle_enemy_bullet_collision_events,
+                        handle_enemy_hurt_collision_events,
                 ).run_if(in_state(GameState::InGame))
             )
             .add_systems(Update, log_transitions::<GameState>)
@@ -848,9 +853,7 @@ fn handle_enemy_fire(
                                             RigidBody::Dynamic,
                                             GravityScale(0.0),
                                             Collider::cuboid(11.0, 5.0),
-                                            KinematicCharacterController {
-                                                ..Default::default()
-                                            },
+                                            ActiveEvents::COLLISION_EVENTS,
                                             )
                                         );
                                     },
@@ -884,9 +887,7 @@ fn handle_enemy_fire(
                                             RigidBody::Dynamic,
                                             GravityScale(0.0),
                                             Collider::cuboid(6.0, 6.0),
-                                            KinematicCharacterController {
-                                                ..Default::default()
-                                            },
+                                            ActiveEvents::COLLISION_EVENTS,
                                             )
                                         );
                                     },
@@ -920,9 +921,7 @@ fn handle_enemy_fire(
                                             RigidBody::Dynamic,
                                             GravityScale(0.0),
                                             Collider::cuboid(6.0, 6.0),
-                                            KinematicCharacterController {
-                                                ..Default::default()
-                                            },
+                                            ActiveEvents::COLLISION_EVENTS,
                                             )
                                         );
                                     },
@@ -1004,8 +1003,8 @@ fn handle_enemy_death(
     }
 }
 
-fn handle_enemy_bullet_collision_events(
-    mut commands: Commands,
+fn handle_enemy_hurt_collision_events(
+    // mut commands: Commands,
     player_query: Query<Entity, With<Bullet>>,
     mut collision_events: EventReader<CollisionEvent>,
     mut enemy_query: Query<(Entity, &mut Health), With<Enemy>>,
@@ -1037,10 +1036,91 @@ fn handle_enemy_bullet_collision_events(
     }
 }
 
+fn handle_enemy_bullet_collision_events(
+    mut commands: Commands,
+    mut collision_events: EventReader<CollisionEvent>,
+    enemy_query: Query<Entity, (With<Enemy>, Without<EnemyBullet>, Without<Boss>)>,
+    enemy_bullet_query: Query<(Entity, & Transform), (With<EnemyBullet>, Without<Enemy>, Without<Boss>)>,
+    boss_query: Query<Entity, (With<Boss>, Without<Enemy>, Without<EnemyBullet>)>,
+    source: Res<GlobalCharacterTextureAtlas>,
+) {
+    if enemy_bullet_query.is_empty() || (enemy_query.is_empty() && boss_query.is_empty()) {
+        return;
+    }
+    for collision_event in collision_events.read() {
+        match collision_event {
+            CollisionEvent::Started(entity1,entity2, _) => {
+                for (bulletentity, transform) in enemy_bullet_query.iter() {
+                    if entity1.eq(&bulletentity) {
+                        if let Ok(b) = enemy_query.get(*entity2) {
+                            continue;
+                        }
+                        if let Ok(b) = boss_query.get(*entity2) {
+                            continue;
+                        }
+                        if let Ok(b) = enemy_bullet_query.get(*entity2) {
+                            continue;
+                        }
+                        commands.entity(bulletentity).despawn();
+                        commands.spawn((
+                            Sprite {
+                                image: source.image_gun_hit.clone(),
+                                texture_atlas: Some(TextureAtlas {
+                                    layout: source.lay_out_gun_hit.clone(),
+                                    index: 0,
+                                }),
+                                ..default()
+                            },
+                            Transform {
+                                translation: transform.translation.clone(),
+                                scale: Vec3::splat(2.5),
+                                ..default()
+                            },
+                            AnimationConfig::new(15),
+                            BulletHit,
+                        ));
+
+                    } else if entity2.eq(&bulletentity) {
+                        if let Ok(b) = enemy_query.get(*entity1) {
+                            continue;
+                        }
+                        if let Ok(b) = boss_query.get(*entity1) {
+                            continue;
+                        }
+                        if let Ok(b) = enemy_bullet_query.get(*entity1) {
+                            continue;
+                        }
+                        commands.entity(bulletentity).despawn();
+                        commands.spawn((
+                            Sprite {
+                                image: source.image_gun_hit.clone(),
+                                texture_atlas: Some(TextureAtlas {
+                                    layout: source.lay_out_gun_hit.clone(),
+                                    index: 0,
+                                }),
+                                ..default()
+                            },
+                            Transform {
+                                translation: transform.translation.clone(),
+                                scale: Vec3::splat(2.5),
+                                ..default()
+                            },
+                            AnimationConfig::new(15),
+                            BulletHit,
+                        ));
+                    }
+                }
+            },
+            CollisionEvent::Stopped(entity1, entity2, _) => { },
+        }
+    }
+}
+
 fn handle_sweeper_hit(
     mut player_query: Query<(
         &mut crate::character::Health,
-        & Transform
+        & Transform,
+        & PlayerState
     ), (With<Character>, Without<Enemy>)>,
     mut enemy_query: Query<(
         & Sprite,
@@ -1054,7 +1134,7 @@ fn handle_sweeper_hit(
     if player_query.is_empty() || enemy_query.is_empty() {
         return;
     }
-    let (mut health, playertransform) = player_query.single_mut();
+    let (mut health, playertransform, playerstate) = player_query.single_mut();
     for (enemy, enemytransform, enemytype, enemystate, mut flag, direction) in enemy_query.iter_mut() {
         match enemytype {
             EnemyType::Sweeper => {
@@ -1068,8 +1148,13 @@ fn handle_sweeper_hit(
                                     if dx >= 0.0 && dx.abs() <= ENEMY_ATTACK && dy <= ENEMY_ATTACK-50.0 && dy >= 25.0-ENEMY_ATTACK {
                                         match *flag {
                                             Fireflag::Fire => {
-                                                *flag = Fireflag::Done;
-                                                health.0 -=ENEMY_DAMAGE;
+                                                match playerstate {
+                                                    PlayerState::Dodge => { },
+                                                    _=> { 
+                                                        *flag = Fireflag::Done;
+                                                        health.0 -=ENEMY_DAMAGE;
+                                                    },
+                                                }
                                             },
                                             Fireflag::Done => {continue;}
                                         }
@@ -1078,8 +1163,13 @@ fn handle_sweeper_hit(
                                     if dx < 0.0 && dx.abs() <= ENEMY_ATTACK && dy <= ENEMY_ATTACK-50.0 && dy >= 25.0-ENEMY_ATTACK {
                                         match *flag {
                                             Fireflag::Fire => {
-                                                *flag = Fireflag::Done;
-                                                health.0 -=ENEMY_DAMAGE;
+                                                match playerstate {
+                                                    PlayerState::Dodge => { },
+                                                    _=> { 
+                                                        *flag = Fireflag::Done;
+                                                        health.0 -=ENEMY_DAMAGE;
+                                                    },
+                                                }
                                             },
                                             Fireflag::Done => {continue;}
                                         }

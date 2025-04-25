@@ -241,8 +241,8 @@ fn check_contact(
 fn evt_object_created(
     mut commands: Commands,
     //敌人诞生动画还没加入到resources中，后续完善了就改用source2调用图片
-    asset_server: Res<AssetServer>,
-    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    // asset_server: Res<AssetServer>,
+    // mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 
     mut object_events: EventReader<TiledObjectCreated>,
     mut object_query: Query<(&Name, &mut Transform), (With<TiledMapObject>, Without<Character>)>,
@@ -250,7 +250,7 @@ fn evt_object_created(
     source: Res<AssetsManager>,
     maps: Res<Assets<TiledMap>>,
     // source: Res<GlobalEnemyTextureAtlas>,
-    // source2: Res<GlobalEnemyTextureAtlas>,
+    source2: Res<GlobalEnemyTextureAtlas>,
     // mut next_state: ResMut<NextState<GameState>>,
     
 ) {
@@ -280,12 +280,12 @@ fn evt_object_created(
             }
         }
         if name.as_str() == "Object(Enemy)" {
-            let layout_born = TextureAtlasLayout::from_grid(UVec2::splat(48),12,1,None,None);
+            // let layout_born = TextureAtlasLayout::from_grid(UVec2::splat(48),12,1,None,None);
             commands.spawn((
                 Sprite {
-                    image: asset_server.load("Entity_Spawn.png"),//后续改用source2
+                    image: source2.image_bron.clone(),//后续改用source2
                     texture_atlas: Some(TextureAtlas {
-                        layout: texture_atlas_layouts.add(layout_born),
+                        layout: source2.layout_born.clone(),
                         index: 0,
                     }),
                     ..Default::default()
@@ -302,12 +302,12 @@ fn evt_object_created(
             // next_state.set(GameState::InGame);
         }
         if name.as_str() == "Object(Boss)" {
-            let layout_born = TextureAtlasLayout::from_grid(UVec2::splat(48),12,1,None,None);
+            // let layout_born = TextureAtlasLayout::from_grid(UVec2::splat(48),12,1,None,None);
             commands.spawn((
                 Sprite {
-                    image: asset_server.load("Entity_Spawn.png"),//后续改用source2
+                    image: source2.image_bron.clone(),//后续改用source2
                     texture_atlas: Some(TextureAtlas {
-                        layout: texture_atlas_layouts.add(layout_born),
+                        layout: source2.layout_born.clone(),
                         index: 0,
                     }),
                     ..Default::default()
@@ -361,7 +361,7 @@ fn check_ifcomplete(
     camera_query: Query<&Transform, With<Camera2d>>,
 ) {
     if enemyclear_query1.is_empty() && enemyclear_query2.is_empty() && bossclear_query.is_empty() {
-        println!("你过关!");
+        // println!("你过关!");
         if keyboard_input.just_pressed(KeyCode::KeyE) && transition_query.is_empty() {
             for trans in camera_query.iter() {
                 commands.spawn((
