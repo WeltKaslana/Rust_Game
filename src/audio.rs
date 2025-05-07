@@ -42,7 +42,8 @@ impl Plugin for GameAudioPlugin {
                 player_jump,
                 player_run,
                 ).run_if(in_state(GameState::InGame)))
-            .add_systems(Update, log_transitions::<GameState>);
+            // .add_systems(Update, log_transitions::<GameState>)
+            ;
     }
 }
 

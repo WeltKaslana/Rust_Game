@@ -223,3 +223,22 @@ fn update_ui (
 //         .entity(entity)
 //         .insert((Mesh2d(mesh), MeshMaterial2d(material)));
 // }
+
+// fn statetransition(
+//     mut commands: Commands, 
+//     mut transition_query: Query<(&mut Transform, Entity), With<Transition>>,
+//     mut next_state: ResMut<NextState<GameState>>,
+// ) {
+//     if transition_query.is_empty() {
+//         return;
+//     }
+//     let (mut transform, e) = transition_query.single_mut();
+//     transform.translation.x += 20.0;
+//     if transform.translation.x == 400.0 {
+//         transform.translation.y -= 100.0;
+//         next_state.set(GameState::Home);
+//     }
+//     if transform.translation.x > 2400.0 {
+//         commands.entity(e).despawn_recursive();
+//     }
+// }

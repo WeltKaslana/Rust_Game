@@ -101,7 +101,7 @@ impl Plugin for PlayerPlugin {
                         handle_player_bullet_collision_events
                 ).run_if(in_state(GameState::InGame))
                 )
-            .add_systems(Update, log_transitions::<GameState>)
+            // .add_systems(Update, log_transitions::<GameState>)
             ;
     }
 }
@@ -404,7 +404,7 @@ fn handle_player_enemy_collision_events(
 }
 
 
-fn handle_player_skills(
+fn handle_player_skills1(
     // mut commands: Commands,
     mut player_query: Query<(
         &mut Sprite, 
@@ -448,7 +448,72 @@ fn handle_player_skills(
         }
     }
 }
+fn handle_player_skills(
+    // mut commands: Commands,
+    mut player_query: Query<(
+        &mut Sprite, 
+        &mut PlayerState,
+        &mut Velocity,
+        &mut KinematicCharacterController,
+    ), With<Character>>,
+    // transform_query: Query<&Transform, Without<Character>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    source: Res<GlobalCharacterTextureAtlas>,
+) {
+    if player_query.is_empty() {
+        return;
+    }
+    if keyboard_input.just_pressed(KeyCode::ShiftLeft) {
+        for (mut player, mut player_state, mut V, mut controller) in player_query.iter_mut() {
+            match *player_state {
+                PlayerState::Jump => {
+                    V.0 = 0.0;
+                    *player_state = PlayerState::Dodge;
+                    //使得玩家不与敌人产生碰撞
+                    controller.filter_groups = Some(CollisionGroups::new(Group::GROUP_1, Group::GROUP_2));
 
+                    if let Some(image) = source.image_skill.clone() {
+                        player.image = image;
+                    } else {
+                        //Utaha skill
+
+                    }
+                    if let Some(layout) = source.lay_out_skill.clone() {
+                        player.texture_atlas = Some(TextureAtlas {
+                            layout: layout,
+                            index: 0,
+                        });
+                    } else {
+                        //Utaha skill
+
+                    }
+                },
+                PlayerState::Dodge => {},
+                _ => {
+                    *player_state = PlayerState::Dodge;
+                    //使得玩家不与敌人产生碰撞
+                    controller.filter_groups = Some(CollisionGroups::new(Group::GROUP_1, Group::GROUP_2));
+
+                    if let Some(image) = source.image_skill.clone() {
+                        player.image = image;
+                    } else {
+                        //Utaha skill
+
+                    }
+                    if let Some(layout) = source.lay_out_skill.clone() {
+                        player.texture_atlas = Some(TextureAtlas {
+                            layout: layout,
+                            index: 0,
+                        });
+                    } else {
+                        //Utaha skill
+
+                    }
+                },
+            }
+        }
+    }
+}
 
 fn handle_player_bullet_collision_events(
     mut commands: Commands,

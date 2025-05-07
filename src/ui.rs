@@ -33,7 +33,8 @@ impl Plugin for UIPlugin {
             // update_ui,
             handle_state_bar,
         ))
-        .add_systems(Update, log_transitions::<GameState>);
+        // .add_systems(Update, log_transitions::<GameState>)
+        ;
     }
 }
 //ui相对于摄像头的偏移量
@@ -69,7 +70,8 @@ fn setup_ui_all (
             font: asset_server.load("Fonts/FIXEDSYS-EXCELSIOR-301.ttf"),
             font_size: 35.0,
             ..default()
-        },  
+        }, 
+        Health(0.0),
         TextColor(Color::rgb(123.0, 157.0, 131.0)),
         Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
     ));
@@ -108,7 +110,7 @@ fn handle_state_bar(
     health_query: Query<&mut Health, (With<Character>, Without<Bar>, Without<BufferBar>, Without<Camera2d>)>,
     mut buffer_query: Query<&mut Transform, (With<BufferBar>, Without<Character>, Without<Bar>, Without<Camera2d>)>,
     mut bar_query: Query<&mut Transform, (With<Bar>, Without<BufferBar>, Without<Character>, Without<Camera2d>)>,
-    mut text_query: Query<&mut Text2d>,//后续可能文本框不止这一个，需要加限制过滤
+    mut text_query: Query<&mut Text2d, With<Health>>,//后续可能文本框不止这一个，需要加限制过滤
     query2: Query<Entity, (With<Hurtui>, Without<Camera2d>)>,
     mut ui_query: Query<&mut Transform, (With<UI>, Without<Camera2d>, Without<BufferBar>, Without<Bar>, Without<Character>)>,
 ) {

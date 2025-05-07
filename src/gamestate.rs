@@ -7,7 +7,23 @@ pub enum GameState {
     Loading,
     OverMenu,
     Home,
-    // GameInit,
     InGame,
     Stop,
 }
+
+#[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, SubStates)]
+#[source(GameState = GameState::Home)]
+pub enum HomeState {
+    #[default]
+    Running,
+    Pause,
+}
+
+#[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, SubStates)]
+#[source(GameState = GameState::InGame)]
+pub enum InGameState {
+    #[default]
+    Running,
+    Pause,
+}
+

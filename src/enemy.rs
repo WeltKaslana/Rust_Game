@@ -93,7 +93,7 @@ impl Plugin for EnemyPlugin {
                         handle_enemy_hurt_collision_events,
                 ).run_if(in_state(GameState::InGame))
             )
-            .add_systems(Update, log_transitions::<GameState>)
+            // .add_systems(Update, log_transitions::<GameState>)
             ;
     }
 }
@@ -1060,7 +1060,7 @@ fn handle_enemy_bullet_collision_events(
     boss_query: Query<Entity, (With<Boss>, Without<Enemy>, Without<EnemyBullet>)>,
     source: Res<GlobalCharacterTextureAtlas>,
 ) {
-    if enemy_bullet_query.is_empty() || (enemy_query.is_empty() && boss_query.is_empty()) {
+    if enemy_bullet_query.is_empty() {
         return;
     }
     for collision_event in collision_events.read() {

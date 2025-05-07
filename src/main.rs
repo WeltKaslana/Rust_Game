@@ -4,7 +4,7 @@ use bevy_framepace::{FramepacePlugin, Limiter};
 
 
 
-use demo::gamestate::GameState;
+use demo::gamestate::*;
 use demo::gui::GuiPlugin;
 use demo::camera::FollowCameraPlugin;
 use demo::character::PlayerPlugin;
@@ -54,6 +54,8 @@ fn main() {
         .add_plugins(RoomPlugin)
 
         .insert_state(GameState::MainMenu)
+        .add_sub_state::<HomeState>()
+        .add_sub_state::<InGameState>()
         .add_systems(Startup, set_rate)
         .add_systems(Update, log_transitions::<GameState>)
         .run();

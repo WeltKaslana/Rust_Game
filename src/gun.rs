@@ -69,7 +69,8 @@ impl Plugin for GunPlugin {
                     handle_bullet_move,
                     despawn_old_bullets,
                 ).run_if(in_state(GameState::InGame)))
-        .add_systems(Update, log_transitions::<GameState>);
+        // .add_systems(Update, log_transitions::<GameState>)
+        ;
     }
 }
 

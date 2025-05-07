@@ -143,11 +143,11 @@ impl Plugin for ResourcesPlugin {
     fn build(&self, app: &mut App) {
         app
             .insert_resource(CursorPosition(None))
-
             .add_systems(Startup, load_assets)
             .add_systems(Update,update_cursor_position)
             .add_systems(OnEnter(GameState::Home),load_assets_enemy)
-            .add_systems(Update, log_transitions::<GameState>);
+            // .add_systems(Update, log_transitions::<GameState>)
+            ;
     }
 }
 

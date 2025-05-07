@@ -33,7 +33,7 @@ pub struct Wall;
 impl Plugin for HomePlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_systems(Update, log_transitions::<GameState>)
+            // .add_systems(Update, log_transitions::<GameState>)
             .add_systems(OnEnter(GameState::Home), setup)
             .add_systems(Update, (
                 check_state, 
@@ -151,7 +151,7 @@ fn setup(
             //test
             Collider::cuboid(15.0, 18.0),
             ColliderMassProperties::Mass(100.0),
-            // CollisionGroups::new(Group::GROUP_2, Group::ALL),
+            CollisionGroups::new(Group::GROUP_3, Group::ALL),
             RigidBody::Dynamic,
             LockedAxes::TRANSLATION_LOCKED_X,
             GravityScale(5.0),

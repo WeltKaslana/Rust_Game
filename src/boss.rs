@@ -75,7 +75,7 @@ impl Plugin for BossPlugin {
                         handle_boss_charge_hurt,
                 ).run_if(in_state(GameState::InGame))
             )
-            .add_systems(Update, log_transitions::<GameState>)
+            // .add_systems(Update, log_transitions::<GameState>)
             ;
     }
 }
