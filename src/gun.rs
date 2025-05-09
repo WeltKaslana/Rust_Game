@@ -40,10 +40,10 @@ pub struct Bullet;
 pub struct BulletHit;
 
 #[derive(Component)]
-pub struct SpawnInstant(Instant);
+pub struct SpawnInstant(pub Instant);
 
 #[derive(Component)]
-struct BulletDirection(Vec3);
+pub struct BulletDirection(pub Vec3);
 
 #[derive(Event)]
 pub struct PlayerFireEvent;
@@ -87,7 +87,7 @@ fn setup_cursor(
         image: asset_server.load("FrontSight.png"),
         ..Default::default()
         },
-        Transform::from_scale(Vec3::splat(2.0)).with_translation(Vec3::new(cursor_pos.x,cursor_pos.y,90.0)),
+        Transform::from_scale(Vec3::splat(2.0)).with_translation(Vec3::new(cursor_pos.x,cursor_pos.y,120.0)),
         Cursor,
         ));
 }

@@ -27,7 +27,7 @@ pub const PLAYER_JUMP_COUNTS: usize = 3;
 
 // Enemy
 pub const MAX_NUM_ENEMIES: usize = 20000;
-pub const ENEMY_DAMAGE: f32 = 1.0;
+pub const ENEMY_DAMAGE: f32 = 0.5;
 pub const SPAWN_RATE_PER_SECOND: usize = 500;
 pub const ENEMY_HEALTH: f32 = 100.0;
 pub const ENEMY_SPAWN_INTERVAL: f32 = 1.0;
