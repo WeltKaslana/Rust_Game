@@ -1,9 +1,11 @@
 use bevy::math::vec3;
+use bevy::transform;
 use bevy::{
     dev_tools::states::*, 
     prelude::*, 
     time::Stopwatch,
     ecs::world::DeferredWorld,};
+use bevy_rapier2d::na::distance;
 use bevy_rapier2d::prelude::*;
 
 use std::{time::Duration};
@@ -12,13 +14,25 @@ use crate::{
     enemy::{
         EnemyBullet,
         Enemy,},
-    gun::Gun,
+    gun::{
+        Gun,
+        BulletDirection,
+        SpawnInstant,},
 };
 use crate::*;
 pub struct PlayerPlugin;
 
 #[derive(Component)]
 pub struct Character;
+
+#[derive(Component)]
+pub struct Drone;
+
+#[derive(Component)]
+pub struct DroneBullet;
+
+#[derive(Component)]
+pub struct State(pub i32);
 
 #[derive(Component)]
 pub struct Health(pub f32);
@@ -97,6 +111,7 @@ impl Plugin for PlayerPlugin {
                         handle_player_death,
                         handle_player_move3,
                         handle_player_skills,
+                        handle_player_skill4,
                         // handle_player_enemy_collision_events,
                         handle_player_bullet_collision_events
                 ).run_if(in_state(GameState::InGame))
@@ -875,5 +890,61 @@ fn handle_player_move3(
                 *player_state = PlayerState::Idle;
             },
         };
+    }
+}
+
+
+fn handle_player_skill4 (
+    mut commands: Commands,
+    transform_query: Query<(&Sprite, &Transform), (With<Character>, Without<Drone>, Without<DroneBullet>, Without<Enemy>)>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    asset_server: Res<AssetServer>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    mut drone_query: Query<(&mut Sprite, & State), (With<Drone>, Without<DroneBullet>, Without<Enemy>, Without<Character>)>,
+    mut drone_bullet_query: Query<(&Transform, &mut BulletDirection), (With<DroneBullet>, Without<Drone>, Without<Enemy>, Without<Character>)>,
+    enemy_query: Query<&Transform, (With<Enemy>, Without<DroneBullet>, Without<Drone>, Without<Character>)>,
+) {
+    if transform_query.is_empty() {
+        return;
+    }
+    let (player, player_transform) = transform_query.single();
+    if !drone_query.is_empty() {//存在小飞机
+        let (mut drone, state) = drone_query.single_mut();
+        if state.0 != 0 {
+            drone.image = asset_server.load("Shiroko_Drone_Fire.png");
+            if let Some(atlas) = &mut drone.texture_atlas {
+                atlas.layout = texture_atlas_layouts.add(TextureAtlasLayout::from_grid(UVec2::splat(96),7,1,None,None));
+            }
+        }
+    } else if keyboard_input.just_pressed(KeyCode::KeyQ)  {//不存在小飞机，则按Q生成小飞机
+        commands.spawn((
+            Sprite {
+                image: asset_server.load("Shiroko_Drone_Idle.png"),
+                texture_atlas: Some(TextureAtlas {
+                    layout: texture_atlas_layouts.add(TextureAtlasLayout::from_grid(UVec2::splat(64),7,1,None,None)),
+                    index: 0,
+                }),
+                flip_x: player.flip_x,
+                ..Default::default()
+            },
+            Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(player_transform.translation.x, player_transform.translation.y, 31.0)),
+            Drone,
+            State(0),
+            AnimationConfig::new(10),
+        ));
+    }
+    if drone_bullet_query.is_empty() ||  enemy_query.is_empty() {
+        return ;
+    } else {
+        for (bullet_transform, mut bullet_direction) in drone_bullet_query.iter_mut() {
+            let mut dis = 99999.9;
+            for enemy_transform in enemy_query.iter() {
+                let d = (bullet_transform.translation - enemy_transform.translation).length();
+                if d < dis {
+                    dis = d;
+                    bullet_direction.0 = (enemy_transform.translation - bullet_transform.translation).normalize();
+                }
+            }
+        }
     }
 }

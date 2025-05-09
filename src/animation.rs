@@ -3,35 +3,26 @@ use bevy::{
     log::tracing_subscriber::fmt::time, 
     prelude::*,
 };
+use bevy::utils::Instant;
+use bevy_ecs_tilemap::helpers::transform;
 use bevy_rapier2d::prelude::*;
 use crate::{
     boss::{
-        Boss, BossComponent, 
-        BossState, 
-        Direction, 
-        Health, 
-        Skillflag, 
-        BossDeathEffect,
-        set_boss,
-    }, 
-    character::{
-        AnimationConfig, 
-        Character, 
-        PlayerState 
-    }, 
-    enemy::{
-        BulletDirection, Enemy, EnemyBullet, EnemyDeathEffect, 
-        EnemyState, EnemyType, Fireflag, PatrolState, set_enemy,
+        set_boss, Boss, BossComponent, BossDeathEffect, BossState, Direction, Health, Skillflag
+    }, character::{
+        AnimationConfig, Character, Drone, DroneBullet, PlayerState, State
+    }, enemy::{
+        set_enemy, BulletDirection, Enemy, EnemyBullet, EnemyDeathEffect, EnemyState, EnemyType, Fireflag, PatrolState
     }, 
     gamestate::GameState, 
-    gun::{Bullet, BulletHit, Cursor, Gun, GunFire}, 
+    gun::{self, Bullet, BulletHit, Cursor, Gun, GunFire, SpawnInstant}, 
     home::{Fridge, FridgeState, Sora, SoraState}, 
-    room::EnemyBorn,
     resources::{
-        GlobalCharacterTextureAtlas, GlobalHomeTextureAtlas, 
-        GlobalEnemyTextureAtlas, GlobalBossTextureAtlas,
-    },
+        GlobalBossTextureAtlas, GlobalCharacterTextureAtlas, GlobalEnemyTextureAtlas, GlobalHomeTextureAtlas
+    }, 
+    room::EnemyBorn
 };
+use bevy::math::{vec2, vec3};
 
 pub struct AnimationPlugin;
 
@@ -53,6 +44,7 @@ impl Plugin for AnimationPlugin {
                 animate_boss,
                 boss_filpx,
                 enemyboss_death_effect,
+                animate_droneskill,
             ).run_if(in_state(GameState::InGame)),)
             .add_systems(Update, 
                 (
@@ -682,6 +674,114 @@ fn animate_fridge(
                     }
                 },
             }
+        }
+    }
+}
+
+fn animate_droneskill (
+    time: Res<Time>,
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    mut drone_query: Query<(
+        Entity, 
+        &mut AnimationConfig, 
+        &mut Sprite,
+        & Transform,
+        &mut State), (With<Drone>, Without<DroneBullet>)>,
+    mut drone_bullet_query: Query<(
+        &mut Sprite,
+        &mut Transform,
+        &mut AnimationConfig,
+        & gun::BulletDirection), (Without<Drone>, With<DroneBullet>)>,
+) {
+    if !drone_query.is_empty() {
+        let (drone, mut config, mut sprite,dronetransform, mut state) = drone_query.single_mut();
+        let all = 7;
+        let flag = sprite.flip_x;
+        config.frame_timer.tick(time.delta());
+        if config.frame_timer.just_finished(){
+            if let Some(atlas) = &mut sprite.texture_atlas {
+                config.frame_timer = AnimationConfig::timer_from_fps(config.fps2p);
+                atlas.index = (atlas.index + 1) % all;
+                if atlas.index == all - 1 {
+                    if state.0 == 8 {
+                        commands.entity(drone).despawn();
+                    } else {
+                        state.0 += 1;
+                    }
+                } else if (state.0 == 1 || state.0 == 3 || state.0 == 5 || state.0 == 7) && atlas.index == 3 {
+                    let mut dir =vec3(1.0, 0.0, 0.0);
+                    if flag {
+                        dir = vec3(-1.0, 0.0, 0.0);
+                    }
+                    commands.spawn((
+                        Sprite {
+                            image: asset_server.load("Player_Bullet_Missile.png"),
+                            texture_atlas: Some(TextureAtlas {
+                                layout: texture_atlas_layouts.add(TextureAtlasLayout::from_grid(UVec2::splat(32),5,1,None,None)),
+                                index: 0,
+                            }),
+                            ..Default::default()
+                        },
+                        Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(dronetransform.translation.x-20.0, dronetransform.translation.y, 32.0)),
+                        DroneBullet,
+                        Bullet,
+                        gun::BulletDirection(dir),
+                        AnimationConfig::new(10),
+                        SpawnInstant(Instant::now()),
+                        
+                        Sensor,
+                        RigidBody::Dynamic,
+                        GravityScale(0.0),
+                        Collider::cuboid(11.0, 5.0),
+                        ActiveEvents::COLLISION_EVENTS,
+                        CollisionGroups::new(Group::GROUP_4, Group::GROUP_3),
+
+                    ));
+                    commands.spawn((
+                        Sprite {
+                            image: asset_server.load("Player_Bullet_Missile.png"),
+                            texture_atlas: Some(TextureAtlas {
+                                layout: texture_atlas_layouts.add(TextureAtlasLayout::from_grid(UVec2::splat(32),5,1,None,None)),
+                                index: 0,
+                            }),
+                            ..Default::default()
+                        },
+                        Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(dronetransform.translation.x+20.0, dronetransform.translation.y, 32.0)),
+                        DroneBullet,
+                        Bullet,
+                        gun::BulletDirection(dir),
+                        AnimationConfig::new(10),
+                        SpawnInstant(Instant::now()),
+                        
+                        Sensor,
+                        RigidBody::Dynamic,
+                        GravityScale(0.0),
+                        Collider::cuboid(11.0, 5.0),
+                        ActiveEvents::COLLISION_EVENTS,
+                        CollisionGroups::new(Group::GROUP_4, Group::GROUP_3),
+                        
+                    ));
+                    state.0 += 1;
+                }
+            }
+        }
+    }
+    if !drone_bullet_query.is_empty() {
+        for (mut bullet, mut transform, mut config, dir) in drone_bullet_query.iter_mut() {
+            let all = 5;
+            config.frame_timer.tick(time.delta());
+            if config.frame_timer.just_finished(){
+                if let Some(atlas) = &mut bullet.texture_atlas {
+                    config.frame_timer = AnimationConfig::timer_from_fps(config.fps2p);
+                    atlas.index = (atlas.index + 1) % all;
+                }
+            }
+            let dx = dir.0.x;
+            let dy = dir.0.y;
+            let angle = dy.atan2(dx);
+            transform.rotation = Quat::from_rotation_z(angle);
         }
     }
 }
