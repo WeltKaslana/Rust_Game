@@ -11,6 +11,7 @@ impl Plugin for FollowCameraPlugin {
         app
             .add_event::<PlayerFireEvent>()
             .add_systems(Startup, setup_camera)
+            .add_systems(OnEnter(GameState::MainMenu), update_camera)
             .add_systems(
                 Update,
                 camera_follow_player.run_if(in_state(GameState::Home)),
@@ -27,7 +28,19 @@ impl Plugin for FollowCameraPlugin {
 fn setup_camera(mut commands: Commands) {
     commands.spawn(Camera2d);
 }
+fn update_camera(
+    mut camera_query: Query<&mut Transform, With<Camera2d>>,
 
+) {
+    if camera_query.is_empty() {
+        info!("Camera not found");
+        return;
+    }
+    let mut camera_transform = camera_query.single_mut();
+    //摄像机位置
+    camera_transform.translation.x = 0.0;
+    camera_transform.translation.y = 0.0;
+}
 fn camera_follow_player(
     mut events: EventReader<PlayerFireEvent>,
     player_query: Query<&Transform, With<Character>>,

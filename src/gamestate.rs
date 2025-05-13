@@ -25,5 +25,6 @@ pub enum InGameState {
     #[default]
     Running,
     Pause,
+    Reloading,
 }
 

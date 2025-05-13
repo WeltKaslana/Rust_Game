@@ -8,8 +8,8 @@ use bevy_rapier2d::prelude::*;
 use rand::Rng;
 
 use crate::{
-    character::{Character, AnimationConfig, },
-    gamestate::GameState,
+    character::{Character, AnimationConfig, Player, },
+    gamestate::*,
     CursorPosition,
     GlobalCharacterTextureAtlas,
     configs::{BULLET_SPAWN_INTERVAL, 
@@ -53,6 +53,22 @@ impl Plugin for GunPlugin {
         app
         .add_event::<PlayerFireEvent>()
         .add_systems(OnEnter(GameState::Home), (setup_gun,setup_cursor))
+        // .add_systems(
+        //     Update,(
+        //         handle_gun_transform,
+        //         handle_cursor_transform,
+        //         handle_gun_fire,
+        //         handle_bullet_move,
+        //         despawn_old_bullets,
+        //     ).run_if(in_state(GameState::Home)))
+        .add_systems(
+        Update,(
+            handle_gun_transform,
+            handle_cursor_transform,
+            handle_gun_fire,
+            handle_bullet_move,
+            despawn_old_bullets,
+        ).run_if(in_state(HomeState::Running)))
         .add_systems(
             Update,(
                 handle_gun_transform,
@@ -60,15 +76,7 @@ impl Plugin for GunPlugin {
                 handle_gun_fire,
                 handle_bullet_move,
                 despawn_old_bullets,
-            ).run_if(in_state(GameState::Home)))
-            .add_systems(
-                Update,(
-                    handle_gun_transform,
-                    handle_cursor_transform,
-                    handle_gun_fire,
-                    handle_bullet_move,
-                    despawn_old_bullets,
-                ).run_if(in_state(GameState::InGame)))
+        ).run_if(in_state(GameState::InGame)))
         // .add_systems(Update, log_transitions::<GameState>)
         ;
     }
@@ -89,6 +97,7 @@ fn setup_cursor(
         },
         Transform::from_scale(Vec3::splat(2.0)).with_translation(Vec3::new(cursor_pos.x,cursor_pos.y,120.0)),
         Cursor,
+        Player,
         ));
 }
 
@@ -138,6 +147,7 @@ fn setup_gun(
         Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(15.0,-215.0,31.0)),
         Gun,
         GunTimer(Stopwatch::default()),
+        Player,
         ));
 }
 
@@ -232,6 +242,7 @@ fn handle_gun_fire(
             },
             AnimationConfig::new(15),
             GunFire,
+            Player,
             ));
         //子弹散布
         let dir = vec3(
@@ -253,6 +264,7 @@ fn handle_gun_fire(
                 rotation: Quat::from_rotation_z(dir.y.atan2(dir.x)),
                 scale: Vec3::splat(2.5),
             },
+            Player,
             Bullet,
             BulletDirection(dir),
             SpawnInstant(Instant::now()),
@@ -269,7 +281,6 @@ fn handle_gun_fire(
         ));
     }
 }
-
 
 fn handle_bullet_move(
     mut bullet_query: Query<(&mut Transform, &BulletDirection), With<Bullet>>,

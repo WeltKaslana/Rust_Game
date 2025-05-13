@@ -242,3 +242,127 @@ fn update_ui (
 //         commands.entity(e).despawn_recursive();
 //     }
 // }
+
+
+    // commands.spawn((
+    //     ImageNode::new(image_menu.clone()),
+    //     Node {
+    //         width: Val::Percent(30.0),
+    //         height: Val::Percent(50.0),
+    //         position_type: PositionType::Absolute,
+    //         left: Val::Percent(35.0),
+    //         top: Val::Percent(25.0 +  40.0),
+    //         align_items: AlignItems::Center,
+    //         justify_content: JustifyContent::Center,
+    //         ..default()
+    //     },
+    //     PauseMenu::Body,))
+    // .with_child((
+    //         Text::new("Pause"),
+    //         TextFont {
+    //             font: font.clone(),
+    //             font_size: 45.0,
+    //             ..default()
+    //         },  
+    //         TextColor(Color::rgb(123.0, 0.0, 131.0)),
+    //         Node {
+    //             top: Val::Percent(0.0),
+    //             left: Val::Percent(40.0),
+    //             position_type: PositionType::Absolute,
+    //             ..Default::default()
+    //         }, 
+    // ))
+    // .with_child((
+    //     ImageNode::new(image_button.clone()),
+
+    //     Node {
+    //         width: Val::Percent(60.0),
+    //         height: Val::Percent(10.0),
+    //         top: Val::Percent(25.0),
+    //         left: Val::Percent(20.0),
+    //         align_items: AlignItems::Center,
+    //         position_type: PositionType::Absolute,
+    //         ..default()
+    //     },
+    //     Button,
+    // ))
+    // .with_child((
+    //     ImageNode::new(image_button.clone()),
+    //     // Text2d::new("back to main menu"),
+    //     // TextFont {
+    //     //         font: font.clone(),
+    //     //         font_size: 45.0,
+    //     //         ..default()
+    //     // },  
+    //     // TextColor(Color::rgb(123.0, 0.0, 131.0)),
+    //     Node {
+    //         width: Val::Percent(60.0),
+    //         height: Val::Percent(10.0),
+    //         top: Val::Percent(42.0),
+    //         left: Val::Percent(20.0),
+    //         align_items: AlignItems::Center,
+    //         position_type: PositionType::Absolute,
+    //         ..default()
+    //     },
+    //     Button,
+    // ));
+
+    // commands.spawn((
+    //     Sprite {
+    //         image: asset_server.load("BookMenu_List.png"),
+    //         ..Default::default()
+    //     },
+    //     Transform::from_scale(Vec3::splat(0.5)).with_translation(Vec3::new(loc.x, loc.y - 260.0, 100.0)),
+    //     PauseMenu::Body,
+    // ))
+    // .with_child((
+    //     Text2d::from("Pause"),
+    //     TextFont {
+    //         font: font.clone(),
+    //         font_size: 85.0,
+    //         ..default()
+    //     },  
+    //     TextColor(Color::rgb(0.0, 0.0, 0.0)),
+    //     Transform::from_translation(Vec3::new(0.0, 360.0, 1.0)),
+    // ))
+    // .with_child((
+    //     Sprite {
+    //         image: image_button.clone(),
+    //         ..Default::default()
+    //     },
+    //     Name::new("back to game"),
+    //     Transform::from_scale(Vec3::splat(1.0)).with_translation(Vec3::new(0.0, 240.0, 1.0)),
+    //     Button,
+    //     Node {
+    //         ..Default::default()
+    //     },
+    // ))
+    // .with_child((
+    //     Text2d::new("Back to game"),
+    //     TextFont {
+    //         font: font.clone(),
+    //         font_size: 45.0,
+    //         ..default()
+    //     }, 
+    //     TextColor(Color::rgb(0.0, 0.0, 0.0)),
+    //     Transform::from_translation(Vec3::new(0.0, 240.0, 2.0)),
+    // ))
+    // .with_child((
+    //     Sprite {
+    //         image: image_button.clone(),
+    //         ..Default::default()
+    //     },
+    //     Name::new("back to main menu"),
+    //     Transform::from_scale(Vec3::splat(1.0)).with_translation(Vec3::new(0.0, 100.0, 1.0)),
+    //     Button,
+    // ))
+    // .with_child((
+    //     Text2d::new("Back to main menu"),
+    //     TextFont {
+    //         font: font.clone(),
+    //         font_size: 45.0,
+    //         ..default()
+    //     }, 
+    //     TextColor(Color::rgb(0.0, 0.0, 0.0)),
+    //     Transform::from_translation(Vec3::new(0.0, 100.0, 2.0)),
+    // ));

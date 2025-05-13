@@ -10,7 +10,7 @@ use bevy_rapier2d::prelude::*;
 
 use std::{time::Duration};
 use crate::{
-    gamestate::GameState,
+    gamestate::*,
     enemy::{
         EnemyBullet,
         Enemy,},
@@ -24,6 +24,10 @@ pub struct PlayerPlugin;
 
 #[derive(Component)]
 pub struct Character;
+
+//表示所有与玩家相关的实体
+#[derive(Component)]
+pub struct Player;
 
 #[derive(Component)]
 pub struct Drone;
@@ -39,11 +43,6 @@ pub struct Health(pub f32);
 
 #[derive(Component)]
 pub struct Velocity(pub f32);
-//用于判断当前player是否不在空中
-#[derive(Component)]
-pub struct Lastlocy(pub f32);
-#[derive(Component)]
-pub struct Lastvy(pub f32);
 
 #[derive(Component)]
 pub struct PlayerTimer(pub Stopwatch);
@@ -70,6 +69,8 @@ pub struct PlayerJumpEvent;
 #[derive(Event)]
 pub struct PlayerHurtEvent;
 
+#[derive(Event)]
+pub struct ReloadPlayerEvent;
 //定义角色动画帧率
 #[derive(Component)]
 
@@ -95,15 +96,24 @@ impl AnimationConfig {
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app
-            // .add_event::<PlayerEnemyCollisionEvent>()
+            .add_event::<ReloadPlayerEvent>()
             .add_systems(OnEnter(GameState::Home), setup_player)
+            .add_systems(Update, reload_player)
+            // .add_systems(
+            // Update,
+            //     (
+            //         handle_player_move2,
+            //         handle_player_skills,
+            //         // handle_play_bullet_collision_events,
+            // ).run_if(in_state(GameState::Home))
+            // )
             .add_systems(
             Update,
                 (
                     handle_player_move2,
                     handle_player_skills,
                     // handle_play_bullet_collision_events,
-            ).run_if(in_state(GameState::Home))
+            ).run_if(in_state(HomeState::Running))
             )
             .add_systems(
                 Update,
@@ -115,8 +125,7 @@ impl Plugin for PlayerPlugin {
                         // handle_player_enemy_collision_events,
                         handle_player_bullet_collision_events
                 ).run_if(in_state(GameState::InGame))
-                )
-            // .add_systems(Update, log_transitions::<GameState>)
+            )
             ;
     }
 }
@@ -139,6 +148,7 @@ fn setup_player(
         AnimationConfig::new(13),
         PlayerState::default(),
         Character,
+        Player,
         // 血条
         Health(PLAYER_HEALTH),
         // //跳跃起始速度
@@ -179,7 +189,47 @@ fn setup_player(
             ));
     }
 }
+fn reload_player(
+    mut events: EventReader<ReloadPlayerEvent>,
+    mut player_query: Query<(&mut Sprite, &PlayerState), (With<Character>, Without<Gun>)>,
+    mut gun_query: Query<&mut Sprite, (With<Gun>, Without<Character>)>,
+    source: Res<GlobalCharacterTextureAtlas>,
+) {//角色重载
+    for _ in events.read() {
+        for (mut player, player_state) in player_query.iter_mut() {
+            match *player_state {
+                PlayerState::Jump => {
+                    player.image = source.image_jump.clone();
+                    player.texture_atlas = Some(TextureAtlas {
+                        layout: source.lay_out_jump.clone(),
+                        index: 0,
+                    });
+                },
+                PlayerState::Move => {
+                    player.image = source.image_move.clone();
+                    player.texture_atlas = Some(TextureAtlas {
+                        layout: source.lay_out_move.clone(),
+                        index: 0,
+                    });
+                },
+                PlayerState::Idle => {
+                    player.image = source.image_idle.clone();
+                    player.texture_atlas = Some(TextureAtlas {
+                        layout: source.lay_out_idle.clone(),
+                        index: 0,
+                    });
+                },
+                _ => {},
+            }
+        }
+        for mut gun in gun_query.iter_mut() {
+            info!("gun reload!");
+            gun.image = source.image_gun.clone();
+        }
+        info!("reload player!");
 
+    }
+}
 fn handle_player_move(
     mut commands: Commands,
     mut events: EventWriter<PlayerRunEvent>,

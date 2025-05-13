@@ -14,7 +14,7 @@ use crate::{
     }, enemy::{
         set_enemy, BulletDirection, Enemy, EnemyBullet, EnemyDeathEffect, EnemyState, EnemyType, Fireflag, PatrolState
     }, 
-    gamestate::GameState, 
+    gamestate::*, 
     gun::{self, Bullet, BulletHit, Cursor, Gun, GunFire, SpawnInstant}, 
     home::{Fridge, FridgeState, Sora, SoraState}, 
     resources::{
@@ -46,6 +46,15 @@ impl Plugin for AnimationPlugin {
                 enemyboss_death_effect,
                 animate_droneskill,
             ).run_if(in_state(GameState::InGame)),)
+            // .add_systems(Update, 
+            //     (
+            //         animate_player,
+            //         flip_player_sprite_x,
+            //         flip_gun_sprite_y,
+            //         animate_gunfire,
+            //         animate_sora,
+            //         animate_fridge,
+            // ).run_if(in_state(GameState::Home)))
             .add_systems(Update, 
                 (
                     animate_player,
@@ -54,7 +63,7 @@ impl Plugin for AnimationPlugin {
                     animate_gunfire,
                     animate_sora,
                     animate_fridge,
-            ).run_if(in_state(GameState::Home))
+            ).run_if(in_state(HomeState::Running))
             );
     }
 }

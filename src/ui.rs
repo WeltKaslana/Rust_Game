@@ -7,6 +7,7 @@ use crate::{
     character::{
         Character,
         Health,
+        Player,
         PlayerHurtEvent
     }, 
     gamestate::GameState, PLAYER_HEALTH
@@ -86,7 +87,7 @@ fn setup_ui_all (
         Transform::from_scale(Vec3::splat(0.5))
         .with_translation(Vec3::new(loc.x, loc.y, 70.0) + UI_OFFSET),
         BufferBar,
-        // UI,
+        UI,
     ));
     //血条
     commands.spawn((
@@ -99,7 +100,7 @@ fn setup_ui_all (
         Transform::from_scale(Vec3::splat(0.5))
         .with_translation(Vec3::new(loc.x, loc.y, 80.0) + UI_OFFSET),
         Bar,
-        // UI,
+        UI,
     ));
 }
 
@@ -121,7 +122,7 @@ fn handle_state_bar(
 
     if !text_query.is_empty() {
         for mut text in text_query.iter_mut() {
-            text.0 = format!("{}/{}",health.0,PLAYER_HEALTH);
+            text.0 = format!("{}/{}",health.0 as i32,PLAYER_HEALTH);
         }
     }
 
@@ -155,9 +156,10 @@ fn handle_state_bar(
 
     //缓冲血条控制
     if buffer.scale.x > bar.scale.x {
-        buffer.scale.x -= 0.003;
+        let bufferspeed = 0.001;
+        buffer.scale.x -= bufferspeed;
 
-        let temp = 0.003 * 0.5 * barwidth;
+        let temp = bufferspeed * 0.5 * barwidth;
         unsafe {
             buffer_offset -= temp;
             buffer.translation.x -= temp;//提前响应，不然左侧会有瑕疵
@@ -191,6 +193,7 @@ fn hurtui(
     }
     let loc = loc_query.single().translation.truncate();
     for _ in event.read() {
+        // println!("Hurt!");//test
         commands.spawn((
             Sprite {
                 image: asset_server.load("UI_Hit.png"),
@@ -199,6 +202,7 @@ fn hurtui(
             Transform::from_scale(Vec3::new(1.9, 1.4, 1.9))
                 .with_translation(Vec3::new(loc.x, loc.y, 111.0)),
             Hurtui,
+            Player,
         ));     
     }
     for mut trans in hurtui_query.iter_mut() {

@@ -1,9 +1,11 @@
-use bevy::{dev_tools::states::*, diagnostic::FrameTimeDiagnosticsPlugin, ecs::query, image, prelude::*, state::{self, commands}, text::cosmic_text::ttf_parser::Style, transform};
+use bevy::{ecs::query, prelude::*, render::camera};
 
 use crate::{
     gamestate::*,
-    character::Character,
+    character::{Character, Player},
+    gun::{Gun, Cursor},
     home::Home,
+    ui::UI,
     room::AssetsManager,
 };
 
@@ -30,7 +32,9 @@ pub enum ButtonType {
 impl Plugin for GuiPlugin {
     fn build(&self, app: &mut App) {
         app
-        .add_systems(OnEnter(GameState::MainMenu), setup_main_menu)
+        .add_systems(OnEnter(GameState::MainMenu), (
+            clear_all.before(setup_main_menu),
+            setup_main_menu))
         .add_systems(OnExit(GameState::MainMenu), despawn_main_menu)
         .add_systems(
             Update,
@@ -86,10 +90,25 @@ struct LeftSlide2;
 struct RightSlide1;
 #[derive(Component)]
 struct RightSlide2;
+
+
+fn clear_all(
+    mut commands: Commands,
+    query1: Query<Entity, (With<Player>, (Without<UI>))>,
+    query2: Query<Entity, (With<UI>, (Without<Player>))>,
+) {
+    for entity in query1.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+    for entity in query2.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+}
+
 fn setup_main_menu(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,) {
-    
+    asset_server: Res<AssetServer>,
+) {
     commands.spawn((
         Sprite {
             image: asset_server.load("Menu1.png"),
@@ -168,8 +187,8 @@ fn handle_main_menu_buttons(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
+    mouse_button_input: Res<ButtonInput<MouseButton>>,
     transition_query: Query<Entity, (With<Transition>, Without<Camera2d>)>,
-
     camera_query: Query<&Transform, (With<Camera2d>, Without<Transition>)>,
 ) {
 
@@ -177,7 +196,7 @@ fn handle_main_menu_buttons(
         return;
     }
 
-    if  keyboard_input.get_just_pressed().count() > 0 && transition_query.is_empty() {
+    if  (keyboard_input.get_just_pressed().count() > 0 || mouse_button_input.pressed(MouseButton::Left)) && transition_query.is_empty() {
         println!("Working!");
 
         let trans = camera_query.single().translation;
@@ -288,6 +307,7 @@ fn handle_ingame_menu(
         next_state.set(match *state.get() {
             InGameState::Running => InGameState::Pause,
             InGameState::Pause => InGameState::Running,
+            InGameState::Reloading => InGameState::Running,
         });
     }
 }
@@ -336,132 +356,94 @@ fn setup_stopmenu(
             ..default()
         },
         PauseMenu::Body,))
-    .with_child((
-            Text::new("Pause"),
-            TextFont {
-                font: font.clone(),
-                font_size: 45.0,
-                ..default()
-            },  
-            TextColor(Color::rgb(123.0, 0.0, 131.0)),
-            Node {
-                top: Val::Percent(-23.0),
-                left: Val::Percent(70.0),
-                position_type: PositionType::Absolute,
-                ..Default::default()
-            }, 
-    ))
-    .with_child((
-        ImageNode::new(image_button.clone()),
-        // Text2d::new("back to game"),
-        // TextFont {
-        //         font: font.clone(),
-        //         font_size: 45.0,
-        //         ..default()
-        // },  
-        // TextColor(Color::rgb(123.0, 0.0, 131.0)),
-        Node {
-            width: Val::Percent(60.0),
-            height: Val::Percent(10.0),
-            top: Val::Percent(-17.0),
-            left: Val::Percent(0.0),
-            align_items: AlignItems::Center,
-            position_type: PositionType::Absolute,
-            ..default()
-        },
-        Button,
-    ))
-    .with_child((
-        ImageNode::new(image_button.clone()),
-        // Text2d::new("back to main menu"),
-        // TextFont {
-        //         font: font.clone(),
-        //         font_size: 45.0,
-        //         ..default()
-        // },  
-        // TextColor(Color::rgb(123.0, 0.0, 131.0)),
-        Node {
-            width: Val::Percent(60.0),
-            height: Val::Percent(10.0),
-            top: Val::Percent(7.0),
-            left: Val::Percent(0.0),
-            align_items: AlignItems::Center,
-            position_type: PositionType::Absolute,
-            ..default()
-        },
-        Button,
-    ));
-
-    // commands.spawn((
-    //     Sprite {
-    //         image: asset_server.load("BookMenu_List.png"),
-    //         ..Default::default()
-    //     },
-    //     Transform::from_scale(Vec3::splat(0.5)).with_translation(Vec3::new(loc.x, loc.y - 260.0, 100.0)),
-    //     PauseMenu::Body,
-    // ))
-    // .with_child((
-    //     Text2d::from("Pause"),
-    //     TextFont {
-    //         font: font.clone(),
-    //         font_size: 85.0,
-    //         ..default()
-    //     },  
-    //     TextColor(Color::rgb(0.0, 0.0, 0.0)),
-    //     Transform::from_translation(Vec3::new(0.0, 360.0, 1.0)),
-    // ))
-    // .with_child((
-    //     Sprite {
-    //         image: image_button.clone(),
-    //         ..Default::default()
-    //     },
-    //     Name::new("back to game"),
-    //     Transform::from_scale(Vec3::splat(1.0)).with_translation(Vec3::new(0.0, 240.0, 1.0)),
-    //     Button,
-    //     Node {
-    //         ..Default::default()
-    //     },
-    // ))
-    // .with_child((
-    //     Text2d::new("Back to game"),
-    //     TextFont {
-    //         font: font.clone(),
-    //         font_size: 45.0,
-    //         ..default()
-    //     }, 
-    //     TextColor(Color::rgb(0.0, 0.0, 0.0)),
-    //     Transform::from_translation(Vec3::new(0.0, 240.0, 2.0)),
-    // ))
-    // .with_child((
-    //     Sprite {
-    //         image: image_button.clone(),
-    //         ..Default::default()
-    //     },
-    //     Name::new("back to main menu"),
-    //     Transform::from_scale(Vec3::splat(1.0)).with_translation(Vec3::new(0.0, 100.0, 1.0)),
-    //     Button,
-    // ))
-    // .with_child((
-    //     Text2d::new("Back to main menu"),
-    //     TextFont {
-    //         font: font.clone(),
-    //         font_size: 45.0,
-    //         ..default()
-    //     }, 
-    //     TextColor(Color::rgb(0.0, 0.0, 0.0)),
-    //     Transform::from_translation(Vec3::new(0.0, 100.0, 2.0)),
-    // ));
-
+    .with_children(|parent| {
+            parent.spawn((
+                Text::new("Pause"),
+                TextFont {
+                    font: font.clone(),
+                    font_size: 45.0,
+                    ..default()
+                },  
+                TextColor(Color::rgb(123.0, 0.0, 131.0)),
+                Node {
+                    top: Val::Percent(0.0),
+                    left: Val::Percent(40.0),
+                    position_type: PositionType::Absolute,
+                    ..Default::default()
+                }, 
+            ));
+            parent.spawn((
+                Name::new("back to game"),
+                ImageNode::new(image_button.clone()),
+                Node {
+                    width: Val::Percent(60.0),
+                    height: Val::Percent(10.0),
+                    top: Val::Percent(25.0),
+                    left: Val::Percent(20.0),
+                    align_items: AlignItems::Center,
+                    position_type: PositionType::Absolute,
+                    ..default()
+                },
+                Button,
+            ))
+            .with_child((
+                Text::new("back to game"),
+                TextFont {
+                        font: font.clone(),
+                        font_size: 35.0,
+                        ..default()
+                },  
+                TextColor(Color::rgb(0.0, 0.0, 0.0)),
+                Node {
+                    align_items: AlignItems::Center,
+                    left: Val::Percent(15.0),
+                    ..default()
+                },   
+            ));
+            parent.spawn((
+                Name::new("back to menu"),
+                ImageNode::new(image_button.clone()),
+                Node {
+                    width: Val::Percent(60.0),
+                    height: Val::Percent(10.0),
+                    top: Val::Percent(42.0),
+                    left: Val::Percent(20.0),
+                    align_items: AlignItems::Center,
+                    position_type: PositionType::Absolute,
+                    ..default()
+                },
+                Button,
+            ))
+            .with_child((
+                Text::new("back to menu"),
+                TextFont {
+                        font: font.clone(),
+                        font_size: 35.0,
+                        ..default()
+                },  
+                TextColor(Color::rgb(0.0, 0.0, 0.0)), 
+                Node {
+                    align_items: AlignItems::Center,
+                    left: Val::Percent(15.0),
+                    ..default()
+                },   
+            ));
+        });
 }
 
 fn handle_stopmenu (
     camera_query: Query<&Transform, (With<Camera2d>, Without<PauseMenu>)>,
     mut menu_query: Query<(&mut Transform, &PauseMenu,), (Without<Camera2d>, Without<Node>)>,
-    mut interaction_query: Query<
+    mut interaction_query: Query<(
             &Interaction,
+            &Name,),
         (Changed<Interaction>, With<Button>),
     >,
+    mut windows: Query<&mut Window>,
     mut query: Query<&mut Node, (With<PauseMenu>, Without<Camera2d>)>,
+    
+    mut next_state: ResMut<NextState<HomeState>>,
+    mut next_state2: ResMut<NextState<GameState>>,
 ) {
     if camera_query.is_empty() || menu_query.is_empty() {
         return;
@@ -479,38 +461,36 @@ fn handle_stopmenu (
                     trans.translation.y += 10.0;
                 }
             },
-            PauseMenu::Body => {
-                if trans.translation.y < loc.y {
-                    trans.translation.y += 10.0;
-                } else {//控制按键
-                    //todo
-                    
-                }
-            },
             _ => {},
         }
     }
     for mut node in query.iter_mut() {
-
         match node.top {
             Val::Percent(v) => {
                 if v > 25.0 {
                     node.top = Val::Percent(v - 2.0);
                 } else{
-                    for interaction in &mut interaction_query {
+                    for (interaction, name) in &mut interaction_query {
                         info!("interaction: ");
                         match *interaction {
                             Interaction::Pressed => {
-                                println!("Clicked!");
-                                // let name = name.as_str();
-                                // println!("name: {}", name);
-                                // if name == "back to game" {
-                                    // info!("Back to game!");
-                                    // next_state.set(HomeState::Running);
-                                // } else if name == "back to main menu" {
-                                    // info!("Back to main menu!");
-                                    // next_state.set(GameState::MainMenu);
-                                // }
+                                println!("{}Clicked!", name);
+                                match name.as_str() {
+                                    "back to game" => {
+                                        if let Ok(mut window) = windows.get_single_mut() {
+                                            window.cursor_options.visible = false;
+                                        }
+                                        next_state.set(HomeState::Running);
+                                    },
+                                    "back to menu" => {
+                                        if let Ok(mut window) = windows.get_single_mut() {
+                                            window.cursor_options.visible = false;
+                                        }
+                                        next_state.set(HomeState::Running);
+                                        next_state2.set(GameState::MainMenu);
+                                    },
+                                    _ => {}
+                                }
                             },
                             Interaction::Hovered => {
                                 println!("Hovered!");
