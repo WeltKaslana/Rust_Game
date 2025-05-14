@@ -17,6 +17,7 @@ pub enum HomeState {
     #[default]
     Running,
     Pause,
+    Reloading,
 }
 
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, SubStates)]
@@ -25,6 +26,5 @@ pub enum InGameState {
     #[default]
     Running,
     Pause,
-    Reloading,
 }
 

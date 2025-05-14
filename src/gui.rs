@@ -1,12 +1,17 @@
 use bevy::{ecs::query, prelude::*, render::camera};
 
 use crate::{
-    gamestate::*,
-    character::{Character, Player},
-    gun::{Gun, Cursor},
-    home::Home,
-    ui::UI,
-    room::AssetsManager,
+    character::{
+        Character, 
+        Player,
+        ReloadPlayerEvent,
+    }, 
+    gamestate::*, 
+    gun::{Cursor, Gun}, 
+    home::Home, 
+    room::AssetsManager, 
+    ui::UI, 
+    resources::*,
 };
 
 pub struct GuiPlugin;
@@ -19,6 +24,9 @@ pub enum PauseMenu {
     BorderUp,
     BorderDown,
 }
+
+#[derive(Component)]
+pub struct SoraMenu;
 
 #[derive(Component)]
 pub enum ButtonType {
@@ -34,7 +42,8 @@ impl Plugin for GuiPlugin {
         app
         .add_systems(OnEnter(GameState::MainMenu), (
             clear_all.before(setup_main_menu),
-            setup_main_menu))
+            setup_main_menu
+        ))
         .add_systems(OnExit(GameState::MainMenu), despawn_main_menu)
         .add_systems(
             Update,
@@ -53,11 +62,21 @@ impl Plugin for GuiPlugin {
         .add_systems(Update, handle_stopmenu.run_if(in_state(HomeState::Pause)))
         .add_systems(OnExit(HomeState::Pause), cleanup_stopmenu)
 
+        .add_systems(OnEnter(HomeState::Reloading), setup_soramenu)
+        .add_systems(Update, handle_soramenu.run_if(in_state(HomeState::Reloading)))
+        .add_systems(OnExit(HomeState::Reloading), cleanup_soramenu)
+
         .add_systems(OnEnter(InGameState::Pause), setup_stopmenu)
         .add_systems(Update, handle_stopmenu.run_if(in_state(InGameState::Pause)))
         .add_systems(OnExit(InGameState::Pause), cleanup_stopmenu)
+
         .add_systems(Update, (animation1::<LeftSlide1>, animation1::<LeftSlide2>, animation2::<RightSlide1>, animation2::<RightSlide2>).run_if(in_state(GameState::MainMenu)))
         .add_systems(Update, statetransition)
+
+        //test
+        .add_systems(Update, print_node_loc)
+        //
+
         // .add_systems(Update, log_transitions::<GameState>)
         ;
     }
@@ -196,7 +215,7 @@ fn handle_main_menu_buttons(
         return;
     }
 
-    if  (keyboard_input.get_just_pressed().count() > 0 || mouse_button_input.pressed(MouseButton::Left)) && transition_query.is_empty() {
+    if  (keyboard_input.get_just_pressed().count() > 0) && transition_query.is_empty() {
         println!("Working!");
 
         let trans = camera_query.single().translation;
@@ -291,6 +310,10 @@ fn handle_home_menu(
                 window.cursor_options.visible = false;
                 HomeState::Running
             },
+            HomeState::Reloading => {
+                window.cursor_options.visible = false;
+                HomeState::Running
+            },
         });
         }
 
@@ -307,7 +330,6 @@ fn handle_ingame_menu(
         next_state.set(match *state.get() {
             InGameState::Running => InGameState::Pause,
             InGameState::Pause => InGameState::Running,
-            InGameState::Reloading => InGameState::Running,
         });
     }
 }
@@ -315,7 +337,8 @@ fn handle_ingame_menu(
 fn setup_stopmenu(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    camera_query: Query<&Transform, (With<Camera2d>)>
+    camera_query: Query<&Transform, (With<Camera2d>)>,
+    source: Res<GlobalMenuTextureAtlas>,
 ) {
     if camera_query.is_empty() {
         return;
@@ -323,7 +346,8 @@ fn setup_stopmenu(
     let loc = camera_query.single().translation.truncate();
     commands.spawn((
         Sprite {
-            image: asset_server.load("BookMenu_PauseBorderSmall.png"),
+            image: source.border.clone(),
+            // image: asset_server.load("BookMenu_PauseBorderSmall.png"),
             flip_x: true,
             flip_y: true,
             ..Default::default()
@@ -333,18 +357,19 @@ fn setup_stopmenu(
     ));
     commands.spawn((
         Sprite {
-            image: asset_server.load("BookMenu_PauseBorderSmall.png"),
+            image: source.border.clone(),
+            // image: asset_server.load("BookMenu_PauseBorderSmall.png"),
             ..Default::default()
             },
             Transform::from_scale(Vec3::splat(0.8)).with_translation(Vec3::new(loc.x + 530.0, loc.y - 510.0, 100.0)),
             PauseMenu::BorderDown,
     )); 
 
-    let image_button = asset_server.load("BookMenu_ButtonBig.png");
+
     let font: Handle<Font> = asset_server.load("Fonts/FIXEDSYS-EXCELSIOR-301.ttf");
-    let image_menu = asset_server.load("BookMenu_List.png");
+
     commands.spawn((
-        ImageNode::new(image_menu.clone()),
+        ImageNode::new(source.list.clone()),
         Node {
             width: Val::Percent(30.0),
             height: Val::Percent(50.0),
@@ -374,7 +399,8 @@ fn setup_stopmenu(
             ));
             parent.spawn((
                 Name::new("back to game"),
-                ImageNode::new(image_button.clone()),
+                ImageNode::new(source.button.clone()),
+                // ImageNode::new(image_button.clone()),
                 Node {
                     width: Val::Percent(60.0),
                     height: Val::Percent(10.0),
@@ -402,7 +428,8 @@ fn setup_stopmenu(
             ));
             parent.spawn((
                 Name::new("back to menu"),
-                ImageNode::new(image_button.clone()),
+                ImageNode::new(source.button.clone()),
+                // ImageNode::new(image_button.clone()),
                 Node {
                     width: Val::Percent(60.0),
                     height: Val::Percent(10.0),
@@ -435,13 +462,14 @@ fn handle_stopmenu (
     camera_query: Query<&Transform, (With<Camera2d>, Without<PauseMenu>)>,
     mut menu_query: Query<(&mut Transform, &PauseMenu,), (Without<Camera2d>, Without<Node>)>,
     mut interaction_query: Query<(
+            &mut ImageNode,
             &Interaction,
             &Name,),
         (Changed<Interaction>, With<Button>),
     >,
     mut windows: Query<&mut Window>,
     mut query: Query<&mut Node, (With<PauseMenu>, Without<Camera2d>)>,
-    
+    source: Res<GlobalMenuTextureAtlas>,
     mut next_state: ResMut<NextState<HomeState>>,
     mut next_state2: ResMut<NextState<GameState>>,
 ) {
@@ -470,7 +498,7 @@ fn handle_stopmenu (
                 if v > 25.0 {
                     node.top = Val::Percent(v - 2.0);
                 } else{
-                    for (interaction, name) in &mut interaction_query {
+                    for (mut image, interaction, name) in &mut interaction_query {
                         info!("interaction: ");
                         match *interaction {
                             Interaction::Pressed => {
@@ -494,8 +522,11 @@ fn handle_stopmenu (
                             },
                             Interaction::Hovered => {
                                 println!("Hovered!");
+                                image.image = source.button_hover.clone();
                             },
-                            Interaction::None => {},
+                            Interaction::None => {
+                                image.image = source.button.clone();
+                            },
                         }
                     }
                 }
@@ -511,5 +542,618 @@ fn cleanup_stopmenu(
 ) {
     for entity in query.iter() {
         commands.entity(entity).despawn_recursive();
+    }
+}
+
+fn setup_soramenu(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    source: Res<GlobalMenuTextureAtlas>,
+) {
+    let font: Handle<Font> = asset_server.load("Fonts/FIXEDSYS-EXCELSIOR-301.ttf");
+    commands.spawn((
+        //底
+        ImageNode::new(source.menu.clone()),
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(130.0),
+            position_type: PositionType::Absolute,
+            left: Val::Percent(0.0),
+            top: Val::Percent(-10.0),
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            ..default()
+        },
+        SoraMenu,
+    ))
+    .with_children(|parent| {
+            //顶
+            parent.spawn((
+                ImageNode::new(source.top.clone()),
+                Node {
+                    width: Val::Percent(70.0),
+                    height: Val::Percent(59.0),
+                    top: Val::Percent(20.7),
+                    left: Val::Percent(15.0),
+                    align_items: AlignItems::Center,
+                    position_type: PositionType::Absolute,
+                    ..default()
+                },
+            ))
+            .with_children(|parent| {
+                // 角色选择标题
+                parent.spawn(( 
+                    ImageNode::new(source.sub_title.clone()),
+                    Node {
+                        width: Val::Percent(48.2),
+                        height: Val::Percent(18.5),
+                        top: Val::Percent(5.9),
+                        left: Val::Percent(50.3),
+                        position_type: PositionType::Absolute,
+                        ..Default::default()
+                    }, 
+                ))
+                .with_children(|parent| {
+                    parent.spawn((
+                        Name::new("Shiroko_choose"),
+                        ImageNode::new(asset_server.load("UI_Hub_Portrait_Shiroko.png")),
+                        Node {
+                            width: Val::Percent(20.5),
+                            height: Val::Percent(87.2),
+                            top: Val::Percent(9.4),
+                            left: Val::Percent(9.2),
+                            position_type: PositionType::Absolute,
+                            ..Default::default()
+                        },
+                        Button,
+                    ));
+                    parent.spawn((
+                        Name::new("Arisu_choose"),
+                        ImageNode::new(asset_server.load("UI_Hub_Portrait_Arisu.png")),
+                        Node {
+                            width: Val::Percent(20.5),
+                            height: Val::Percent(87.2),
+                            top: Val::Percent(7.7),
+                            left: Val::Percent(44.4),
+                            position_type: PositionType::Absolute,
+                            ..Default::default()
+                        },
+                        Button,
+                    ));
+                    parent.spawn((
+                        Name::new("Utaha_choose"),
+                        ImageNode::new(asset_server.load("UI_Hub_Portrait_Utaha.png")),
+                        Node {
+                            width: Val::Percent(20.5),
+                            height: Val::Percent(87.2),
+                            top: Val::Percent(7.7),
+                            left: Val::Percent(77.0),
+                            position_type: PositionType::Absolute,
+                            ..Default::default()
+                        },
+                        Button,
+                    ));
+                });
+                // 角色简介底
+                parent.spawn(( 
+                    ImageNode::new(source.tips.clone()),
+                    Node {
+                        width: Val::Percent(46.7),
+                        height: Val::Percent(72.0),
+                        top: Val::Percent(25.1),
+                        left: Val::Percent(51.3),
+                        position_type: PositionType::Absolute,
+                        ..Default::default()
+                    }, 
+                ));
+                // 关闭
+                parent.spawn(( 
+                    Name::new("close"),
+                    ImageNode::new(source.close.clone()),
+                    Node {
+                        width: Val::Percent(5.6),
+                        height: Val::Percent(9.0),
+                        top: Val::Percent(6.7),
+                        left: Val::Percent(99.8),
+                        position_type: PositionType::Absolute,
+                        ..Default::default()
+                    }, 
+                    Button,
+                ));
+                // 别针
+                parent.spawn(( 
+                    ImageNode::new(source.title.clone()),
+                    Node {
+                        width: Val::Percent(23.3),
+                        height: Val::Percent(16.5),
+                        top: Val::Percent(-4.2),
+                        left: Val::Percent(13.5),
+                        position_type: PositionType::Absolute,
+                        ..Default::default()
+                    }, 
+                ))                
+                .with_child((
+                    Text::new("setting"),
+                    TextFont {
+                        // font: font.clone(),
+                        font_size: 35.0,
+                        ..default()
+                    },
+                    TextColor(Color::rgb(1.0, 1.0, 1.0)),
+                    Node {
+                        top: Val::Percent(0.0),
+                        left: Val::Percent(20.0),
+                        position_type: PositionType::Absolute,
+                        ..Default::default()
+                    },
+                ));
+                // 难度选择标题
+                parent.spawn(( 
+                    ImageNode::new(source.sub_title.clone()),
+                    Node {
+                        width: Val::Percent(37.1),
+                        height: Val::Percent(11.4),
+                        top: Val::Percent(22.7),
+                        left: Val::Percent(6.4),
+                        position_type: PositionType::Absolute,
+                        ..Default::default()
+                    }, 
+                ))
+                .with_child((
+                    Text::new("Choose difficulty"),
+                    TextFont {
+                        // font: font.clone(),
+                        font_size: 35.0,
+                        ..default()
+                    },
+                    TextColor(Color::rgb(1.0, 1.0, 1.0)),
+                    Node {
+                        top: Val::Percent(0.0),
+                        left: Val::Percent(20.0),
+                        position_type: PositionType::Absolute,
+                        ..Default::default()
+                    },
+                ));
+                // 按钮
+                parent.spawn(( 
+                    Name::new("easy"),
+                    ImageNode::new(source.button.clone()),
+                    Node {
+                        width: Val::Percent(10.9),
+                        height: Val::Percent(8.3),
+                        top: Val::Percent(40.9),
+                        left: Val::Percent(5.1),
+                        position_type: PositionType::Absolute,
+                        ..Default::default()
+                   }, 
+                   Button,
+                ))
+                .with_child((
+                    Text::new("easy"),
+                    TextFont {
+                        // font: font.clone(),
+                        font_size: 20.0,
+                        ..default()
+                    },
+                    TextColor(Color::rgb(0.0, 10.0, 1.0)),
+                    Node {
+                        top: Val::Percent(0.0),
+                        left: Val::Percent(20.0),
+                        position_type: PositionType::Absolute,
+                        ..Default::default()
+                    },
+                ));
+                parent.spawn(( 
+                    Name::new("normal"),
+                    ImageNode::new(source.button.clone()),
+                    Node {
+                        width: Val::Percent(10.9),
+                        height: Val::Percent(8.3),
+                        top: Val::Percent(40.9),
+                        left: Val::Percent(20.7),
+                        position_type: PositionType::Absolute,
+                        ..Default::default()
+                   }, 
+                   Button,
+                ))
+                .with_child((
+                    Text::new("normal"),
+                    TextFont {
+                        // font: font.clone(),
+                        font_size: 20.0,
+                        ..default()
+                    },
+                    TextColor(Color::rgb(0.0, 10.0, 1.0)),
+                    Node {
+                        top: Val::Percent(0.0),
+                        left: Val::Percent(20.0),
+                        position_type: PositionType::Absolute,
+                        ..Default::default()
+                    },
+                ));
+                parent.spawn(( 
+                    Name::new("hard"),
+                    ImageNode::new(source.button.clone()),
+                    Node {
+                        width: Val::Percent(10.9),
+                        height: Val::Percent(8.3),
+                        top: Val::Percent(40.9),
+                        left: Val::Percent(36.1),
+                        position_type: PositionType::Absolute,
+                        ..Default::default()
+                   }, 
+                   Button,
+                ))
+                .with_child((
+                    Text::new("hard"),
+                    TextFont {
+                        // font: font.clone(),
+                        font_size: 20.0,
+                        ..default()
+                    },
+                    TextColor(Color::rgb(0.0, 10.0, 1.0)),
+                    Node {
+                        top: Val::Percent(0.0),
+                        left: Val::Percent(20.0),
+                        position_type: PositionType::Absolute,
+                        ..Default::default()
+                    },
+                ));
+                // 挑战因子
+                parent.spawn(( 
+                    ImageNode::new(source.sub_title.clone()),
+                    Node {
+                        width: Val::Percent(37.1),
+                        height: Val::Percent(11.4),
+                        top: Val::Percent(58.5),
+                        left: Val::Percent(6.4),
+                        position_type: PositionType::Absolute,
+                        ..Default::default()
+                    }, 
+                ))
+                .with_child((
+                    Text::new("difficulty factor"),
+                    TextFont {
+                        // font: font.clone(),
+                        font_size: 35.0,
+                        ..default()
+                    },
+                    TextColor(Color::rgb(1.0, 1.0, 1.0)),
+                    Node {
+                        top: Val::Percent(0.0),
+                        left: Val::Percent(20.0),
+                        position_type: PositionType::Absolute,
+                        ..Default::default()
+                    },
+                ));
+                // parent.spawn(( 
+                //     Name::new("easy"),
+                //     ImageNode::new(source.button.clone()),
+                //     Node {
+                //         width: Val::Percent(10.9),
+                //         height: Val::Percent(8.3),
+                //         top: Val::Percent(40.9),
+                //         left: Val::Percent(5.1),
+                //         position_type: PositionType::Absolute,
+                //         ..Default::default()
+                //    }, 
+                //    Button,
+                // ))
+                // .with_child((
+                //     Text::new("easy"),
+                //     TextFont {
+                //         // font: font.clone(),
+                //         font_size: 20.0,
+                //         ..default()
+                //     },
+                //     TextColor(Color::rgb(0.0, 10.0, 1.0)),
+                //     Node {
+                //         top: Val::Percent(0.0),
+                //         left: Val::Percent(20.0),
+                //         position_type: PositionType::Absolute,
+                //         ..Default::default()
+                //     },
+                // ));
+                // parent.spawn(( 
+                //     Name::new("normal"),
+                //     ImageNode::new(source.button.clone()),
+                //     Node {
+                //         width: Val::Percent(10.9),
+                //         height: Val::Percent(8.3),
+                //         top: Val::Percent(40.9),
+                //         left: Val::Percent(20.7),
+                //         position_type: PositionType::Absolute,
+                //         ..Default::default()
+                //    }, 
+                //    Button,
+                // ))
+                // .with_child((
+                //     Text::new("normal"),
+                //     TextFont {
+                //         // font: font.clone(),
+                //         font_size: 20.0,
+                //         ..default()
+                //     },
+                //     TextColor(Color::rgb(0.0, 10.0, 1.0)),
+                //     Node {
+                //         top: Val::Percent(0.0),
+                //         left: Val::Percent(20.0),
+                //         position_type: PositionType::Absolute,
+                //         ..Default::default()
+                //     },
+                // ));
+                // parent.spawn(( 
+                //     Name::new("hard"),
+                //     ImageNode::new(source.button.clone()),
+                //     Node {
+                //         width: Val::Percent(10.9),
+                //         height: Val::Percent(8.3),
+                //         top: Val::Percent(40.9),
+                //         left: Val::Percent(36.1),
+                //         position_type: PositionType::Absolute,
+                //         ..Default::default()
+                //    }, 
+                //    Button,
+                // ))
+                // .with_child((
+                //     Text::new("hard"),
+                //     TextFont {
+                //         // font: font.clone(),
+                //         font_size: 20.0,
+                //         ..default()
+                //     },
+                //     TextColor(Color::rgb(0.0, 10.0, 1.0)),
+                //     Node {
+                //         top: Val::Percent(0.0),
+                //         left: Val::Percent(20.0),
+                //         position_type: PositionType::Absolute,
+                //         ..Default::default()
+                //     },
+                // ));
+
+                // 书签
+                parent.spawn((
+                    Name::new("bookmark_settings"),
+                    ImageNode::new(source.bookmark.clone()),
+                    Node {
+                        width: Val::Percent(7.7),
+                        height: Val::Percent(10.7),
+                        top: Val::Percent(6.6),
+                        left: Val::Percent(-7.6),
+                        position_type: PositionType::Absolute,
+                        ..Default::default()
+                    },  
+                    Button,
+                ))
+                .with_child((
+                    Text::new("setting"),
+                    TextFont {
+                        // font: font.clone(),
+                        font_size: 15.0,
+                        ..default()
+                    },
+                    TextColor(Color::rgb(10.0, 0.0, 7.0)),
+                    Node {
+                        top: Val::Percent(0.0),
+                        left: Val::Percent(20.0),
+                        position_type: PositionType::Absolute,
+                        ..Default::default()
+                    },
+                ));
+                parent.spawn((
+                    Name::new("bookmark_atlas"),
+                    ImageNode::new(source.bookmark.clone()),
+                    Node {
+                        width: Val::Percent(7.7),
+                        height: Val::Percent(10.7),
+                        top: Val::Percent(21.0),
+                        left: Val::Percent(-7.6),
+                        position_type: PositionType::Absolute,
+                        ..Default::default()
+                    },  
+                    Button,
+                ))
+                .with_child((
+                    Text::new("Atlas"),
+                    TextFont {
+                        // font: font.clone(),
+                        font_size: 15.0,
+                        ..default()
+                    },
+                    TextColor(Color::rgb(10.0, 0.0, 7.0)),
+                    Node {
+                        top: Val::Percent(0.0),
+                        left: Val::Percent(20.0),
+                        position_type: PositionType::Absolute,
+                        ..Default::default()
+                    },
+                ));
+                parent.spawn((
+                    Name::new("bookmark_room"),
+                    ImageNode::new(source.bookmark.clone()),
+                    Node {
+                        width: Val::Percent(7.7),
+                        height: Val::Percent(10.7),
+                        top: Val::Percent(35.2),
+                        left: Val::Percent(-7.6),
+                        position_type: PositionType::Absolute,
+                        ..Default::default()
+                    },  
+                    Button,
+                    test,
+                ))
+                .with_child((
+                    Text::new("Room"),
+                    TextFont {
+                        // font: font.clone(),
+                        font_size: 15.0,
+                        ..default()
+                    },
+                    TextColor(Color::rgb(10.0, 0.0, 7.0)),
+                    Node {
+                        top: Val::Percent(0.0),
+                        left: Val::Percent(20.0),
+                        position_type: PositionType::Absolute,
+                        ..Default::default()
+                    },
+                ));
+            });
+        });
+}
+
+//更改角色
+fn reload_player (
+    id: u8,
+    asset_server: &Res<AssetServer>,
+    mut texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>,
+    mut source: ResMut<GlobalCharacterTextureAtlas>,
+) {
+    //根据id选择角色
+    *source = GlobalCharacterTextureAtlas::init(id, &asset_server, &mut texture_atlas_layouts);
+    info!("Player Reloading!");
+}
+
+fn handle_soramenu (
+    asset_server: Res<AssetServer>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    mut interaction_query: Query<(
+            &mut ImageNode,
+            &Interaction,
+            &Name,),
+        (Changed<Interaction>, With<Button>),
+    >,
+    mut windows: Query<&mut Window>,
+    source: Res<GlobalMenuTextureAtlas>,
+    mut character_source: ResMut<GlobalCharacterTextureAtlas>,
+    mut events: EventWriter<ReloadPlayerEvent>,
+    mut next_state: ResMut<NextState<HomeState>>,
+) {
+    for (mut image, interaction, name) in &mut interaction_query {
+        info!("interaction: ");
+        match *interaction {
+            Interaction::Pressed => {
+                println!("{}Clicked!", name);
+                match name.as_str() {
+                    "close" => {
+                        if let Ok(mut window) = windows.get_single_mut() {
+                            window.cursor_options.visible = false;
+                        }
+                        next_state.set(HomeState::Running);
+                    },
+                    "Shiroko_choose" if character_source.id != 1 => {
+                        reload_player(1, &asset_server, &mut texture_atlas_layouts, character_source);
+                        events.send(ReloadPlayerEvent);
+                        break;
+                    },
+                    "Arisu_choose" if character_source.id != 2 => {
+                        reload_player(2, &asset_server, &mut texture_atlas_layouts, character_source);
+                        events.send(ReloadPlayerEvent);
+                        break;
+                    },
+                    "Utaha_choose" if character_source.id != 3 => {
+                        reload_player(3, &asset_server, &mut texture_atlas_layouts, character_source);
+                        events.send(ReloadPlayerEvent);
+                        break;
+                    },
+                    _ => {}
+                }
+            },
+            Interaction::Hovered => {
+                println!("Hovered!");
+            },
+            Interaction::None => {
+            },
+        }
+    }
+}
+
+fn cleanup_soramenu(
+    mut commands: Commands,
+    query: Query<Entity, With<SoraMenu>>,
+) {
+    for entity in query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+}
+
+
+
+#[derive(Component)]
+pub struct test;
+
+fn print_node_loc(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut query: Query<&mut Node, With<test>>,
+) {
+    if query.is_empty() {
+        return;
+    }
+    let left = keyboard_input.pressed(KeyCode::ArrowLeft);
+    let right = keyboard_input.pressed(KeyCode::ArrowRight);
+    let up = keyboard_input.pressed(KeyCode::ArrowUp);
+    let down = keyboard_input.pressed(KeyCode::ArrowDown);
+    let zoom_up_w = keyboard_input.pressed(KeyCode::Equal);
+    let zoom_down_w = keyboard_input.pressed(KeyCode::Minus);
+    let zoom_up_h = keyboard_input.pressed(KeyCode::KeyQ);
+    let zoom_down_h = keyboard_input.pressed(KeyCode::KeyE);
+
+    let mut loc = Vec2::ZERO;
+    let mut zoom = Vec2::ZERO;
+
+    for mut node in query.iter_mut() {
+        match node.top {
+            Val::Percent(v) => {
+                if up {
+                    node.top = Val::Percent(v - 0.1);
+                }
+                if down {
+                    node.top = Val::Percent(v + 0.1);
+                }
+
+                loc.y = v;
+            },
+            _ => {}
+        }
+        match node.left {
+            Val::Percent(v) => {
+                loc.x = v;
+                if left {
+                    node.left = Val::Percent(v - 0.1);
+                }
+                if right {
+                    node.left = Val::Percent(v + 0.1);
+                }
+            },
+            _ => {}
+        }
+        match node.width {
+            Val::Percent(v) => {
+                zoom.x = v;
+
+                if zoom_up_w {
+                    node.width = Val::Percent(v + 0.1);
+                }
+                if zoom_down_w {
+                    node.width = Val::Percent(v - 0.1);
+                }
+            },
+            _ => {}
+        }
+        match node.height {
+            Val::Percent(v) => {
+                zoom.y = v;
+
+                if zoom_up_h {
+                    node.height = Val::Percent(v + 0.1);
+                }
+                if zoom_down_h {
+                    node.height = Val::Percent(v - 0.1);
+                }
+            },
+            _ => {}
+        }
+        if keyboard_input.just_pressed(KeyCode::KeyP) {
+            print!("width: {}, height: {}, top: {}, left: {},\n", zoom.x, zoom.y, loc.y, loc.x);
+        }
     }
 }

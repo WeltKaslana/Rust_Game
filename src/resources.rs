@@ -1,3 +1,5 @@
+use std::path;
+
 use bevy::{dev_tools::states::*, prelude::*};
 use bevy::window::PrimaryWindow;
 
@@ -135,7 +137,55 @@ impl GlobalHomeTextureAtlas {
     }
 }
 
+#[derive(Resource,Default)]
+pub struct GlobalMenuTextureAtlas {
+    pub close: Handle<Image>,
+    pub menu: Handle<Image>,
+    pub top: Handle<Image>,
+    pub list: Handle<Image>,
+    pub button: Handle<Image>,
+    pub button_hover: Handle<Image>,
+    pub button_click: Handle<Image>,
+    pub bookmark: Handle<Image>,
+    pub tips: Handle<Image>,
+    pub title: Handle<Image>,
+    pub sub_title: Handle<Image>,
+    pub border: Handle<Image>,
+}
 
+impl GlobalMenuTextureAtlas {
+    pub fn init(
+        asset_server: &Res<AssetServer>,
+    ) -> Self {
+        let path_close = String::from("BookMenu_Close.png");
+        let path_menu = String::from("BookMenu.png");
+        let path_top = String::from("BookMenu_Top.png");
+        let path_list = String::from("BookMenu_List.png");
+        let path_button = String::from("BookMenu_ButtonBig.png");
+        let path_button_hover = String::from("BookMenu_ButtonBig_Hover.png");
+        let path_button_click = String::from("BookMenu_ButtonBig_Click.png");
+        let path_bookmark = String::from("BookMenu_Options_Small.png");
+        let path_tips = String::from("BookMenu_Tips.png");
+        let path_title = String::from("BookMenu_Title.png");
+        let path_sub_title = String::from("BookMenu_Gray_ButtonSmall.png");
+        let path_border = String::from("BookMenu_PauseBorderSmall.png");
+
+        Self {
+            close: asset_server.load(path_close),
+            menu: asset_server.load(path_menu),
+            top: asset_server.load(path_top),
+            list: asset_server.load(path_list),
+            button: asset_server.load(path_button),
+            button_hover: asset_server.load(path_button_hover),
+            button_click: asset_server.load(path_button_click),
+            bookmark: asset_server.load(path_bookmark),
+            tips: asset_server.load(path_tips),
+            title: asset_server.load(path_title),
+            sub_title: asset_server.load(path_sub_title),
+            border: asset_server.load(path_border),
+        }
+    }
+}
 #[derive(Resource)]
 pub struct CursorPosition(pub Option<Vec2>);
 
@@ -143,7 +193,10 @@ impl Plugin for ResourcesPlugin {
     fn build(&self, app: &mut App) {
         app
             .insert_resource(CursorPosition(None))
-            .add_systems(Startup, load_assets)
+            .add_systems(Startup, (
+                load_assets,
+                load_menu,
+            ))
             .add_systems(Update,update_cursor_position)
             .add_systems(OnEnter(GameState::Home),load_assets_enemy)
             // .add_systems(Update, log_transitions::<GameState>)
@@ -186,7 +239,14 @@ fn load_assets (
     commands.insert_resource(ghta);
     println!("over!");
 }
-
+fn load_menu (
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+) {
+    let ghta = GlobalMenuTextureAtlas::init(&asset_server);
+    commands.insert_resource(ghta);
+    info!("Menu Resourse Loaded");
+}
 fn load_assets_enemy (
     mut commands: Commands,
     asset_server: Res<AssetServer>,

@@ -5,7 +5,7 @@ use crate::{
         Character,
         ReloadPlayerEvent,
     }, 
-    gamestate::GameState, 
+    gamestate::*, 
     gui::Transition, 
     resources::*,
 };
@@ -50,7 +50,7 @@ impl Plugin for HomePlugin {
             .add_systems(Update, (
                 check_state, 
                 update_wall,
-            ).run_if(in_state(GameState::Home)))
+            ).run_if(in_state(HomeState::Running)))
             .add_systems(OnExit(GameState::Home), cleanup);
     }
 }
@@ -225,29 +225,32 @@ fn setup(
 }
 
 //更改角色
-fn reload_player (
-    id: u8,
-    asset_server: &Res<AssetServer>,
-    mut texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>,
-    mut source: ResMut<GlobalCharacterTextureAtlas>,
-) {
-    //根据id选择角色
-    *source = GlobalCharacterTextureAtlas::init(id, &asset_server, &mut texture_atlas_layouts);
-    info!("Player Reloading!");
-}
+// 迁移至gui.rs
+// fn reload_player (
+//     id: u8,
+//     asset_server: &Res<AssetServer>,
+//     mut texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>,
+//     mut source: ResMut<GlobalCharacterTextureAtlas>,
+// ) {
+//     //根据id选择角色
+//     *source = GlobalCharacterTextureAtlas::init(id, &asset_server, &mut texture_atlas_layouts);
+//     info!("Player Reloading!");
+// }
 fn check_state(
+    mut windows: Query<&mut Window>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    // mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut player_query: Query<&Transform, (With<Character>, Without<Sora>, Without<Fridge>)>,
     mut sora_query: Query<(&Transform, &mut Sprite, &mut SoraState), (With<Sora>, Without<Fridge>, Without<Character>)>,
     mut fridge_query: Query<(&Transform, &mut Sprite, &mut FridgeState), (With<Fridge>, Without<Character>, Without<Sora>)>,
     mut source: ResMut<GlobalHomeTextureAtlas>,
-    mut character_source: ResMut<GlobalCharacterTextureAtlas>,
+    // mut character_source: ResMut<GlobalCharacterTextureAtlas>,
     camera_query: Query<&Transform, With<Camera2d>>,
     transition_query: Query<&mut Transform, (With<Transition>, Without<Character>, Without<Fridge>, Without<Sora>, Without<Camera2d>)>,
-    mut events: EventWriter<ReloadPlayerEvent>,
+    // mut events: EventWriter<ReloadPlayerEvent>,
+    mut next_state: ResMut<NextState<HomeState>>,
  ) {
     if player_query.is_empty() || sora_query.is_empty() || fridge_query.is_empty() {
         // println!("empty1!");
@@ -264,9 +267,15 @@ fn check_state(
         // println!("activate Sora!");
         if keyboard_input.just_pressed(KeyCode::KeyE) {
             println!("Menu!");
+            if let Ok(mut window) = windows.get_single_mut() {
+                window.cursor_options.visible = true;
+            }
+            next_state.set(HomeState::Reloading);
+
             // test
-            reload_player(2, &asset_server, &mut texture_atlas_layouts, character_source);
-            events.send(ReloadPlayerEvent);
+            // reload_player(2, &asset_server, &mut texture_atlas_layouts, character_source);
+            // events.send(ReloadPlayerEvent);
+            //
         }
         match *sora_state {
             SoraState::Loop => {
