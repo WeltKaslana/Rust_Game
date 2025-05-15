@@ -6,6 +6,7 @@ use bevy::{
 use bevy::utils::Instant;
 use bevy_ecs_tilemap::helpers::transform;
 use bevy_rapier2d::prelude::*;
+use crate::GlobalRoomTextureAtlas;
 use crate::{
     boss::{
         set_boss, Boss, BossComponent, BossDeathEffect, BossState, Direction, Health, Skillflag
@@ -20,7 +21,7 @@ use crate::{
     resources::{
         GlobalBossTextureAtlas, GlobalCharacterTextureAtlas, GlobalEnemyTextureAtlas, GlobalHomeTextureAtlas
     }, 
-    room::EnemyBorn
+    room::{EnemyBorn, Door, Chest},
 };
 use bevy::math::{vec2, vec3};
 
@@ -45,6 +46,7 @@ impl Plugin for AnimationPlugin {
                 boss_filpx,
                 enemyboss_death_effect,
                 animate_droneskill,
+                animate_door_and_chest,
             ).run_if(in_state(GameState::InGame)),)
             // .add_systems(Update, 
             //     (
@@ -804,4 +806,141 @@ fn animate_droneskill (
             transform.rotation = Quat::from_rotation_z(angle);
         }
     }
+}
+
+fn animate_door_and_chest (
+    mut door_query: Query<(
+        &mut Sprite,
+        & Transform,
+        &mut AnimationConfig,
+        &mut Door,
+    ), (With<Door>, Without<Chest>, Without<Character>)>,
+    mut chest_query: Query<(
+        &mut Sprite,
+        & Transform,
+        &mut AnimationConfig,
+        &mut Chest,
+    ), (With<Chest>, Without<Door>, Without<Character>)>,
+    time: Res<Time>,
+    player_query: Query<& Transform, (With<Character>, Without<Door>, Without<Chest>)>,
+    source: Res<GlobalRoomTextureAtlas>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+) {
+    if door_query.is_empty() && chest_query.is_empty() { return; }
+    let player_transform = player_query.single();
+
+    if !door_query.is_empty() { 
+        let (mut door_sprite, door_transfrom, mut aconfig, mut door) = door_query.single_mut();
+        match door.0 {
+            0 => { },
+            1 => {//ready to open
+                let distance = player_transform.translation.distance(door_transfrom.translation);
+                if distance <= 100.0 { 
+                    door.0 = 2;
+                }
+            },
+            2 => {
+                let all = 13;
+                aconfig.frame_timer.tick(time.delta());
+                if aconfig.frame_timer.just_finished(){
+                    if let Some(atlas) = &mut door_sprite.texture_atlas {
+                        aconfig.frame_timer = AnimationConfig::timer_from_fps(aconfig.fps2p);
+                        atlas.index = atlas.index + 1;
+                        if atlas.index == all - 1 {
+                            door.0 = 3;
+                        }
+                    }
+                }
+            },
+            3 => {
+                let distance = player_transform.translation.distance(door_transfrom.translation);
+                if distance > 100.0 { 
+                    door.0 = 4;
+                    door_sprite.image = source.image_door_close.clone();
+                    if let Some(atlas) =&mut door_sprite.texture_atlas {
+                        atlas.index = 0;
+                    }
+                }
+            },
+            4 => {
+                let all = 15;
+                aconfig.frame_timer.tick(time.delta());
+                if aconfig.frame_timer.just_finished(){
+                    if let Some(atlas) = &mut door_sprite.texture_atlas {
+                        aconfig.frame_timer = AnimationConfig::timer_from_fps(aconfig.fps2p);
+                        atlas.index = atlas.index + 1;
+                        if atlas.index == all - 1 {
+                            atlas.index = 0;
+                            door.0 = 1;
+                        }
+                    }
+                    if door.0 == 1 {
+                        door_sprite.image = source.image_door_open.clone();
+                    }
+                }
+            },
+            _ => { }
+        }
+    }
+
+    if !chest_query.is_empty() {
+        for (mut sprite, transform, mut aconfig, mut chest) in chest_query.iter_mut() {
+            match chest.0 {
+                0 => {
+                    let all = 3;
+                    aconfig.frame_timer.tick(time.delta());
+                    if aconfig.frame_timer.just_finished(){
+                        if let Some(atlas) = &mut sprite.texture_atlas {
+                            aconfig.frame_timer = AnimationConfig::timer_from_fps(aconfig.fps2p);
+                            atlas.index = (atlas.index + 1) % all;
+                        }
+                    }
+                },
+                1 => { },
+                2 => { },
+                3  => { 
+                    let distance = player_transform.translation.distance(transform.translation);
+                    if distance <= 40.0 {
+                        if keyboard_input.just_pressed(KeyCode::KeyF) {
+                            chest.0 = 5;
+                        }
+                    }
+                },
+                4 => {
+                    let distance = player_transform.translation.distance(transform.translation);
+                    if distance <= 40.0 {
+                        if keyboard_input.just_pressed(KeyCode::KeyF) {
+                            chest.0 = 6;
+                        }
+                    }
+                },
+                5 => {
+                    let all = 34;
+                    aconfig.frame_timer.tick(time.delta());
+                    if aconfig.frame_timer.just_finished(){
+                        if let Some(atlas) = &mut sprite.texture_atlas {
+                            aconfig.frame_timer = AnimationConfig::timer_from_fps(aconfig.fps2p);
+                            if atlas.index < all {
+                                atlas.index = atlas.index + 1;
+                            }
+                        }
+                    }
+                },
+                6 => {
+                    let all = 24;
+                    aconfig.frame_timer.tick(time.delta());
+                    if aconfig.frame_timer.just_finished(){
+                        if let Some(atlas) = &mut sprite.texture_atlas {
+                            aconfig.frame_timer = AnimationConfig::timer_from_fps(aconfig.fps2p);
+                            if atlas.index < all - 1 {
+                                atlas.index = atlas.index + 1;
+                            }
+                        }
+                    }
+                },
+                _ => { },
+            }
+        }
+    }
+
 }

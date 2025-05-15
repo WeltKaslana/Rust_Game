@@ -1,10 +1,11 @@
 use bevy::{
-    animation::transition, color::palettes::css::{BLUE, GREEN, RED}, dev_tools::states::*, ecs::{component::ComponentId, system::EntityCommands, world::DeferredWorld}, math::{Vec3, VectorSpace}, prelude::* 
+    animation::transition, color::palettes::css::{BLUE, GREEN, RED}, dev_tools::states::*, ecs::{component::ComponentId, system::EntityCommands, world::DeferredWorld}, math::{Vec3, VectorSpace}, prelude::*, utils::info 
     };
 use bevy_ecs_tiled::{prelude::*,};
 // use bevy_ecs_tilemap::{map::TilemapSize, TilemapBundle};
 
 use bevy_rapier2d::{prelude::*};
+use rand::Rng;
 
 use crate::{
     boss::{self, BossComponent}, character::{AnimationConfig, Character}, enemy::Enemy, gamestate::GameState, gui::Transition, gun::Bullet, resources::*
@@ -13,6 +14,14 @@ pub struct RoomPlugin;
 
 #[derive(Component)]
 pub struct EnemyBorn;
+
+#[derive(Component)]
+pub struct Chest(pub i32);
+// 0:effect 1:big can't open 2: small can't open 3: big ready to open 4: small ready to open 5: big opening 6: small opening 
+
+#[derive(Component)]
+pub struct Door(pub i32);
+// 0:can't open 1:ready to open 2:opening 3:opened 4:closing
 
 ////test
 pub type MapInfosCallback = fn(&mut EntityCommands);
@@ -253,6 +262,7 @@ fn evt_object_created(
     // source: Res<GlobalEnemyTextureAtlas>,
     source2: Res<GlobalEnemyTextureAtlas>,
     // mut next_state: ResMut<NextState<GameState>>,
+    source3: Res<GlobalRoomTextureAtlas>,
     
 ) {
     let mut size = Vec2::ZERO;
@@ -324,6 +334,113 @@ fn evt_object_created(
             info!("boss created! ");
             // next_state.set(GameState::InGame);
         }
+
+        if name.as_str() == "Object(door)" {
+            commands.spawn((
+                Sprite {
+                    image: source3.image_door_open.clone(),
+                    texture_atlas: Some(TextureAtlas {
+                        layout: source3.layout_door_open.clone(),
+                        index: 0,
+                    }),
+                    ..Default::default()
+                },
+                Transform::from_translation(Vec3::new(
+                    (transform .translation.x - size.x) * 3.0, 
+                    (transform .translation.y - size.y) * 3.0, 
+                    0.0)).with_scale(Vec3::splat(2.5)),
+                AnimationConfig::new(15),
+                Door(0),
+            ));
+            info!("door created!");
+        }
+        if name.as_str() == "Object(chest)" {
+            let mut rng = rand::rng();
+            let i = rng.random_range(0..9);
+
+            match i {
+                0..=1 => {
+                    commands.spawn((
+                        Sprite {
+                            image: source3.image_chest_big2.clone(),
+                            texture_atlas: Some(TextureAtlas {
+                                layout: source3.layout_chest_big2.clone(),
+                                index: 0,
+                            }),
+                            ..Default::default()
+                        },
+                       Transform::from_translation(Vec3::new(
+                            (transform .translation.x - size.x) * 3.0, 
+                            (transform .translation.y - size.y) * 3.0, 
+                            0.0)).with_scale(Vec3::splat(2.5)),
+                        AnimationConfig::new(15),
+                        Chest(1),
+                    )).with_child((
+                        Sprite {
+                            image: source3.image_chest_big2_effect1.clone(),
+                            texture_atlas: Some(TextureAtlas {
+                                layout: source3.layout_chest_big2_effect1.clone(),
+                                index: 0,
+                            }),
+                            ..Default::default()
+                        },
+                        Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)).with_scale(Vec3::splat(2.5)),
+                        AnimationConfig::new(15),
+                        Chest(0),
+                    )).with_child((
+                        Sprite {
+                            image: source3.image_chest_big2_effect2.clone(),
+                            texture_atlas: Some(TextureAtlas {
+                                layout: source3.layout_chest_big2_effect2.clone(),
+                                index: 0,
+                            }),
+                            ..Default::default()
+                        },
+                        Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)).with_scale(Vec3::splat(2.5)),
+                        AnimationConfig::new(15),
+                        Chest(0),
+                    ));
+                },
+                2..5 => {
+                    commands.spawn((
+                        Sprite {
+                            image: source3.image_chest_big1.clone(),
+                            texture_atlas: Some(TextureAtlas {
+                                layout: source3.layout_chest_big1.clone(),
+                                index: 0,
+                            }),
+                            ..Default::default()
+                        },
+                        Transform::from_translation(Vec3::new(
+                            (transform .translation.x - size.x) * 3.0, 
+                            (transform .translation.y - size.y) * 3.0, 
+                            0.0)).with_scale(Vec3::splat(2.5)),
+                        AnimationConfig::new(15),
+                        Chest(1),
+                    ));
+                },
+                5..=9 => {
+                    commands.spawn((
+                        Sprite {
+                            image: source3.image_chest_small.clone(),
+                            texture_atlas: Some(TextureAtlas {
+                                layout: source3.layout_chest_small.clone(),
+                                index: 0,
+                            }),
+                            ..Default::default()
+                        },
+                        Transform::from_translation(Vec3::new(
+                            (transform .translation.x - size.x) * 3.0, 
+                            (transform .translation.y - size.y) * 3.0, 
+                            0.0)).with_scale(Vec3::splat(2.5)),
+                        AnimationConfig::new(15),
+                        Chest(2),
+                    ));
+                },
+                _ => {},
+            }
+            info!("chest created!");
+        }
     }
 
 }
@@ -360,9 +477,20 @@ fn check_ifcomplete(
     bossclear_query: Query<Entity, (With<BossComponent>, Without<EnemyBorn>, Without<Enemy>)>,
     transition_query: Query<Entity, (With<Transition>, Without<Enemy>)>,
     camera_query: Query<&Transform, With<Camera2d>>,
+    mut door_query: Query<&mut Door, With<Door>>,
+    mut chest_query: Query<&mut Chest, With<Chest>>,
 ) {
     if enemyclear_query1.is_empty() && enemyclear_query2.is_empty() && bossclear_query.is_empty() {
         println! ("你过关!");
+
+        let mut door =door_query.single_mut();
+        if door.0 == 0 { door.0 = 1; } 
+
+        for mut chest in chest_query.iter_mut() {
+            if chest.0 == 1 { chest.0 = 3; }
+            if chest.0 == 2 { chest.0 = 4; }
+        }
+
         if keyboard_input.just_pressed(KeyCode::KeyE) && transition_query.is_empty() {
             for trans in camera_query.iter() {
                 commands.spawn((

@@ -1,5 +1,6 @@
 use std::path;
 
+use bevy::text;
 use bevy::{dev_tools::states::*, prelude::*};
 use bevy::window::PrimaryWindow;
 
@@ -413,7 +414,10 @@ impl Plugin for ResourcesPlugin {
                 load_menu,
             ))
             .add_systems(Update,update_cursor_position)
-            .add_systems(OnEnter(GameState::Home),load_assets_enemy)
+            .add_systems(OnEnter(GameState::Home),(
+                load_assets_enemy,
+                load_assets_room,
+            ))
             // .add_systems(Update, log_transitions::<GameState>)
             ;
     }
@@ -476,6 +480,16 @@ fn load_assets_enemy (
     println!("Enemy Resourse Loaded");
 }
 
+fn load_assets_room (
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+) {
+    let room_resources = GlobalRoomTextureAtlas::init(&asset_server, &mut texture_atlas_layouts);
+    commands.insert_resource(room_resources);
+
+    println!("Room Resourse Loaded");
+}
 
 #[derive(Resource,Default)]
 pub struct GlobalEnemyTextureAtlas {
@@ -726,4 +740,79 @@ impl GlobalBossTextureAtlas {
     }
 
 
+}
+
+#[derive(Resource,Default)]
+pub struct GlobalRoomTextureAtlas { 
+    pub layout_chest_big1: Handle<TextureAtlasLayout>,
+    pub image_chest_big1: Handle<Image>,
+
+    pub layout_chest_big2: Handle<TextureAtlasLayout>,
+    pub image_chest_big2: Handle<Image>,
+
+    pub layout_chest_small: Handle<TextureAtlasLayout>,
+    pub image_chest_small: Handle<Image>,
+
+    pub layout_door_open: Handle<TextureAtlasLayout>,
+    pub image_door_open: Handle<Image>,
+
+    pub layout_door_close: Handle<TextureAtlasLayout>,
+    pub image_door_close: Handle<Image>,
+
+    pub layout_chest_big2_effect1: Handle<TextureAtlasLayout>,
+    pub image_chest_big2_effect1: Handle<Image>,
+
+    pub layout_chest_big2_effect2: Handle<TextureAtlasLayout>,
+    pub image_chest_big2_effect2: Handle<Image>,
+}
+
+impl GlobalRoomTextureAtlas {
+    pub fn init(
+        asset_server: &Res<AssetServer>,
+        texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>,
+    ) -> Self { 
+        let layoutchestbig1 = TextureAtlasLayout::from_grid(UVec2::splat(96), 10, 4, None, None);
+        let imagechestbig1 = String::from("Chest_Big1_Open.png");
+
+        let layoutchestbig2 = TextureAtlasLayout::from_grid(UVec2::splat(96), 10, 4, None, None);
+        let imagechestbig2 = String::from("Chest_Big2_Open.png");
+
+        let layoutchestsmall = TextureAtlasLayout::from_grid(UVec2::splat(64), 24, 1, None, None);
+        let imagechestsmall = String::from("Chest_Small_Open.png");
+
+        let layoutdooropen = TextureAtlasLayout::from_grid(UVec2::splat(96), 8, 2, None, None);
+        let imagedooropen = String::from("Boss_Door_Open.png");
+
+        let layoutdoorclose = TextureAtlasLayout::from_grid(UVec2::splat(96), 8, 2, None, None);
+        let imagedoorclose = String::from("Boss_Door_Close.png");
+
+        let layoutchestbig2effect1 = TextureAtlasLayout::from_grid(UVec2::splat(32), 3, 1, None, None);
+        let imagechestbig2effect1 = String::from("Chest_Big2_Effect1.png");
+
+        let layoutchestbig2effect2 = TextureAtlasLayout::from_grid(UVec2::splat(32), 3, 1, None, None);
+        let imagechestbig2effect2 = String::from("Chest_Big2_Effect2.png");
+
+        Self {
+            layout_chest_big1: texture_atlas_layouts.add(layoutchestbig1),
+            image_chest_big1: asset_server.load(imagechestbig1),
+
+            layout_chest_big2: texture_atlas_layouts.add(layoutchestbig2),
+            image_chest_big2: asset_server.load(imagechestbig2),
+
+            layout_chest_small: texture_atlas_layouts.add(layoutchestsmall),
+            image_chest_small: asset_server.load(imagechestsmall),
+
+            layout_door_open: texture_atlas_layouts.add(layoutdooropen),
+            image_door_open: asset_server.load(imagedooropen),
+
+            layout_door_close: texture_atlas_layouts.add(layoutdoorclose),
+            image_door_close: asset_server.load(imagedoorclose),
+
+            layout_chest_big2_effect1: texture_atlas_layouts.add(layoutchestbig2effect1),
+            image_chest_big2_effect1: asset_server.load(imagechestbig2effect1),
+
+            layout_chest_big2_effect2: texture_atlas_layouts.add(layoutchestbig2effect2),
+            image_chest_big2_effect2: asset_server.load(imagechestbig2effect2),
+        }
+    }
 }
