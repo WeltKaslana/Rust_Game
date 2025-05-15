@@ -1,4 +1,5 @@
 use bevy::math::vec3;
+use bevy::sprite;
 use bevy::{
     dev_tools::states::*, 
     prelude::*, 
@@ -29,6 +30,12 @@ pub struct Player;
 
 #[derive(Component)]
 pub struct Drone;
+
+#[derive(Component)]
+pub struct Grenade;
+
+#[derive(Component)]
+pub struct GrenadeHit;
 
 #[derive(Component)]
 pub struct DroneBullet;
@@ -79,7 +86,7 @@ pub struct PlayerJumpEvent;
 pub struct PlayerHurtEvent;
 
 #[derive(Event)]
-pub struct ReloadPlayerEvent;
+pub struct ReloadPlayerEvent(pub u8);
 //定义角色动画帧率
 #[derive(Component)]
 
@@ -120,7 +127,9 @@ impl Plugin for PlayerPlugin {
             Update,
                 (
                     handle_player_move2,
-                    handle_player_skills,
+                    handle_player_skill2,
+                    handle_player_skill3,
+                    handle_grenade_despawn,
                     // handle_play_bullet_collision_events,
             ).run_if(in_state(HomeState::Running))
             )
@@ -129,7 +138,9 @@ impl Plugin for PlayerPlugin {
                     (
                         handle_player_death,
                         handle_player_move3,
-                        handle_player_skills,
+                        handle_player_skill2,
+                        handle_player_skill3,
+                        handle_grenade_despawn,
                         handle_player_skill4,
                         // handle_player_enemy_collision_events,
                         handle_player_bullet_collision_events
@@ -525,15 +536,13 @@ fn handle_player_skills1(
         }
     }
 }
-fn handle_player_skills(
-    // mut commands: Commands,
+fn handle_player_skill2(
     mut player_query: Query<(
         &mut Sprite, 
         &mut PlayerState,
         &mut Velocity,
         &mut KinematicCharacterController,
     ), With<Character>>,
-    // transform_query: Query<&Transform, Without<Character>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     source: Res<GlobalCharacterTextureAtlas>,
 ) {
@@ -591,9 +600,105 @@ fn handle_player_skills(
         }
     }
 }
+fn handle_player_skill3 (
+    mut commands: Commands,
+    player_query: Query<(
+        &Transform,
+    ), (With<Character>, Without<Gun>)>,
+    gun_query: Query<&Transform, (With<Gun>, Without<Character>)>,
+    mut grenade_query: Query<(&mut Transform, &BulletDirection, &mut Velocity), (With<Grenade>, Without<Character>, Without<Gun>)>,
+    mouse_button_input: Res<ButtonInput<MouseButton>>,
+    source: Res<GlobalCharacterTextureAtlas>,   
+) {
+    if player_query.is_empty() || gun_query.is_empty() {
+        return;
+    }
+    if mouse_button_input.just_pressed(MouseButton::Right) {
+        let gun_transform = gun_query.single();
+        let direction = gun_transform.local_x();
+        for (trans,) in player_query.iter() {
+            commands.spawn((
+                Sprite {
+                    image: source.image_grenade.clone(),
+                    ..Default::default()
+                },
+                Transform::from_translation(trans.translation.clone()).with_scale(Vec3::splat(2.5)),
+                BulletDirection(Vec3::new(direction.x,direction.y,direction.z,)),
+                Player,
+                Grenade,
+                Velocity(0.5),
+                Collider::ball(7.0),
+                RigidBody::Dynamic,
+                GravityScale(0.0),
+                ColliderMassProperties::Mass(1000.0),
+                ActiveEvents::COLLISION_EVENTS,
+            ));
+        }
+    }
+    for (mut trans, dir, mut V) in grenade_query.iter_mut() {
+        trans.translation += dir.0.normalize() * Vec3::splat(BULLET_SPEED);
+        trans.translation.y -= V.0;
+        V.0 += 0.2;
+        trans.translation.z = 30.0;
+    }
+}
+
+fn handle_grenade_despawn (
+    mut commands: Commands,
+    grenade_query: Query<(Entity, &Transform), (With<Grenade>, Without<Character>)>,
+    player_query: Query<Entity, (With<Character>, Without<Grenade>)>,
+    mut collision_events: EventReader<CollisionEvent>,
+    source: Res<GlobalCharacterTextureAtlas>,
+) {
+    for collision_event in collision_events.read() {
+        match collision_event {
+            CollisionEvent::Started(entity1, entity2, _) => {
+                let mut flag = false;
+                let mut trans = Vec3::splat(-100.0);
+                if let Ok((e, transf)) = grenade_query.get(*entity1) {
+                    if !player_query.get(*entity2).is_ok() {
+                        // 手雷与玩家不碰撞
+                        commands.entity(*entity1).despawn();
+                        trans = transf.translation;
+                        flag = true;
+                    }
+
+                }
+                if let Ok((e, transf)) = grenade_query.get(*entity2) {
+                    if !player_query.get(*entity1).is_ok() {
+                        commands.entity(*entity2).despawn();
+                        trans = transf.translation;
+                        flag = true;
+                    }
+                }
+                if flag {
+                    //产生手雷消失的特效
+                    commands.spawn((
+                        Sprite {
+                            image: source.image_grenade_hit.clone(),
+                            texture_atlas: Some(TextureAtlas {
+                                layout: source.layout_grenade_hit.clone(),
+                                index: 0,
+                            }),
+                            ..default()
+                        },
+                        Transform {
+                            translation: trans.clone(),
+                            scale: Vec3::splat(2.5),
+                            ..default()
+                        },
+                        AnimationConfig::new(15),
+                        GrenadeHit,
+                    ));
+                }
+            },
+            _ => {}
+        }
+    }
+}
 
 fn handle_player_bullet_collision_events(
-    mut commands: Commands,
+    // mut commands: Commands,
     mut events: EventWriter<PlayerHurtEvent>,
     mut player_query: Query<(Entity, &mut Health, &PlayerState), With<Character>>,
     mut collision_events: EventReader<CollisionEvent>,

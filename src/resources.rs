@@ -101,7 +101,7 @@ impl GlobalCharacterTextureAtlas {
         
         // shiroko
         let mut path_grenade = String::from("Shiroko_Grenade.png");
-        let mut layout_grenade_hit = TextureAtlasLayout::from_grid(UVec2::splat(64),6,1,None,None);
+        let mut layout_grenade_hit = TextureAtlasLayout::from_grid(UVec2::splat(96),6,1,None,None);
         let mut path_grenade_hit = String::from("Shiroko_Grenade_Effect.png");
 
         let mut layout_drone_idle = TextureAtlasLayout::from_grid(UVec2::splat(64),7,1,None,None);

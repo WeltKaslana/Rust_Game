@@ -364,6 +364,7 @@ fn despawn_old_bullets(
                 let mut trans = Vec3::splat(-100.0);
                 if let Ok((instant, e, transf)) = bullet_query.get(*entity1) {
                     if !bullet_query.get(*entity2).is_ok() {
+                        // 子弹之间不碰撞
                         commands.entity(*entity1).despawn();
                         trans = transf.translation;
                         flag = true;
@@ -389,7 +390,7 @@ fn despawn_old_bullets(
                             ..default()
                         },
                         Transform {
-                            translation: trans,
+                            translation: trans.clone(),
                             scale: Vec3::splat(2.5),
                             ..default()
                         },

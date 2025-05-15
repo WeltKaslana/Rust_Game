@@ -91,6 +91,7 @@ impl Plugin for EnemyPlugin {
                         handle_enemy_death,
                         handle_enemy_bullet_collision_events,
                         handle_enemy_hurt_collision_events,
+                        handle_enemy_hurt_collision_events_special,
                 ).run_if(in_state(GameState::InGame))
             )
             // .add_systems(Update, log_transitions::<GameState>)
@@ -1021,9 +1022,9 @@ fn handle_enemy_death(
 
 fn handle_enemy_hurt_collision_events(
     // mut commands: Commands,
-    player_query: Query<Entity, With<Bullet>>,
+    player_query: Query<Entity, (With<Bullet>)>,
     mut collision_events: EventReader<CollisionEvent>,
-    mut enemy_query: Query<(Entity, &mut Health), With<Enemy>>,
+    mut enemy_query: Query<(Entity, &mut Health), (With<Enemy>, Without<Bullet>)>,
 ) {
     for collision_event in collision_events.read() {
         if player_query.is_empty() || enemy_query.is_empty() {
@@ -1048,6 +1049,41 @@ fn handle_enemy_hurt_collision_events(
                 },
                 CollisionEvent::Stopped(entity1, entity2, _) => { },
             }
+        }
+    }
+}
+
+
+fn handle_enemy_hurt_collision_events_special(
+    grenade_query: Query<(Entity, &Transform), (With<Grenade>)>,
+    mut collision_events: EventReader<CollisionEvent>,
+    mut enemy_query: Query<(Entity, &mut Health, &Transform), (With<Enemy>, Without<Bullet>)>,
+) {
+    for collision_event in collision_events.read() {
+        if grenade_query.is_empty() || enemy_query.is_empty() {
+            return;
+        }
+        match collision_event {
+            CollisionEvent::Started(entity1, entity2, _) => {
+                // 手雷爆炸范围内的敌人都扣血
+                if let Ok((_, transg)) = grenade_query.get(*entity1) {
+                    for (_, mut health, trans) in &mut enemy_query.iter_mut()  {
+                        if trans.translation.distance(transg.translation) < GRENADE_BOOM_RANGE {
+                            health.0 -= BULLET_DAMAGE * 5.0;
+                            println!("BOOM!");
+                        }
+                    }
+                }
+                if let Ok((_, transg)) = grenade_query.get(*entity2) {
+                    for (_, mut health, trans) in &mut enemy_query.iter_mut()  {
+                        if trans.translation.distance(transg.translation) < GRENADE_BOOM_RANGE {
+                            health.0 -= BULLET_DAMAGE * 5.0;
+                            println!("BOOM!");
+                        }
+                    }
+                }
+            },
+            _ => {}
         }
     }
 }

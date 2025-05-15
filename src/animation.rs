@@ -10,9 +10,11 @@ use crate::GlobalRoomTextureAtlas;
 use crate::{
     boss::{
         set_boss, Boss, BossComponent, BossDeathEffect, BossState, Direction, Health, Skillflag
-    }, character::{
-        AnimationConfig, Character, Drone, DroneBullet, PlayerState, State
-    }, enemy::{
+    }, 
+    character::{
+        AnimationConfig, Character, Drone, DroneBullet, PlayerState, State, GrenadeHit,
+    }, 
+    enemy::{
         set_enemy, BulletDirection, Enemy, EnemyBullet, EnemyDeathEffect, EnemyState, EnemyType, Fireflag, PatrolState
     }, 
     gamestate::*, 
@@ -63,6 +65,7 @@ impl Plugin for AnimationPlugin {
                     flip_player_sprite_x,
                     flip_gun_sprite_y,
                     animate_gunfire,
+                    // animate_grenadehit,
                     animate_sora,
                     animate_fridge,
             ).run_if(in_state(HomeState::Running))
@@ -576,8 +579,9 @@ fn flip_gun_sprite_y(
 fn animate_gunfire(
     mut commands: Commands,
     time: Res<Time>,
-    mut Gun_query: Query<(&mut AnimationConfig, &mut Sprite, Entity), (With<GunFire>, Without<BulletHit>)>,
-    mut Hit_query: Query<(&mut AnimationConfig, &mut Sprite, Entity), (With<BulletHit>, Without<GunFire>)>,
+    mut Gun_query: Query<(&mut AnimationConfig, &mut Sprite, Entity), (With<GunFire>, Without<BulletHit>, Without<GrenadeHit>)>,
+    mut Hit_query: Query<(&mut AnimationConfig, &mut Sprite, Entity), (With<BulletHit>, Without<GunFire>, Without<GrenadeHit>)>,
+    mut grenade_query: Query<(&mut AnimationConfig, &mut Sprite, Entity), (With<GrenadeHit>, Without<GunFire>, Without<BulletHit>)>,
 ) {
     // if Gun_query.is_empty() {
     //     return;
@@ -607,7 +611,38 @@ fn animate_gunfire(
             }
         }
     }
+    for (mut config, mut sprite, entity) in &mut grenade_query.iter_mut() {
+        config.frame_timer.tick(time.delta());
+        if config.frame_timer.just_finished(){
+            if let Some(atlas) = &mut sprite.texture_atlas {
+                config.frame_timer = AnimationConfig::timer_from_fps(config.fps2p);
+                atlas.index = atlas.index + 1;
+                if atlas.index == 5 {
+                    commands.entity(entity).despawn();
+                }
+            }
+        }
+    }
 }
+
+// fn animate_grenadehit(
+//     mut commands: Commands,
+//     time: Res<Time>,
+//     mut grenade_query: Query<(&mut AnimationConfig, &mut Sprite, Entity), (With<GrenadeHit>)>,
+// ) {
+//     for (mut config, mut sprite, entity) in &mut grenade_query.iter_mut() {
+//         config.frame_timer.tick(time.delta());
+//         if config.frame_timer.just_finished(){
+//             if let Some(atlas) = &mut sprite.texture_atlas {
+//                 config.frame_timer = AnimationConfig::timer_from_fps(config.fps2p);
+//                 atlas.index = atlas.index + 1;
+//                 if atlas.index == 5 {
+//                     commands.entity(entity).despawn();
+//                 }
+//             }
+//         }
+//     }
+// }
 
 fn animate_sora(
     // asset_server: Res<AssetServer>,
@@ -920,7 +955,7 @@ fn animate_door_and_chest (
                     if aconfig.frame_timer.just_finished(){
                         if let Some(atlas) = &mut sprite.texture_atlas {
                             aconfig.frame_timer = AnimationConfig::timer_from_fps(aconfig.fps2p);
-                            if atlas.index < all {
+                            if atlas.index < all - 1 {
                                 atlas.index = atlas.index + 1;
                             }
                         }

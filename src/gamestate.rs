@@ -30,6 +30,16 @@ pub enum ReloadingState {
 }
 
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, SubStates)]
+#[source(ReloadingState = ReloadingState::Settings)]
+pub enum PlayerMessageState {
+    #[default]
+    Shiroko,
+    Arisu,
+    Utaha,
+    None,
+}
+
+#[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, SubStates)]
 #[source(GameState = GameState::InGame)]
 pub enum InGameState {
     #[default]
