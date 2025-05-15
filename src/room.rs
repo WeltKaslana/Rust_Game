@@ -135,6 +135,9 @@ impl Plugin for RoomPlugin {
                 evt_object_created,
                 evt_map_created,
                 ).run_if(in_state(GameState::Loading)))
+            .add_systems(OnEnter(GameState::Loading),(
+                del_door_chest,
+            ))
             .add_systems(Update, (
                 check_ifcomplete,
             ).run_if(in_state(GameState::InGame)))
@@ -509,6 +512,20 @@ fn check_ifcomplete(
 
 }
 
-
+fn del_door_chest(
+    mut commands: Commands,
+    door_query: Query<Entity, With<Door>>,
+    chest_query: Query<Entity, With<Chest>>,
+) {
+    if !door_query.is_empty() {
+        let entity = door_query.single();
+        commands.entity(entity).despawn();
+    }
+    if !chest_query.is_empty() {
+        for entity in chest_query.iter() {
+            commands.entity(entity).despawn();
+        }
+    }
+}
 
 
