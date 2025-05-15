@@ -480,13 +480,15 @@ fn check_ifcomplete(
     bossclear_query: Query<Entity, (With<BossComponent>, Without<EnemyBorn>, Without<Enemy>)>,
     transition_query: Query<Entity, (With<Transition>, Without<Enemy>)>,
     camera_query: Query<&Transform, With<Camera2d>>,
-    mut door_query: Query<&mut Door, With<Door>>,
+    mut door_query: Query<(&mut Door, & Transform), With<Door>>,
     mut chest_query: Query<&mut Chest, With<Chest>>,
+    player_query: Query<&Transform, With<Character>>,
 ) {
     if enemyclear_query1.is_empty() && enemyclear_query2.is_empty() && bossclear_query.is_empty() {
         println! ("你过关!");
 
-        let mut door =door_query.single_mut();
+        let player_transform = player_query.single();
+        let (mut door, door_transform) =door_query.single_mut();
         if door.0 == 0 { door.0 = 1; } 
 
         for mut chest in chest_query.iter_mut() {
@@ -494,20 +496,23 @@ fn check_ifcomplete(
             if chest.0 == 2 { chest.0 = 4; }
         }
 
-        if keyboard_input.just_pressed(KeyCode::KeyE) && transition_query.is_empty() {
-            for trans in camera_query.iter() {
-                commands.spawn((
-                    Sprite {
-                        image: asset_server.load("Menu_Transition1.png"),
-                        ..Default::default()
-                    },
-                    Transform::from_scale(Vec3::new(0.7,0.7,0.5))
-                        .with_translation(Vec3::new(trans.translation.x-3200.0, trans.translation.y, 100.0)),
-                    Transition,
-                ));                     
+        let distance = player_transform.translation.distance(door_transform.translation);
+
+        if distance <= 100.0 &&  door.0 == 3 {
+            if keyboard_input.just_pressed(KeyCode::KeyE) && transition_query.is_empty() {
+                for trans in camera_query.iter() {
+                    commands.spawn((
+                        Sprite {
+                            image: asset_server.load("Menu_Transition1.png"),
+                            ..Default::default()
+                        },
+                        Transform::from_scale(Vec3::new(0.7,0.7,0.5))
+                            .with_translation(Vec3::new(trans.translation.x-3200.0, trans.translation.y, 100.0)),
+                        Transition,
+                    ));                     
+                }
             }
         }
-
     }
 
 }
