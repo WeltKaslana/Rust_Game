@@ -366,3 +366,99 @@ fn update_ui (
     //     TextColor(Color::rgb(0.0, 0.0, 0.0)),
     //     Transform::from_translation(Vec3::new(0.0, 100.0, 2.0)),
     // ));
+
+// fn handle_gun_fire(
+//     time: Res<Time>,
+//     mut commands: Commands,
+//     // asset_server: Res<AssetServer>,
+//     // mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+//     mut gun_query: Query<(&Transform, &mut GunTimer), (With<Gun>, Without<Character>)>,
+//     buff_query: Query<&Buff, (With<Character>, Without<Gun>)>,
+//     mouse_button_input: Res<ButtonInput<MouseButton>>,
+//     mut ew: EventWriter<PlayerFireEvent>,
+//     source: Res<GlobalCharacterTextureAtlas>,
+// ) {
+//     //枪的开火没法通用，ARISU的枪和子弹甚至有开火动画，而UTAHA居然用的不是枪
+//     //没法写通用的逻辑
+//     //后续考虑根据内存中的角色id判断角色，然后写不同的开火逻辑
+//     if gun_query.is_empty() {
+//         return;
+//     }
+//     let (gun_transform, mut gun_timer) = gun_query.single_mut();
+//     let gun_pos = gun_transform.translation.truncate();
+//     gun_timer.0.tick(time.delta());
+
+//     //如果tick在检测鼠标按键后就会出现单点不射击的情况
+//     if !mouse_button_input.pressed(MouseButton::Left) {
+//         return;
+//     }
+//     // println!("mouse pressed!");
+
+//     let mut rng = rand::rng();
+//     let bullet_direction = gun_transform.local_x();
+//     if gun_timer.0.elapsed_secs() >= BULLET_SPAWN_INTERVAL {
+//         gun_timer.0.reset();
+//         ew.send(PlayerFireEvent);
+
+//         //枪口焰动画
+//         // let layout_fire = TextureAtlasLayout::from_grid(UVec2::splat(32),5,1,None,None);
+//         commands.spawn((Sprite {
+//             image: source.image_gun_fire_effect.clone(),
+//             texture_atlas: Some(TextureAtlas {
+//                 layout: source.lay_out_gun_fire_effect.clone(),
+//                 index: 0,
+//             }),
+//             ..Default::default()
+//             },
+//             Transform{
+//                 translation: vec3(gun_pos.x + bullet_direction.x * 30.0, 
+//                                   gun_pos.y + bullet_direction.y * 30.0, 
+//                                   32.0),//深度要盖过枪
+//                 rotation: Quat::from_rotation_z(bullet_direction.y.atan2(bullet_direction.x)),
+//                 scale: Vec3::splat(2.5),
+//             },
+//             AnimationConfig::new(15),
+//             GunFire,
+//             Player,
+//             ));
+//         //子弹散布
+//         let dir = vec3(
+//             bullet_direction.x + rng.random_range(-0.1..0.1),
+//             bullet_direction.y + rng.random_range(-0.1..0.1),
+//             bullet_direction.z,
+//         );
+//         //子弹生成
+//         commands.spawn((
+//             Sprite {
+//                 image: source.image_bullet.clone(),
+//                 texture_atlas: Some(TextureAtlas {
+//                     layout: source.lay_out_bullet.clone(),
+//                     index: 0,
+//                 }),
+//                 ..default()
+//             },
+//             Transform {
+//                 translation: vec3(
+//                     gun_pos.x + bullet_direction.x * 80.0, 
+//                     gun_pos.y + bullet_direction.y * 80.0, 
+//                     1.0),
+//                 rotation: Quat::from_rotation_z(dir.y.atan2(dir.x)),
+//                 scale: Vec3::splat(2.5),
+//             },
+//             Player,
+//             Bullet,
+//             BulletDirection(dir),
+//             SpawnInstant(Instant::now()),
+//             //碰撞体
+//             Collider::cuboid(2.0, 1.0),
+
+//             RigidBody::Dynamic,
+//             GravityScale(0.0),
+//             ColliderMassProperties::Mass(1000.0),
+//             LockedAxes::ROTATION_LOCKED,
+//             // Sensor,
+//             // CollisionGroups::new(Group::GROUP_3, Group::GROUP_2),
+//             ActiveEvents::COLLISION_EVENTS,
+//         ));
+//     }
+// }

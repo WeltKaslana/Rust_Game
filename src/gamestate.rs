@@ -21,6 +21,15 @@ pub enum HomeState {
 }
 
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, SubStates)]
+#[source(HomeState = HomeState::Reloading)]
+pub enum ReloadingState {
+    #[default]
+    Settings,
+    Atlas,
+    Room,
+}
+
+#[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, SubStates)]
 #[source(GameState = GameState::InGame)]
 pub enum InGameState {
     #[default]

@@ -1,11 +1,9 @@
 use bevy::math::vec3;
-use bevy::transform;
 use bevy::{
     dev_tools::states::*, 
     prelude::*, 
     time::Stopwatch,
     ecs::world::DeferredWorld,};
-use bevy_rapier2d::na::distance;
 use bevy_rapier2d::prelude::*;
 
 use std::{time::Duration};
@@ -57,6 +55,17 @@ pub enum PlayerState {
     Dodge,
 }
 
+#[derive(Component)]
+pub struct Buff(
+    pub i8, // 0.bullet_num
+    pub i8, // 1.fire_speed
+    pub i8, // 2.bullet_speed
+    pub i8, // 3.bullet_spread
+    pub i8, // 4.bullet_damage
+    pub i8, // 5.grenade_range
+    pub i8, // 6.skill_cooldown
+    // to design 
+);
 #[derive(Event)]
 pub struct PlayerEnemyCollisionEvent;
 
@@ -155,6 +164,9 @@ fn setup_player(
         Velocity(PLAYER_JUMP_SPEED),
         //音效播放间隔计时器
         PlayerTimer(Stopwatch::default()),
+        // 状态栏
+        Buff(5, 1, 1, 1, 2, 1, 1),
+
         Collider::cuboid(9.0, 16.5),
 
         RigidBody::Fixed,
@@ -953,6 +965,7 @@ fn handle_player_skill4 (
     mut drone_query: Query<(&mut Sprite, & State), (With<Drone>, Without<DroneBullet>, Without<Enemy>, Without<Character>)>,
     mut drone_bullet_query: Query<(&Transform, &mut BulletDirection), (With<DroneBullet>, Without<Drone>, Without<Enemy>, Without<Character>)>,
     enemy_query: Query<&Transform, (With<Enemy>, Without<DroneBullet>, Without<Drone>, Without<Character>)>,
+    source: Res<GlobalCharacterTextureAtlas>,
 ) {
     if transform_query.is_empty() {
         return;
@@ -961,17 +974,26 @@ fn handle_player_skill4 (
     if !drone_query.is_empty() {//存在小飞机
         let (mut drone, state) = drone_query.single_mut();
         if state.0 != 0 {
-            drone.image = asset_server.load("Shiroko_Drone_Fire.png");
+            // drone.image = asset_server.load("Shiroko_Drone_Fire.png");
+            // if let Some(atlas) = &mut drone.texture_atlas {
+            //     atlas.layout = texture_atlas_layouts.add(TextureAtlasLayout::from_grid(UVec2::splat(96),7,1,None,None));
+            // }
+            drone.image = source.image_drone_fire.clone();
             if let Some(atlas) = &mut drone.texture_atlas {
-                atlas.layout = texture_atlas_layouts.add(TextureAtlasLayout::from_grid(UVec2::splat(96),7,1,None,None));
+                atlas.layout = source.layout_drone_fire.clone();
             }
         }
     } else if keyboard_input.just_pressed(KeyCode::KeyQ)  {//不存在小飞机，则按Q生成小飞机
         commands.spawn((
             Sprite {
-                image: asset_server.load("Shiroko_Drone_Idle.png"),
+                // image: asset_server.load("Shiroko_Drone_Idle.png"),
+                // texture_atlas: Some(TextureAtlas {
+                //     layout: texture_atlas_layouts.add(TextureAtlasLayout::from_grid(UVec2::splat(64),7,1,None,None)),
+                //     index: 0,
+                // }),
+                image:  source.image_drone_idle.clone(),
                 texture_atlas: Some(TextureAtlas {
-                    layout: texture_atlas_layouts.add(TextureAtlasLayout::from_grid(UVec2::splat(64),7,1,None,None)),
+                    layout: source.layout_drone_idle.clone(),
                     index: 0,
                 }),
                 flip_x: player.flip_x,

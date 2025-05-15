@@ -703,6 +703,7 @@ fn animate_droneskill (
         &mut Transform,
         &mut AnimationConfig,
         & gun::BulletDirection), (Without<Drone>, With<DroneBullet>)>,
+    source: Res<GlobalCharacterTextureAtlas>,
 ) {
     if !drone_query.is_empty() {
         let (drone, mut config, mut sprite,dronetransform, mut state) = drone_query.single_mut();
@@ -726,9 +727,14 @@ fn animate_droneskill (
                     }
                     commands.spawn((
                         Sprite {
-                            image: asset_server.load("Player_Bullet_Missile.png"),
+                            // image: asset_server.load("Player_Bullet_Missile.png"),
+                            // texture_atlas: Some(TextureAtlas {
+                            //     layout: texture_atlas_layouts.add(TextureAtlasLayout::from_grid(UVec2::splat(32),5,1,None,None)),
+                            //     index: 0,
+                            // }),
+                            image: source.image_drone_missle.clone(),
                             texture_atlas: Some(TextureAtlas {
-                                layout: texture_atlas_layouts.add(TextureAtlasLayout::from_grid(UVec2::splat(32),5,1,None,None)),
+                                layout: source.layout_drone_missle.clone(),
                                 index: 0,
                             }),
                             ..Default::default()
@@ -750,9 +756,14 @@ fn animate_droneskill (
                     ));
                     commands.spawn((
                         Sprite {
-                            image: asset_server.load("Player_Bullet_Missile.png"),
+                            // image: asset_server.load("Player_Bullet_Missile.png"),
+                            // texture_atlas: Some(TextureAtlas {
+                            //     layout: texture_atlas_layouts.add(TextureAtlasLayout::from_grid(UVec2::splat(32),5,1,None,None)),
+                            //     index: 0,
+                            // }),
+                            image: source.image_drone_missle.clone(),
                             texture_atlas: Some(TextureAtlas {
-                                layout: texture_atlas_layouts.add(TextureAtlasLayout::from_grid(UVec2::splat(32),5,1,None,None)),
+                                layout: source.layout_drone_missle.clone(),
                                 index: 0,
                             }),
                             ..Default::default()

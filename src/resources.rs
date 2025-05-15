@@ -14,16 +14,62 @@ pub struct ResourcesPlugin;
 pub struct GlobalCharacterTextureAtlas {
     pub lay_out_idle: Handle<TextureAtlasLayout>,
     pub image_idle: Handle<Image>,
+
     pub lay_out_move: Handle<TextureAtlasLayout>,
     pub image_move: Handle<Image>,
+
     pub lay_out_jump: Handle<TextureAtlasLayout>,
     pub image_jump: Handle<Image>,
+
     pub lay_out_skill: Option<Handle<TextureAtlasLayout>>,
     pub image_skill: Option<Handle<Image>>,
+
+    pub lay_out_gun: Handle<TextureAtlasLayout>,
     pub image_gun: Handle<Image>,
+
+    pub lay_out_gun_fire_effect: Handle<TextureAtlasLayout>,
+    pub image_gun_fire_effect: Handle<Image>,
+
     pub lay_out_gun_hit: Handle<TextureAtlasLayout>,
     pub image_gun_hit: Handle<Image>,
+
+    pub lay_out_bullet: Handle<TextureAtlasLayout>,
+    pub image_bullet: Handle<Image>,
+    // pub image_bullet_fly: Handle<Image>,
+
     pub id: u8,
+
+    //以下为角色独有的素材，如技能动画等
+    // shiroko
+    pub image_grenade: Handle<Image>,
+    pub layout_grenade_hit: Handle<TextureAtlasLayout>,
+    pub image_grenade_hit: Handle<Image>,
+
+    pub layout_drone_idle: Handle<TextureAtlasLayout>,
+    pub image_drone_idle: Handle<Image>,
+
+    pub layout_drone_fire: Handle<TextureAtlasLayout>,
+    pub image_drone_fire: Handle<Image>,
+
+    pub layout_drone_fire_effect: Handle<TextureAtlasLayout>,
+    pub image_drone_fire_effect: Handle<Image>,
+
+    pub layout_drone_missle: Handle<TextureAtlasLayout>,
+    pub image_drone_missle: Handle<Image>,
+
+    // arisu
+    pub layout_gun_fire: Handle<TextureAtlasLayout>,
+    pub image_gun_fire: Handle<Image>,
+
+    pub layout_gun_fire_special: Handle<TextureAtlasLayout>,
+    pub image_gun_fire_special: Handle<Image>,
+
+    pub layout_bullet_special: Handle<TextureAtlasLayout>,
+    pub image_bullet_special: Handle<Image>,
+
+    // utaha
+    // 炮台和小无人机
+    // to do
 }
 
 impl GlobalCharacterTextureAtlas {
@@ -36,7 +82,12 @@ impl GlobalCharacterTextureAtlas {
         let mut layout_idle = TextureAtlasLayout::from_grid(UVec2::splat(64),6,1,None,None);
         let mut layout_jump = TextureAtlasLayout::from_grid(UVec2::splat(64),4,2,None,None);
         let mut layout_skill = TextureAtlasLayout::from_grid(UVec2::splat(96),12,1,None,None);
+
+        let mut layout_gun = TextureAtlasLayout::from_grid(UVec2::splat(64),1,1,None,None);
         let mut layout_gun_hit = TextureAtlasLayout::from_grid(UVec2::splat(32),6,1,None,None);
+        let mut layout_gun_fire_effect = TextureAtlasLayout::from_grid(UVec2::splat(32),5,1,None,None);
+        let mut layout_bullet = TextureAtlasLayout::from_grid(UVec2::splat(32),1,1,None,None);
+
         let mut path_move = String::from("Shiroko_Move.png");
         let mut path_idle = String::from("Shiroko_Idle.png");
         let mut path_jump = String::from("Shiroko_Jump.png");
@@ -44,6 +95,39 @@ impl GlobalCharacterTextureAtlas {
         let mut path_gun = String::from("Shiroko_Gun.png");
         let mut path_gun_hit = String::from("Shiroko_Hit_Effect.png");
         
+        let mut path_gun_fire_effect = String::from("Shiroko_Gun_Fire_Effect.png");
+        let mut path_bullet = String::from("Shiroko_Projectile.png");
+        
+        // shiroko
+        let mut path_grenade = String::from("Shiroko_Grenade.png");
+        let mut layout_grenade_hit = TextureAtlasLayout::from_grid(UVec2::splat(64),6,1,None,None);
+        let mut path_grenade_hit = String::from("Shiroko_Grenade_Effect.png");
+
+        let mut layout_drone_idle = TextureAtlasLayout::from_grid(UVec2::splat(64),7,1,None,None);
+        let mut path_drone_idle = String::from("Shiroko_Drone_Idle.png");
+
+        let mut layout_drone_fire = TextureAtlasLayout::from_grid(UVec2::splat(96),7,1,None,None);
+        let mut path_drone_fire = String::from("Shiroko_Drone_Fire.png");
+
+        let mut layout_drone_fire_effect = TextureAtlasLayout::from_grid(UVec2::splat(64),4,1,None,None);
+        let mut path_drone_fire_effect = String::from("Shiroko_Drone_Fire_Effect.png");
+
+        let mut layout_drone_missle = TextureAtlasLayout::from_grid(UVec2::splat(32),5,1,None,None);
+        let mut path_drone_missle = String::from("Player_Bullet_Missile.png");
+
+        // arisu
+        let mut layout_gun_fire = TextureAtlasLayout::from_grid(UVec2::splat(64),8,1,None,None);
+        let mut path_gun_fire = String::from("Arisu_Gun_Fire.png");
+
+        let mut layout_gun_fire_special = TextureAtlasLayout::from_grid(UVec2::splat(96),9,3,None,None);
+        let mut path_gun_fire_special = String::from("Arisu_Gun_Fire_Special.png");
+
+        let mut layout_bullet_special = TextureAtlasLayout::from_grid(UVec2::splat(96),8,1,None,None);
+        let mut path_bullet_special = String::from("Arisu_Projectile_Big.png");
+        
+        // utaha
+        // to do
+
         match id {
             1 => {//Shiroko
                 println!("Shiroko!");        
@@ -55,37 +139,92 @@ impl GlobalCharacterTextureAtlas {
                 layout_jump = TextureAtlasLayout::from_grid(UVec2::splat(64),4,2,None,None);
                 layout_skill = TextureAtlasLayout::from_grid(UVec2::splat(96),8,2,None,None);
                 layout_gun_hit = TextureAtlasLayout::from_grid(UVec2::splat(128),7,1,None,None);
+                
+                layout_gun = TextureAtlasLayout::from_grid(UVec2::splat(64),1,1,None,None);
+                layout_gun_hit = TextureAtlasLayout::from_grid(UVec2::splat(128),7,1,None,None);
+                layout_gun_fire_effect = TextureAtlasLayout::from_grid(UVec2::splat(64),6,1,None,None);
+                layout_bullet = TextureAtlasLayout::from_grid(UVec2::splat(64),4,1,None,None);
+                
                 path_move = String::from("Arisu_Move.png");
                 path_idle = String::from("Arisu_Idle.png");
                 path_jump = String::from("Arisu_Jump.png"); 
                 path_skill = String::from("Arisu_Shield.png");
                 path_gun =  String::from("Arisu_Gun.png"); 
                 path_gun_hit = String::from("Arisu_Hit_Effect.png");
+
+                path_gun_fire_effect = String::from("Arisu_Gun_Fire_Effect.png");
+                path_bullet = String::from("Arisu_Projectile.png");
             }
             3 => {//Utaha
                 println!("Utaha!");
                 layout_move = TextureAtlasLayout::from_grid(UVec2::splat(64),9,2,None,None);
                 layout_idle = TextureAtlasLayout::from_grid(UVec2::splat(64),11,1,None,None);
                 layout_jump = TextureAtlasLayout::from_grid(UVec2::splat(64),4,2,None,None);
+                layout_skill = TextureAtlasLayout::from_grid(UVec2::splat(64),5,3,None,None);
                 path_move = String::from("Utaha_Move.png");
                 path_idle = String::from("Utaha_Idle.png");
                 path_jump = String::from("Utaha_Jump.png");
+                path_skill = String::from("Utaha_Secondary.png");
+                // path_gun =  String::from("Utaha_Weapon.png"); 
             }
             _ => {},
         }
         Self {
             lay_out_idle: texture_atlas_layouts.add(layout_idle),
             image_idle: asset_server.load(path_idle),
+
             lay_out_move: texture_atlas_layouts.add(layout_move),
             image_move: asset_server.load(path_move),
+
             lay_out_jump: texture_atlas_layouts.add(layout_jump),
             image_jump: asset_server.load(path_jump),
+
             lay_out_gun_hit: texture_atlas_layouts.add(layout_gun_hit),
             image_gun_hit: asset_server.load(path_gun_hit),
+
+            lay_out_gun: texture_atlas_layouts.add(layout_gun),
             image_gun: asset_server.load(path_gun),
-            lay_out_skill: if id != 3 { Some(texture_atlas_layouts.add(layout_skill)) } else { None },
-            image_skill: if id != 3 { Some(asset_server.load(path_skill)) } else { None },
+
+            lay_out_gun_fire_effect: texture_atlas_layouts.add(layout_gun_fire_effect),
+            image_gun_fire_effect: asset_server.load(path_gun_fire_effect),
+
+            lay_out_bullet: texture_atlas_layouts.add(layout_bullet),
+            image_bullet: asset_server.load(path_bullet),
+
+            lay_out_skill: Some(texture_atlas_layouts.add(layout_skill)),
+            // image_skill: if id != 3 { Some(asset_server.load(path_skill)) } else { None },
+            image_skill: Some(asset_server.load(path_skill)),
             id: id,
+
+            // shiroko
+            image_grenade: asset_server.load(path_grenade),
+            layout_grenade_hit: texture_atlas_layouts.add(layout_grenade_hit),
+            image_grenade_hit: asset_server.load(path_grenade_hit),
+
+            layout_drone_idle: texture_atlas_layouts.add(layout_drone_idle),
+            image_drone_idle: asset_server.load(path_drone_idle),
+
+            layout_drone_fire: texture_atlas_layouts.add(layout_drone_fire),
+            image_drone_fire: asset_server.load(path_drone_fire),
+
+            layout_drone_fire_effect: texture_atlas_layouts.add(layout_drone_fire_effect),
+            image_drone_fire_effect: asset_server.load(path_drone_fire_effect),
+
+            layout_drone_missle: texture_atlas_layouts.add(layout_drone_missle),
+            image_drone_missle: asset_server.load(path_drone_missle),
+
+            // arisu
+            layout_gun_fire: texture_atlas_layouts.add(layout_gun_fire),
+            image_gun_fire: asset_server.load(path_gun_fire),
+
+            layout_gun_fire_special: texture_atlas_layouts.add(layout_gun_fire_special),
+            image_gun_fire_special: asset_server.load(path_gun_fire_special),
+
+            layout_bullet_special: texture_atlas_layouts.add(layout_bullet_special),
+            image_bullet_special: asset_server.load(path_bullet_special),
+
+            // utaha
+            // to do
         }
     }
 }
@@ -151,6 +290,32 @@ pub struct GlobalMenuTextureAtlas {
     pub title: Handle<Image>,
     pub sub_title: Handle<Image>,
     pub border: Handle<Image>,
+
+    //图片素材
+    pub shiroko: Handle<Image>,
+    pub shiroko_hover: Handle<Image>,
+    pub shiroko_unselect: Handle<Image>,
+    pub shiroko_skill1: Handle<Image>,
+    pub shiroko_skill2: Handle<Image>,
+    pub shiroko_skill3: Handle<Image>,
+    pub shiroko_skill4: Handle<Image>,
+
+
+    pub arisu: Handle<Image>,
+    pub arisu_hover: Handle<Image>,
+    pub arisu_unselect: Handle<Image>,
+    pub arisu_skill1: Handle<Image>,
+    pub arisu_skill2: Handle<Image>,
+    pub arisu_skill3: Handle<Image>,
+    pub arisu_skill4: Handle<Image>,
+
+    pub utaha: Handle<Image>,
+    pub utaha_hover: Handle<Image>,
+    pub utaha_unselect: Handle<Image>,
+    pub utaha_skill1: Handle<Image>,
+    pub utaha_skill2: Handle<Image>,
+    pub utaha_skill3: Handle<Image>,
+    pub utaha_skill4: Handle<Image>,
 }
 
 impl GlobalMenuTextureAtlas {
@@ -170,6 +335,31 @@ impl GlobalMenuTextureAtlas {
         let path_sub_title = String::from("BookMenu_Gray_ButtonSmall.png");
         let path_border = String::from("BookMenu_PauseBorderSmall.png");
 
+        // 图片资源
+        let path_shiroko = String::from("UI_Hub_Portrait_Shiroko.png");
+        let path_shiroko_hover = String::from("UI_Hub_Portrait_Shiroko_Hover.png");
+        let path_shiroko_unselect = String::from("UI_Hub_Portrait_Shiroko_Select.png");
+        let path_shiroko_skill1 = String::from("Skill_Shiroko_1.png");
+        let path_shiroko_skill2 = String::from("Skill_Shiroko_2.png");
+        let path_shiroko_skill3 = String::from("Skill_Shiroko_3.png");
+        let path_shiroko_skill4 = String::from("Skill_Shiroko_4.png");
+
+        let path_arisu = String::from("UI_Hub_Portrait_Arisu.png");
+        let path_arisu_hover = String::from("UI_Hub_Portrait_Arisu_Hover.png");
+        let path_arisu_unselect = String::from("UI_Hub_Portrait_Arisu_Select.png");
+        let path_arisu_skill1 = String::from("Skill_Arisu_1.png");
+        let path_arisu_skill2 = String::from("Skill_Arisu_2.png");
+        let path_arisu_skill3 = String::from("Skill_Arisu_3.png");
+        let path_arisu_skill4 = String::from("Skill_Arisu_4.png");
+
+        let path_utaha = String::from("UI_Hub_Portrait_Utaha.png");
+        let path_utaha_hover = String::from("UI_Hub_Portrait_Utaha_Hover.png");
+        let path_utaha_unselect = String::from("UI_Hub_Portrait_Utaha_Select.png");
+        let path_utaha_skill1 = String::from("Skill_Utaha_1.png");
+        let path_utaha_skill2 = String::from("Skill_Utaha_2.png");
+        let path_utaha_skill3 = String::from("Skill_Utaha_3.png");
+        let path_utaha_skill4 = String::from("Skill_Utaha_4.png");
+
         Self {
             close: asset_server.load(path_close),
             menu: asset_server.load(path_menu),
@@ -183,6 +373,31 @@ impl GlobalMenuTextureAtlas {
             title: asset_server.load(path_title),
             sub_title: asset_server.load(path_sub_title),
             border: asset_server.load(path_border),
+
+            // 图片
+            shiroko: asset_server.load(path_shiroko),
+            shiroko_hover: asset_server.load(path_shiroko_hover),
+            shiroko_unselect: asset_server.load(path_shiroko_unselect),
+            shiroko_skill1: asset_server.load(path_shiroko_skill1),
+            shiroko_skill2: asset_server.load(path_shiroko_skill2),
+            shiroko_skill3: asset_server.load(path_shiroko_skill3),
+            shiroko_skill4: asset_server.load(path_shiroko_skill4),
+
+            arisu: asset_server.load(path_arisu),
+            arisu_hover: asset_server.load(path_arisu_hover),
+            arisu_unselect: asset_server.load(path_arisu_unselect),
+            arisu_skill1: asset_server.load(path_arisu_skill1),
+            arisu_skill2: asset_server.load(path_arisu_skill2),
+            arisu_skill3: asset_server.load(path_arisu_skill3),
+            arisu_skill4: asset_server.load(path_arisu_skill4),
+
+            utaha: asset_server.load(path_utaha),
+            utaha_hover: asset_server.load(path_utaha_hover),
+            utaha_unselect: asset_server.load(path_utaha_unselect),
+            utaha_skill1: asset_server.load(path_utaha_skill1),
+            utaha_skill2: asset_server.load(path_utaha_skill2),
+            utaha_skill3: asset_server.load(path_utaha_skill3),
+            utaha_skill4: asset_server.load(path_utaha_skill4),
         }
     }
 }

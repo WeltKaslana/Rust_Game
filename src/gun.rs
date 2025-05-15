@@ -8,7 +8,7 @@ use bevy_rapier2d::prelude::*;
 use rand::Rng;
 
 use crate::{
-    character::{Character, AnimationConfig, Player, },
+    character::{Character, AnimationConfig, Player, Buff, },
     gamestate::*,
     CursorPosition,
     GlobalCharacterTextureAtlas,
@@ -195,11 +195,11 @@ fn handle_gun_transform(
 fn handle_gun_fire(
     time: Res<Time>,
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
-    mut gun_query: Query<(&Transform, &mut GunTimer), With<Gun>>,
+    mut gun_query: Query<(&Transform, &mut GunTimer), (With<Gun>, Without<Character>)>,
+    buff_query: Query<&Buff, (With<Character>, Without<Gun>)>,
     mouse_button_input: Res<ButtonInput<MouseButton>>,
     mut ew: EventWriter<PlayerFireEvent>,
+    source: Res<GlobalCharacterTextureAtlas>,
 ) {
     //枪的开火没法通用，ARISU的枪和子弹甚至有开火动画，而UTAHA居然用的不是枪
     //没法写通用的逻辑
@@ -207,6 +207,24 @@ fn handle_gun_fire(
     if gun_query.is_empty() {
         return;
     }
+
+    let mut gun_speed = 1.0;
+    let mut bullet_num = 1;
+    let mut bullet_size =  1.0;
+    let mut bullet_spread = 1.0;
+    if !buff_query.is_empty() {
+        let buff = buff_query.single();
+        bullet_num = buff.0;
+        gun_speed = buff.1 as f32;
+        bullet_spread = buff.3 as f32;
+        bullet_size += (buff.4 - 1) as f32 * 0.3;
+    }
+
+    if source.id == 2 {
+        //arisu
+        gun_speed /= 4.0;
+    }
+
     let (gun_transform, mut gun_timer) = gun_query.single_mut();
     let gun_pos = gun_transform.translation.truncate();
     gun_timer.0.tick(time.delta());
@@ -219,16 +237,17 @@ fn handle_gun_fire(
 
     let mut rng = rand::rng();
     let bullet_direction = gun_transform.local_x();
-    if gun_timer.0.elapsed_secs() >= BULLET_SPAWN_INTERVAL {
+    if gun_timer.0.elapsed_secs() >= BULLET_SPAWN_INTERVAL / gun_speed {
         gun_timer.0.reset();
         ew.send(PlayerFireEvent);
 
+
         //枪口焰动画
-        let layout_fire = TextureAtlasLayout::from_grid(UVec2::splat(32),5,1,None,None);
+        // let layout_fire = TextureAtlasLayout::from_grid(UVec2::splat(32),5,1,None,None);
         commands.spawn((Sprite {
-            image: asset_server.load("Shiroko_Gun_Fire_Effect.png"),
+            image: source.image_gun_fire_effect.clone(),
             texture_atlas: Some(TextureAtlas {
-                layout: texture_atlas_layouts.add(layout_fire),
+                layout: source.lay_out_gun_fire_effect.clone(),
                 index: 0,
             }),
             ..Default::default()
@@ -244,55 +263,87 @@ fn handle_gun_fire(
             GunFire,
             Player,
             ));
-        //子弹散布
-        let dir = vec3(
-            bullet_direction.x + rng.random_range(-0.1..0.1),
-            bullet_direction.y + rng.random_range(-0.1..0.1),
-            bullet_direction.z,
-        );
-        //子弹生成
-        commands.spawn((
-            Sprite {
-                image:asset_server.load("Shiroko_Projectile.png"),
-                ..default()
-            },
-            Transform {
-                translation: vec3(
-                    gun_pos.x + bullet_direction.x * 80.0, 
-                    gun_pos.y + bullet_direction.y * 80.0, 
-                    1.0),
-                rotation: Quat::from_rotation_z(dir.y.atan2(dir.x)),
-                scale: Vec3::splat(2.5),
-            },
-            Player,
-            Bullet,
-            BulletDirection(dir),
-            SpawnInstant(Instant::now()),
-            //碰撞体
-            Collider::cuboid(2.0, 1.0),
 
-            RigidBody::Dynamic,
-            GravityScale(0.0),
-            ColliderMassProperties::Mass(1000.0),
-            LockedAxes::ROTATION_LOCKED,
-            // Sensor,
-            // CollisionGroups::new(Group::GROUP_3, Group::GROUP_2),
-            ActiveEvents::COLLISION_EVENTS,
-        ));
+        for i in 0..bullet_num {
+            // println!("{}",i);
+            //子弹散布
+            let mut dir = vec3(
+                bullet_direction.x + rng.random_range(-0.1..0.1) / bullet_spread,
+                bullet_direction.y + rng.random_range(-0.1..0.1) / bullet_spread,
+                bullet_direction.z,
+            );
+            if i > 0 {
+                // 给子弹分裂转角度
+                let ang = PI / 12.0;
+                let ud = if i % 2 == 0 {1.0} else {-1.0};
+                let cosa = (ang * ud * ((i + 1) / 2) as f32).cos();
+                let sina = (ang * ud * ((i + 1) / 2) as f32).sin();
+                let rot_direction = Vec2::new(
+                    bullet_direction.x * cosa + bullet_direction.y * sina,
+                    bullet_direction.y * cosa - bullet_direction.x * sina,
+                );
+
+                dir = vec3(
+                    rot_direction.x + rng.random_range(-0.1..0.1) / bullet_spread,
+                    rot_direction.y + rng.random_range(-0.1..0.1) / bullet_spread,
+                    bullet_direction.z,
+                );
+            }
+
+            //子弹生成
+            commands.spawn((
+                Sprite {
+                    image: source.image_bullet.clone(),
+                    texture_atlas: Some(TextureAtlas {
+                        layout: source.lay_out_bullet.clone(),
+                        index: 0,
+                    }),
+                    ..default()
+                },
+                Transform {
+                    translation: vec3(
+                        gun_pos.x + bullet_direction.x * 80.0, 
+                        gun_pos.y + bullet_direction.y * 80.0, 
+                        1.0),
+                    rotation: Quat::from_rotation_z(dir.y.atan2(dir.x)),
+                    scale: Vec3::splat(2.5) * bullet_size,
+                },
+                Player,
+                Bullet,
+                BulletDirection(dir),
+                SpawnInstant(Instant::now()),
+                //碰撞体
+                Collider::cuboid(2.0 * bullet_size, 1.0 * bullet_size),
+
+                RigidBody::Dynamic,
+                GravityScale(0.0),
+                ColliderMassProperties::Mass(1000.0),
+                LockedAxes::ROTATION_LOCKED,
+                // Sensor,
+                // CollisionGroups::new(Group::GROUP_3, Group::GROUP_2),
+                ActiveEvents::COLLISION_EVENTS,
+            ));
+        }
     }
 }
 
 fn handle_bullet_move(
-    mut bullet_query: Query<(&mut Transform, &BulletDirection), With<Bullet>>,
+    mut bullet_query: Query<(&mut Transform, &BulletDirection), (With<Bullet>,Without<Buff>)>,
+    buff_query: Query<&Buff, (With<Character>, Without<Bullet>)>,
 ) {
     if bullet_query.is_empty() {
         return;
     }
+    let mut speed= 1.0;
+    if !buff_query.is_empty() {
+        speed += 0.7 * (buff_query.single().2 - 1) as f32;
+    }
     for (mut t, dir) in bullet_query.iter_mut() {
-        t.translation += dir.0.normalize() * Vec3::splat(BULLET_SPEED);
+        t.translation += dir.0.normalize() * Vec3::splat(BULLET_SPEED) * speed;
         t.translation.z = 30.0;
     }
 }
+
 
 fn despawn_old_bullets(
     mut commands: Commands,
@@ -312,14 +363,19 @@ fn despawn_old_bullets(
                 let mut flag = false;
                 let mut trans = Vec3::splat(-100.0);
                 if let Ok((instant, e, transf)) = bullet_query.get(*entity1) {
-                    commands.entity(*entity1).despawn();
-                    trans = transf.translation;
-                    flag = true;
+                    if !bullet_query.get(*entity2).is_ok() {
+                        commands.entity(*entity1).despawn();
+                        trans = transf.translation;
+                        flag = true;
+                    }
+
                 }
                 if let Ok((instant, e, transf)) = bullet_query.get(*entity2) {
-                    commands.entity(*entity2).despawn();
-                    trans = transf.translation;
-                    flag = true;
+                    if !bullet_query.get(*entity1).is_ok() {
+                        commands.entity(*entity2).despawn();
+                        trans = transf.translation;
+                        flag = true;
+                    }
                 }
                 if flag {
                     //产生子弹消失的特效

@@ -29,13 +29,15 @@ pub enum PauseMenu {
 pub struct SoraMenu;
 
 #[derive(Component)]
-pub enum ButtonType {
-    Close,
-    ReturntoMainMenu,
-    ReturntoHome,
-    Settings,
-    Quit,
-}
+pub struct CharacterSelectButton;
+// #[derive(Component)]
+// pub enum ButtonType {
+//     Close,
+//     ReturntoMainMenu,
+//     ReturntoHome,
+//     Settings,
+//     Quit,
+// }
 
 impl Plugin for GuiPlugin {
     fn build(&self, app: &mut App) {
@@ -63,7 +65,10 @@ impl Plugin for GuiPlugin {
         .add_systems(OnExit(HomeState::Pause), cleanup_stopmenu)
 
         .add_systems(OnEnter(HomeState::Reloading), setup_soramenu)
-        .add_systems(Update, handle_soramenu.run_if(in_state(HomeState::Reloading)))
+        .add_systems(Update, (
+            handle_soramenu.run_if(in_state(HomeState::Reloading)),
+            handle_player_messages.run_if(in_state(HomeState::Reloading)),
+        ))
         .add_systems(OnExit(HomeState::Reloading), cleanup_soramenu)
 
         .add_systems(OnEnter(InGameState::Pause), setup_stopmenu)
@@ -549,6 +554,7 @@ fn setup_soramenu(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     source: Res<GlobalMenuTextureAtlas>,
+    source1: Res<GlobalCharacterTextureAtlas>,
 ) {
     let font: Handle<Font> = asset_server.load("Fonts/FIXEDSYS-EXCELSIOR-301.ttf");
     commands.spawn((
@@ -596,7 +602,13 @@ fn setup_soramenu(
                 .with_children(|parent| {
                     parent.spawn((
                         Name::new("Shiroko_choose"),
-                        ImageNode::new(asset_server.load("UI_Hub_Portrait_Shiroko.png")),
+                        // ImageNode::new(asset_server.load("UI_Hub_Portrait_Shiroko.png")),
+                        ImageNode::new(
+                            if source1.id == 1 {
+                                source.shiroko.clone()
+                            } else {
+                                source.shiroko_unselect.clone()
+                            }),
                         Node {
                             width: Val::Percent(20.5),
                             height: Val::Percent(87.2),
@@ -605,11 +617,18 @@ fn setup_soramenu(
                             position_type: PositionType::Absolute,
                             ..Default::default()
                         },
+                        CharacterSelectButton,
                         Button,
                     ));
                     parent.spawn((
                         Name::new("Arisu_choose"),
-                        ImageNode::new(asset_server.load("UI_Hub_Portrait_Arisu.png")),
+                        // ImageNode::new(asset_server.load("UI_Hub_Portrait_Arisu.png")),
+                        ImageNode::new(
+                            if source1.id == 2 {
+                                source.arisu.clone()
+                            } else {
+                                source.arisu_unselect.clone()
+                            }),
                         Node {
                             width: Val::Percent(20.5),
                             height: Val::Percent(87.2),
@@ -618,11 +637,18 @@ fn setup_soramenu(
                             position_type: PositionType::Absolute,
                             ..Default::default()
                         },
+                        CharacterSelectButton,
                         Button,
                     ));
                     parent.spawn((
                         Name::new("Utaha_choose"),
-                        ImageNode::new(asset_server.load("UI_Hub_Portrait_Utaha.png")),
+                        // ImageNode::new(asset_server.load("UI_Hub_Portrait_Utaha.png")),
+                        ImageNode::new(
+                            if source1.id == 3 {
+                                source.utaha.clone()
+                            } else {
+                                source.utaha_unselect.clone()
+                            }),
                         Node {
                             width: Val::Percent(20.5),
                             height: Val::Percent(87.2),
@@ -631,6 +657,7 @@ fn setup_soramenu(
                             position_type: PositionType::Absolute,
                             ..Default::default()
                         },
+                        CharacterSelectButton,
                         Button,
                     ));
                 });
@@ -1013,6 +1040,212 @@ fn reload_player (
     info!("Player Reloading!");
 }
 
+fn handle_player_messages (
+    asset_server: Res<AssetServer>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    mut interaction_query: Query<(
+            &mut ImageNode,
+            &Interaction,
+            &Name,),
+        (Changed<Interaction>, With<Button>, With<CharacterSelectButton>, ),
+    >,
+    source: Res<GlobalMenuTextureAtlas>,
+    character_source: ResMut<GlobalCharacterTextureAtlas>,
+    mut events: EventWriter<ReloadPlayerEvent>,
+) {
+    let mut id = 0;
+    let mut flag = false;
+    // let mut test1 = None;
+    for (mut image, interaction, name) in &mut interaction_query  {
+        match name.as_str() {
+            "Shiroko_choose" => {
+                match *interaction {
+                    Interaction::Pressed => {
+                        if character_source.id != 1 {
+                            id = 1;
+                            flag = true;
+                            reload_player(1, &asset_server, &mut texture_atlas_layouts, character_source);
+                            events.send(ReloadPlayerEvent);
+                            break;
+                        }
+                    },
+                    Interaction::Hovered => {
+                        image.image = source.shiroko_hover.clone();
+                    }
+                    Interaction::None => {
+                        if character_source.id == 1 {
+                            image.image = source.shiroko.clone();
+                        } else {
+                            image.image = source.shiroko_unselect.clone();
+                        }
+                    }
+                }
+            },
+            "Arisu_choose" => {
+                match *interaction {
+                    Interaction::Pressed => {
+                        if character_source.id != 2 {
+                            id = 2;
+                            flag = true;
+                            reload_player(2, &asset_server, &mut texture_atlas_layouts, character_source);
+                            events.send(ReloadPlayerEvent);
+                            break;
+                        }
+                    },
+                    Interaction::Hovered => {
+                        image.image = source.arisu_hover.clone();
+                    }
+                    Interaction::None => {
+                        if character_source.id == 2 {
+                            image.image = source.arisu.clone();
+                        } else {
+                            image.image = source.arisu_unselect.clone();
+                        }
+                    }
+                }
+            },
+            "Utaha_choose" => {
+                match *interaction {
+                    Interaction::Pressed => {
+                        if character_source.id != 3 {
+                            id = 3;
+                            flag = true;
+                            reload_player(3, &asset_server, &mut texture_atlas_layouts, character_source);
+                            events.send(ReloadPlayerEvent);
+                            break;
+                        }
+                    },
+                    Interaction::Hovered => {
+                        image.image = source.utaha_hover.clone();
+                    }
+                    Interaction::None => {
+                        if character_source.id == 3 {
+                            image.image = source.utaha.clone();
+                        } else {
+                            image.image = source.utaha_unselect.clone();
+                        }
+                    }
+                }   
+            }
+            _ => {}
+        }
+        // match *interaction {
+        //     Interaction::Pressed => {
+        //         // println!("{}Clicked!", name);
+        //         match name.as_str() {
+        //             "Shiroko_choose" if character_source.id != 1 => {
+        //                 id = 1;
+        //                 flag = true;
+        //                 reload_player(1, &asset_server, &mut texture_atlas_layouts, character_source);
+        //                 events.send(ReloadPlayerEvent);
+        //                 break;
+        //             },
+        //             "Arisu_choose" if character_source.id != 2 => {
+        //                 id = 2;
+        //                 flag = true;
+        //                 test1 = Some(image);
+        //                 reload_player(2, &asset_server, &mut texture_atlas_layouts, character_source);
+        //                 events.send(ReloadPlayerEvent);
+        //                 break;
+        //             },
+        //             "Utaha_choose" if character_source.id != 3 => {
+        //                 id = 3;
+        //                 flag = true;
+        //                 reload_player(3, &asset_server, &mut texture_atlas_layouts, character_source);
+        //                 events.send(ReloadPlayerEvent);
+        //                 break;
+        //             },
+        //             _ => {}
+        //         }
+        //     },
+        //     Interaction::Hovered => {
+        //         // println!("Hovered!");
+        //         match name.as_str() {
+        //             "Shiroko_choose" => { 
+        //                 image.image = source.shiroko_hover.clone();
+        //             },
+        //             "Arisu_choose" => {
+        //                 image.image = source.arisu_hover.clone();
+        //             },
+        //             "Utaha_choose" => {
+        //                 image.image = source.utaha_hover.clone();
+        //             },
+        //             _ => {}
+        //         }
+        //     },
+        //     Interaction::None => {
+        //         match name.as_str() {
+        //             "Shiroko_choose" => {
+        //                 if character_source.id == 1 {
+        //                     image.image = source.shiroko.clone();
+        //                 } else {
+        //                     image.image = source.shiroko_unselect.clone();
+        //                 }
+        //             },
+        //             "Arisu_choose" => {
+        //                 if character_source.id == 2 {
+        //                     image.image = source.arisu.clone();
+        //                 } else {
+        //                     image.image = source.arisu_unselect.clone();
+        //                 }
+        //             },
+        //             "Utaha_choose" => {
+        //                 if character_source.id == 3 {
+        //                     image.image = source.utaha.clone();
+        //                 } else {
+        //                     image.image = source.utaha_unselect.clone();
+        //                 }
+        //             },
+        //             _ => {}
+        //         }   
+        //     },
+        // }
+    }   
+    if flag && (id > 0) {
+        println!("id:{}",id);
+        // if let Some(mut image) = test1 {
+        //     if id == 1 {
+        //         image.image = source.shiroko.clone();
+        //     } else {
+        //         println!("fuck");
+        //         image.image = source.shiroko_unselect.clone();
+        //     }
+        // } else {
+        //     println!("fuck2");
+        // }
+        // for (mut image, _, name) in  &mut interaction_query  {
+        //     println!("fuck");
+        //     match name.as_str() {
+        //         "Shiroko_choose" => {
+        //             if id == 1 {
+        //                 image.image = source.shiroko.clone();
+        //             } else {
+        //                 println!("unselectshiroko");
+        //                 image.image = source.shiroko_unselect.clone();
+        //             }
+        //         },
+        //         "Arisu_choose" => {
+        //             if id == 2 {
+        //                 image.image = source.arisu.clone();
+        //             } else {
+        //                 println!("unselectarisu");
+        //                 image.image = source.arisu_unselect.clone();
+        //             }
+        //         },    
+        //         "Utaha_choose" => {
+        //             if id == 3 {
+        //                 image.image = source.utaha.clone();
+        //             } else {
+        //                 println!("unselectutaha");
+        //                 image.image = source.utaha_unselect.clone();
+        //             }
+        //         },
+        //         _ => {}
+        //     }
+        // }
+    }   
+}
+
 fn handle_soramenu (
     asset_server: Res<AssetServer>,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
@@ -1029,10 +1262,9 @@ fn handle_soramenu (
     mut next_state: ResMut<NextState<HomeState>>,
 ) {
     for (mut image, interaction, name) in &mut interaction_query {
-        info!("interaction: ");
         match *interaction {
             Interaction::Pressed => {
-                println!("{}Clicked!", name);
+                // println!("{}Clicked!", name);
                 match name.as_str() {
                     "close" => {
                         if let Ok(mut window) = windows.get_single_mut() {
@@ -1040,26 +1272,27 @@ fn handle_soramenu (
                         }
                         next_state.set(HomeState::Running);
                     },
-                    "Shiroko_choose" if character_source.id != 1 => {
-                        reload_player(1, &asset_server, &mut texture_atlas_layouts, character_source);
-                        events.send(ReloadPlayerEvent);
-                        break;
-                    },
-                    "Arisu_choose" if character_source.id != 2 => {
-                        reload_player(2, &asset_server, &mut texture_atlas_layouts, character_source);
-                        events.send(ReloadPlayerEvent);
-                        break;
-                    },
-                    "Utaha_choose" if character_source.id != 3 => {
-                        reload_player(3, &asset_server, &mut texture_atlas_layouts, character_source);
-                        events.send(ReloadPlayerEvent);
-                        break;
-                    },
+                    // "Shiroko_choose" if character_source.id != 1 => {
+                    //     reload_player(1, &asset_server, &mut texture_atlas_layouts, character_source);
+                    //     events.send(ReloadPlayerEvent);
+                    //     break;
+                    // },
+                    // "Arisu_choose" if character_source.id != 2 => {
+                    //     reload_player(2, &asset_server, &mut texture_atlas_layouts, character_source);
+                    //     events.send(ReloadPlayerEvent);
+                    //     break;
+                    // },
+                    // "Utaha_choose" if character_source.id != 3 => {
+                    //     reload_player(3, &asset_server, &mut texture_atlas_layouts, character_source);
+                    //     events.send(ReloadPlayerEvent);
+                    //     break;
+                    // },
                     _ => {}
                 }
             },
             Interaction::Hovered => {
-                println!("Hovered!");
+                // println!("Hovered!");
+
             },
             Interaction::None => {
             },
