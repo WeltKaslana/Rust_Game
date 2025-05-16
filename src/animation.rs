@@ -870,7 +870,7 @@ fn animate_door_and_chest (
             0 => { },
             1 => {//ready to open
                 let distance = player_transform.translation.distance(door_transfrom.translation);
-                if distance <= 100.0 { 
+                if distance <= 150.0 { 
                     door.0 = 2;
                 }
             },
@@ -889,7 +889,7 @@ fn animate_door_and_chest (
             },
             3 => {
                 let distance = player_transform.translation.distance(door_transfrom.translation);
-                if distance > 100.0 { 
+                if distance > 150.0 { 
                     door.0 = 4;
                     door_sprite.image = source.image_door_close.clone();
                     if let Some(atlas) =&mut door_sprite.texture_atlas {
@@ -935,7 +935,7 @@ fn animate_door_and_chest (
                 2 => { },
                 3  => { 
                     let distance = player_transform.translation.distance(transform.translation);
-                    if distance <= 40.0 {
+                    if distance <= 75.0 {
                         if keyboard_input.just_pressed(KeyCode::KeyF) {
                             chest.0 = 5;
                         }
@@ -943,7 +943,7 @@ fn animate_door_and_chest (
                 },
                 4 => {
                     let distance = player_transform.translation.distance(transform.translation);
-                    if distance <= 40.0 {
+                    if distance <= 75.0 {
                         if keyboard_input.just_pressed(KeyCode::KeyF) {
                             chest.0 = 6;
                         }

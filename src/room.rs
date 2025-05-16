@@ -351,7 +351,7 @@ fn evt_object_created(
                 Transform::from_translation(Vec3::new(
                     (transform .translation.x - size.x) * 3.0, 
                     (transform .translation.y - size.y) * 3.0, 
-                    0.0)).with_scale(Vec3::splat(2.5)),
+                    -52.0)).with_scale(Vec3::splat(2.5)),
                 AnimationConfig::new(15),
                 Door(0),
             ));
@@ -375,7 +375,7 @@ fn evt_object_created(
                        Transform::from_translation(Vec3::new(
                             (transform .translation.x - size.x) * 3.0, 
                             (transform .translation.y - size.y) * 3.0, 
-                            0.0)).with_scale(Vec3::splat(2.5)),
+                            -52.0)).with_scale(Vec3::splat(2.5)),
                         AnimationConfig::new(15),
                         Chest(1),
                     )).with_child((
@@ -498,7 +498,7 @@ fn check_ifcomplete(
 
         let distance = player_transform.translation.distance(door_transform.translation);
 
-        if distance <= 100.0 &&  door.0 == 3 {
+        if distance <= 125.0 &&  door.0 == 3 {
             if keyboard_input.just_pressed(KeyCode::KeyE) && transition_query.is_empty() {
                 for trans in camera_query.iter() {
                     commands.spawn((

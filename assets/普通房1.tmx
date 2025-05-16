@@ -95,7 +95,7 @@
    </properties>
    <point/>
   </object>
-  <object id="5" name="Enemy" x="300.667" y="298.333">
+  <object id="5" name="Enemy" x="312" y="252.333">
    <properties>
     <property name="EnemyType" type="int" value="2"/>
    </properties>
@@ -107,10 +107,10 @@
    </properties>
    <point/>
   </object>
-  <object id="7" name="chest" x="195.667" y="226.333">
+  <object id="7" name="chest" x="205.667" y="234.333">
    <point/>
   </object>
-  <object id="8" name="door" x="301.333" y="257">
+  <object id="8" name="door" x="291.333" y="280.667">
    <point/>
   </object>
  </objectgroup>

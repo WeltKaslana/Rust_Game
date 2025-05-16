@@ -74,9 +74,6 @@
 </data>
  </layer>
  <objectgroup id="4" name="对象层 1">
-  <object id="1" name="Boss" x="315.86" y="111.453">
-   <point/>
-  </object>
   <object id="3" name="Enemy" x="228.773" y="72.6478">
    <point/>
   </object>
@@ -89,7 +86,7 @@
   <object id="7" name="Enemy" x="499.961" y="182.748">
    <point/>
   </object>
-  <object id="8" name="Enemy" x="513.949" y="259.908">
+  <object id="8" name="Enemy" x="508.985" y="227.871">
    <point/>
   </object>
   <object id="9" name="Enemy" x="371.31" y="170.771">
@@ -101,7 +98,7 @@
   <object id="11" name="chest" x="366.398" y="210.724">
    <point/>
   </object>
-  <object id="12" name="door" x="526.132" y="227.87">
+  <object id="12" name="door" x="511.693" y="263.213">
    <point/>
   </object>
  </objectgroup>
