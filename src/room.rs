@@ -116,6 +116,8 @@ impl AssetsManager {
         if let Some(entity) = self.map_entity {
             commands.entity(entity).despawn_recursive();
         }
+        self.map_entity = None;
+        self.map_index = 0;
         info!("map deleted!");
     }
 }

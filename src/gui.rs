@@ -474,7 +474,6 @@ fn setup_stopmenu(
             parent.spawn((
                 Name::new("back to menu"),
                 ImageNode::new(source.button.clone()),
-                // ImageNode::new(image_button.clone()),
                 Node {
                     width: Val::Percent(60.0),
                     height: Val::Percent(10.0),
@@ -488,6 +487,35 @@ fn setup_stopmenu(
             ))
             .with_child((
                 Text::new("返回封面"),
+                TextFont {
+                        font: font.clone(),
+                        font_size: 30.0,
+                        ..default()
+                },  
+                TextColor(Color::rgb(0.0, 0.0, 0.0)), 
+                Node {
+                    align_items: AlignItems::Center,
+                    left: Val::Percent(15.0),
+                    ..default()
+                },   
+            ));
+            parent.spawn((
+                Name::new("back to home"),
+                ImageNode::new(source.button.clone()),
+                Node {
+                    width: Val::Percent(60.0),
+                    height: Val::Percent(10.0),
+                    top: Val::Percent(60.3),
+                    left: Val::Percent(20.0),
+                    align_items: AlignItems::Center,
+                    position_type: PositionType::Absolute,
+                    ..default()
+                },
+                Button,
+                test,
+            ))
+            .with_child((
+                Text::new("返回大厅"),
                 TextFont {
                         font: font.clone(),
                         font_size: 30.0,
@@ -549,7 +577,7 @@ fn handle_stopmenu1 (
                             Interaction::Pressed => {
                                 println!("{}Clicked!", name);
                                 match name.as_str() {
-                                    "back to game" => {
+                                    "back to game" | "back to home" => {
                                         if let Ok(mut window) = windows.get_single_mut() {
                                             window.cursor_options.visible = false;
                                         }
