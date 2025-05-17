@@ -3,7 +3,7 @@ use bevy::render::texture;
 use bevy::state::commands;
 use bevy::transform;
 use bevy::{dev_tools::states::*, prelude::*, time::Stopwatch};
-use crate::{gamestate::GameState,
+use crate::{gamestate::*,
     configs::*,character::*, gun::Bullet, enemy::*};
 use crate::*;
 use rand::Rng;
@@ -63,6 +63,18 @@ impl Plugin for BossPlugin {
     fn build(&self, app: &mut App) {
         app
             // .add_systems(OnEnter(GameState::InGame), setup_boss)
+            // .add_systems(
+            //     Update,
+            //         (
+            //             handle_boss_animation,
+            //             handle_boss_skill,
+            //             handle_bossbullet_setup,
+            //             handle_bossgun_rotation,
+            //             handle_boss_hurt,
+            //             handle_boss_death,
+            //             handle_boss_charge_hurt,
+            //     ).run_if(in_state(GameState::InGame))
+            // )
             .add_systems(
                 Update,
                     (
@@ -73,9 +85,8 @@ impl Plugin for BossPlugin {
                         handle_boss_hurt,
                         handle_boss_death,
                         handle_boss_charge_hurt,
-                ).run_if(in_state(GameState::InGame))
+                ).run_if(in_state(InGameState::Running))
             )
-            // .add_systems(Update, log_transitions::<GameState>)
             ;
     }
 }

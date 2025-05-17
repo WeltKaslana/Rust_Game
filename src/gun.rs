@@ -45,6 +45,13 @@ pub struct SpawnInstant(pub Instant);
 #[derive(Component)]
 pub struct BulletDirection(pub Vec3);
 
+#[derive(Component)]
+pub enum GunState {
+    Normal,
+    Fire,
+    SP,
+}
+
 #[derive(Event)]
 pub struct PlayerFireEvent;
 
@@ -69,6 +76,14 @@ impl Plugin for GunPlugin {
             handle_bullet_move,
             despawn_old_bullets,
         ).run_if(in_state(HomeState::Running)))
+        // .add_systems(
+        //     Update,(
+        //         handle_gun_transform,
+        //         handle_cursor_transform,
+        //         handle_gun_fire,
+        //         handle_bullet_move,
+        //         despawn_old_bullets,
+        // ).run_if(in_state(GameState::InGame)))
         .add_systems(
             Update,(
                 handle_gun_transform,
@@ -76,7 +91,7 @@ impl Plugin for GunPlugin {
                 handle_gun_fire,
                 handle_bullet_move,
                 despawn_old_bullets,
-        ).run_if(in_state(GameState::InGame)))
+        ).run_if(in_state(InGameState::Running)))
         // .add_systems(Update, log_transitions::<GameState>)
         ;
     }
@@ -142,9 +157,15 @@ fn setup_gun(
     //Utaha的貌似不是枪，逻辑可能要另写！！！
     commands.spawn((Sprite {
         image: source.image_gun.clone(),
+        texture_atlas: Some(TextureAtlas {
+            layout: source.lay_out_gun.clone(),
+            index: 0,
+        }),
         ..Default::default()
         },
         Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(15.0,-215.0,31.0)),
+        AnimationConfig::new(30),
+        GunState::Normal,
         Gun,
         GunTimer(Stopwatch::default()),
         Player,
@@ -195,7 +216,7 @@ fn handle_gun_transform(
 fn handle_gun_fire(
     time: Res<Time>,
     mut commands: Commands,
-    mut gun_query: Query<(&Transform, &mut GunTimer), (With<Gun>, Without<Character>)>,
+    mut gun_query: Query<(&mut Sprite, &mut GunState, &Transform, &mut GunTimer), (With<Gun>, Without<Character>)>,
     buff_query: Query<&Buff, (With<Character>, Without<Gun>)>,
     mouse_button_input: Res<ButtonInput<MouseButton>>,
     mut ew: EventWriter<PlayerFireEvent>,
@@ -222,10 +243,10 @@ fn handle_gun_fire(
 
     if source.id == 2 {
         //arisu
-        gun_speed /= 4.0;
+        gun_speed /= 3.0;
     }
 
-    let (gun_transform, mut gun_timer) = gun_query.single_mut();
+    let (mut gun, mut state, gun_transform, mut gun_timer) = gun_query.single_mut();
     let gun_pos = gun_transform.translation.truncate();
     gun_timer.0.tick(time.delta());
 
@@ -239,11 +260,18 @@ fn handle_gun_fire(
     let bullet_direction = gun_transform.local_x();
     if gun_timer.0.elapsed_secs() >= BULLET_SPAWN_INTERVAL / gun_speed {
         gun_timer.0.reset();
+        if source.id == 2 {//arisu枪有开火动画
+            gun.image = source.image_gun_fire.clone();
+            gun.texture_atlas = Some(TextureAtlas {
+                layout: source.layout_gun_fire.clone(),
+                index: 0,
+            });
+            *state = GunState::Fire;
+            // println!("arisu fire!");
+        }
         ew.send(PlayerFireEvent);
 
-
         //枪口焰动画
-        // let layout_fire = TextureAtlasLayout::from_grid(UVec2::splat(32),5,1,None,None);
         commands.spawn((Sprite {
             image: source.image_gun_fire_effect.clone(),
             texture_atlas: Some(TextureAtlas {
@@ -308,6 +336,7 @@ fn handle_gun_fire(
                     rotation: Quat::from_rotation_z(dir.y.atan2(dir.x)),
                     scale: Vec3::splat(2.5) * bullet_size,
                 },
+                AnimationConfig::new(8),
                 Player,
                 Bullet,
                 BulletDirection(dir),
@@ -347,7 +376,8 @@ fn handle_bullet_move(
 
 fn despawn_old_bullets(
     mut commands: Commands,
-    bullet_query: Query<(&SpawnInstant, Entity, &Transform), With<Bullet>>,
+    bullet_query: Query<(&SpawnInstant, Entity, &Transform), (With<Bullet>, Without<Character>)>,
+    player_query: Query<Entity, (With<Character>, Without<Bullet>)>,
     mut collision_events: EventReader<CollisionEvent>,
     source: Res<GlobalCharacterTextureAtlas>,
 ) {
@@ -363,8 +393,8 @@ fn despawn_old_bullets(
                 let mut flag = false;
                 let mut trans = Vec3::splat(-100.0);
                 if let Ok((instant, e, transf)) = bullet_query.get(*entity1) {
-                    if !bullet_query.get(*entity2).is_ok() {
-                        // 子弹之间不碰撞
+                    if !bullet_query.get(*entity2).is_ok() && !player_query.get(*entity2).is_ok() {
+                        // 子弹之间和子弹与玩家不碰撞
                         commands.entity(*entity1).despawn();
                         trans = transf.translation;
                         flag = true;
@@ -372,7 +402,7 @@ fn despawn_old_bullets(
 
                 }
                 if let Ok((instant, e, transf)) = bullet_query.get(*entity2) {
-                    if !bullet_query.get(*entity1).is_ok() {
+                    if !bullet_query.get(*entity1).is_ok() && !player_query.get(*entity1).is_ok()  {
                         commands.entity(*entity2).despawn();
                         trans = transf.translation;
                         flag = true;

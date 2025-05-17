@@ -1,16 +1,17 @@
-use bevy::{ecs::query, prelude::*, render::camera};
-use bevy_rapier2d::na;
+use bevy::{asset, ecs::query, prelude::*, render::camera};
+use encoding_rs::{GBK, UTF_8};
 
 use crate::{
     character::{
         Character, 
         Player,
+        Buff,
         ReloadPlayerEvent,
     }, 
     gamestate::*, 
     gun::{Cursor, Gun}, 
     home::Home, 
-    room::AssetsManager, 
+    room::{AssetsManager, Map}, 
     ui::UI, 
     resources::*,
 };
@@ -31,6 +32,10 @@ pub struct SoraMenu;
 
 #[derive(Component)]
 pub struct CharacterSelectButton;
+
+#[derive(Component)]
+pub struct ChoosingBuffMenu;
+
 // #[derive(Component)]
 // pub enum ButtonType {
 //     Close,
@@ -77,6 +82,10 @@ impl Plugin for GuiPlugin {
         .add_systems(Update, handle_stopmenu2.run_if(in_state(InGameState::Pause)))
         .add_systems(OnExit(InGameState::Pause), cleanup_stopmenu)
 
+        .add_systems(OnEnter(InGameState::ChoosingBuff), setup_choosingbuffmenu)
+        .add_systems(Update, handle_choosingbuffmenu.run_if(in_state(InGameState::ChoosingBuff)))
+        .add_systems(OnExit(InGameState::ChoosingBuff), cleanup_choosingbuffmenu)
+
         .add_systems(Update, (animation1::<LeftSlide1>, animation1::<LeftSlide2>, animation2::<RightSlide1>, animation2::<RightSlide2>).run_if(in_state(GameState::MainMenu)))
         .add_systems(Update, statetransition)
 
@@ -120,13 +129,17 @@ struct RightSlide2;
 
 fn clear_all(
     mut commands: Commands,
-    query1: Query<Entity, (With<Player>, (Without<UI>))>,
-    query2: Query<Entity, (With<UI>, (Without<Player>))>,
+    query1: Query<Entity, (With<Player>, (Without<UI>, Without<Map>))>,
+    query2: Query<Entity, (With<UI>, (Without<Player>, Without<Map>))>,
+    query3: Query<Entity, (With<Map>, (Without<UI>, Without<Player>))>,
 ) {
     for entity in query1.iter() {
         commands.entity(entity).despawn_recursive();
     }
     for entity in query2.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+    for entity in query3.iter() {
         commands.entity(entity).despawn_recursive();
     }
 }
@@ -345,10 +358,24 @@ fn handle_ingame_menu(
                     window.cursor_options.visible = false;
                     InGameState::Running
                 },
+                InGameState::ChoosingBuff => {
+                    InGameState::ChoosingBuff
+                },
             }); 
         }
     }
 }
+
+// fn utf8_to_gb2312(input: &str) -> String {
+//     // 将 UTF-8 字符串编码为 GBK（兼容 GB2312）
+//     let (encoded, _, had_errors) = UTF_8.encode(input);
+    
+//     if had_errors {
+//         eprintln!("警告：转换过程中出现无法映射的字符");
+//     }
+//     let (utf8_decoded, _, _) = GBK.decode(&encoded);
+//     utf8_decoded.into_owned()
+// }
 
 fn setup_stopmenu(
     mut commands: Commands,
@@ -382,8 +409,9 @@ fn setup_stopmenu(
     )); 
 
 
-    let font: Handle<Font> = asset_server.load("Fonts/FIXEDSYS-EXCELSIOR-301.ttf");
-
+    // let font: Handle<Font> = asset_server.load("Fonts/FIXEDSYS-EXCELSIOR-301.ttf");
+    let font = asset_server.load("fonts/pixel_font.ttf");
+    
     commands.spawn((
         ImageNode::new(source.list.clone()),
         Node {
@@ -399,10 +427,11 @@ fn setup_stopmenu(
         PauseMenu::Body,))
     .with_children(|parent| {
             parent.spawn((
-                Text::new("Pause"),
+                Text::new("选项菜单"),
+                // Text::new(utf8_to_gb2312("选项菜单")),
                 TextFont {
                     font: font.clone(),
-                    font_size: 45.0,
+                    font_size: 48.0,
                     ..default()
                 },  
                 TextColor(Color::rgb(123.0, 0.0, 131.0)),
@@ -429,10 +458,10 @@ fn setup_stopmenu(
                 Button,
             ))
             .with_child((
-                Text::new("back to game"),
+                Text::new("继续"),
                 TextFont {
                         font: font.clone(),
-                        font_size: 35.0,
+                        font_size: 30.0,
                         ..default()
                 },  
                 TextColor(Color::rgb(0.0, 0.0, 0.0)),
@@ -458,10 +487,10 @@ fn setup_stopmenu(
                 Button,
             ))
             .with_child((
-                Text::new("back to menu"),
+                Text::new("返回封面"),
                 TextFont {
                         font: font.clone(),
-                        font_size: 35.0,
+                        font_size: 30.0,
                         ..default()
                 },  
                 TextColor(Color::rgb(0.0, 0.0, 0.0)), 
@@ -553,6 +582,7 @@ fn handle_stopmenu1 (
 }
 
 fn handle_stopmenu2 (
+    mut commands: Commands,
     camera_query: Query<&Transform, (With<Camera2d>, Without<PauseMenu>)>,
     mut menu_query: Query<(&mut Transform, &PauseMenu,), (Without<Camera2d>, Without<Node>)>,
     mut interaction_query: Query<(
@@ -564,6 +594,7 @@ fn handle_stopmenu2 (
     mut windows: Query<&mut Window>,
     mut query: Query<&mut Node, (With<PauseMenu>, Without<Camera2d>)>,
     source: Res<GlobalMenuTextureAtlas>,
+    mut mgr: ResMut<AssetsManager>,
     mut next_state: ResMut<NextState<InGameState>>,
     mut next_state2: ResMut<NextState<GameState>>,
 ) {
@@ -608,6 +639,7 @@ fn handle_stopmenu2 (
                                         if let Ok(mut window) = windows.get_single_mut() {
                                             window.cursor_options.visible = false;
                                         }
+                                        mgr.del_map(&mut commands);
                                         next_state.set(InGameState::Running);
                                         // 游戏内最好改成返回大厅
                                         next_state2.set(GameState::MainMenu);
@@ -1404,7 +1436,195 @@ fn cleanup_soramenu(
     }
 }
 
+fn setup_choosingbuffmenu(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    camera_query: Query<&Transform, (With<Camera2d>)>,
+    source: Res<GlobalMenuTextureAtlas>,
+) {
+    if camera_query.is_empty() {
+        return;
+    }
+    let loc = camera_query.single().translation.truncate();
+    commands.spawn((
+        Sprite {
+            image: source.border.clone(),
+            flip_x: true,
+            flip_y: true,
+            ..Default::default()
+            },
+            Transform::from_scale(Vec3::splat(0.8)).with_translation(Vec3::new(loc.x - 530.0, loc.y + 510.0, 100.0)),
+            PauseMenu::BorderUp,
+            ChoosingBuffMenu,
+    ));
+    commands.spawn((
+        Sprite {
+            image: source.border.clone(),
+            ..Default::default()
+            },
+            Transform::from_scale(Vec3::splat(0.8)).with_translation(Vec3::new(loc.x + 530.0, loc.y - 510.0, 100.0)),
+            PauseMenu::BorderDown,
+            ChoosingBuffMenu,
+    )); 
 
+
+    let font = asset_server.load("fonts/pixel_font.ttf");
+    
+    commands.spawn((
+        ImageNode::new(source.tips.clone()),
+        Node {
+            width: Val::Percent(30.0),
+            height: Val::Percent(50.0),
+            position_type: PositionType::Absolute,
+            left: Val::Percent(35.0),
+            top: Val::Percent(25.0 +  40.0),
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            ..default()
+        },
+        ChoosingBuffMenu,
+    ))
+    .with_children(|parent| {
+            parent.spawn((
+                Text::new("增益菜单"),
+                TextFont {
+                    font: font.clone(),
+                    font_size: 48.0,
+                    ..default()
+                },  
+                TextColor(Color::rgb(123.0, 0.0, 131.0)),
+                Node {
+                    top: Val::Percent(0.0),
+                    left: Val::Percent(40.0),
+                    position_type: PositionType::Absolute,
+                    ..Default::default()
+                },
+            ));
+
+            parent.spawn((
+                Name::new("buff1"),
+                // ImageNode::new(source.utaha_skill1.clone()),
+                ImageNode::new(asset_server.load("Icon_Buff_AmmoUp.png")),
+                Node {
+                    width: Val::Percent(34.0),
+                    height: Val::Percent(33.6),
+                    top: Val::Percent(33.3),
+                    left: Val::Percent(4.3),
+                    align_items: AlignItems::Center,
+                    position_type: PositionType::Absolute,
+                    ..default()
+                },
+                Button,
+            ));
+            parent.spawn((
+                Name::new("buff2"),
+                // ImageNode::new(source.utaha_skill2.clone()),
+                ImageNode::new(asset_server.load("Icon_Buff_AttackUp.png")),
+                Node {
+                    width: Val::Percent(34.0),
+                    height: Val::Percent(33.6),
+                    top: Val::Percent(33.1),
+                    left: Val::Percent(36.1),
+                    align_items: AlignItems::Center,
+                    position_type: PositionType::Absolute,
+                    ..default()
+                },
+                Button,
+            ));
+        });
+}
+
+fn handle_choosingbuffmenu (
+    camera_query: Query<&Transform, (With<Camera2d>, Without<PauseMenu>)>,
+    mut menu_query: Query<(&mut Transform, &PauseMenu,), (Without<Camera2d>, Without<Node>)>,
+    mut interaction_query: Query<(
+            &mut ImageNode,
+            &Interaction,
+            &Name,),
+        (Changed<Interaction>, With<Button>),
+    >,
+    mut buff_query: Query<&mut Buff, With<Character>>,
+    mut windows: Query<&mut Window>,
+    mut query: Query<&mut Node, (With<ChoosingBuffMenu>, Without<Camera2d>)>,
+    source: Res<GlobalMenuTextureAtlas>,
+    mut next_state: ResMut<NextState<InGameState>>,
+) {
+    if camera_query.is_empty() || menu_query.is_empty() {
+        return;
+    }
+    let loc = camera_query.single().translation.truncate();
+    for (mut trans, obj) in menu_query.iter_mut() {
+        match *obj {
+            PauseMenu::BorderUp => {
+                if trans.translation.y > loc.y + 250.0 {
+                    trans.translation.y -= 10.0;
+                }
+            },
+            PauseMenu::BorderDown => {
+                if trans.translation.y < loc.y - 250.0 {
+                    trans.translation.y += 10.0;
+                }
+            },
+            _ => {},
+        }
+    }
+    for mut node in query.iter_mut() {
+        match node.top {
+            Val::Percent(v) => {
+                if v > 25.0 {
+                    node.top = Val::Percent(v - 2.0);
+                } else{
+                    for (mut image, interaction, name) in &mut interaction_query {
+                        info!("interaction: ");
+                        match *interaction {
+                            Interaction::Pressed => {
+                                println!("{}Clicked!", name);
+                                if buff_query.is_empty() {
+                                    return;
+                                }
+                                let mut buff = buff_query.single_mut();
+
+                                match name.as_str() {
+                                    "buff1" => {
+                                        if let Ok(mut window) = windows.get_single_mut() {
+                                            window.cursor_options.visible = false;
+                                        }
+                                        buff.0 += 2;// 子弹分裂
+                                    },
+                                    "buff2" => {
+                                        if let Ok(mut window) = windows.get_single_mut() {
+                                            window.cursor_options.visible = false;
+                                        }
+                                        buff.4 += 2;
+                                    },
+                                    _ => {}
+                                }
+                                next_state.set(InGameState::Running);
+                            },
+                            Interaction::Hovered => {
+                                println!("Hovered!");
+                                // image.image = source.button_hover.clone();
+                            },
+                            Interaction::None => {
+                                // image.image = source.button.clone();
+                            },
+                        }
+                    }
+                }
+            },
+            _ => {}
+        }
+    }
+}
+
+fn cleanup_choosingbuffmenu (
+    mut commands: Commands,
+    query: Query<Entity, With<ChoosingBuffMenu>>,
+) {
+    for entity in query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+}
 
 #[derive(Component)]
 pub struct test;

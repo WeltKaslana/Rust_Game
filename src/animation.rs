@@ -1,10 +1,8 @@
 use bevy::{
     dev_tools::states::*, 
-    log::tracing_subscriber::fmt::time, 
     prelude::*,
 };
 use bevy::utils::Instant;
-use bevy_ecs_tilemap::helpers::transform;
 use bevy_rapier2d::prelude::*;
 use crate::GlobalRoomTextureAtlas;
 use crate::{
@@ -18,7 +16,7 @@ use crate::{
         set_enemy, BulletDirection, Enemy, EnemyBullet, EnemyDeathEffect, EnemyState, EnemyType, Fireflag, PatrolState
     }, 
     gamestate::*, 
-    gun::{self, Bullet, BulletHit, Cursor, Gun, GunFire, SpawnInstant}, 
+    gun::{self, Bullet, BulletHit, Cursor, Gun, GunFire, SpawnInstant, GunState, }, 
     home::{Fridge, FridgeState, Sora, SoraState}, 
     resources::{
         GlobalBossTextureAtlas, GlobalCharacterTextureAtlas, GlobalEnemyTextureAtlas, GlobalHomeTextureAtlas
@@ -34,10 +32,27 @@ impl Plugin for AnimationPlugin {
     fn build(&self, app: &mut App) {
         app
         // .add_systems(Update, log_transitions::<GameState>)
+        // .add_systems(
+        //     Update,
+        //     (
+        //         animate_player,
+        //         animate_enemy_born,
+        //         animate_enemy,
+        //         flip_gun_sprite_y,
+        //         flip_player_sprite_x,
+        //         animate_gunfire,
+        //         animate_enemy_bullet,
+        //         animate_boss,
+        //         boss_filpx,
+        //         enemyboss_death_effect,
+        //         animate_droneskill,
+        //         animate_door_and_chest,
+        //     ).run_if(in_state(GameState::InGame)),)
         .add_systems(
             Update,
             (
                 animate_player,
+                animate_player_gun_and_bullet,
                 animate_enemy_born,
                 animate_enemy,
                 flip_gun_sprite_y,
@@ -49,23 +64,14 @@ impl Plugin for AnimationPlugin {
                 enemyboss_death_effect,
                 animate_droneskill,
                 animate_door_and_chest,
-            ).run_if(in_state(GameState::InGame)),)
-            // .add_systems(Update, 
-            //     (
-            //         animate_player,
-            //         flip_player_sprite_x,
-            //         flip_gun_sprite_y,
-            //         animate_gunfire,
-            //         animate_sora,
-            //         animate_fridge,
-            // ).run_if(in_state(GameState::Home)))
+            ).run_if(in_state(InGameState::Running)),)
             .add_systems(Update, 
                 (
                     animate_player,
+                    animate_player_gun_and_bullet,
                     flip_player_sprite_x,
                     flip_gun_sprite_y,
                     animate_gunfire,
-                    // animate_grenadehit,
                     animate_sora,
                     animate_fridge,
             ).run_if(in_state(HomeState::Running))
@@ -165,6 +171,60 @@ fn animate_player(
 
 }
 
+fn animate_player_gun_and_bullet (
+    time: Res<Time>,
+    mut gun_query: Query<(
+        &mut AnimationConfig, 
+        &mut Sprite, 
+        &mut GunState,
+    ), (With<Gun>, Without<Bullet>)>,
+    mut bullet_query: Query<(
+        &mut AnimationConfig, 
+        &mut Sprite, 
+    ), (With<Bullet>, Without<Gun>)>,
+    source: Res<GlobalCharacterTextureAtlas>,
+) {
+    if source.id == 2 {
+        for (mut config, mut bullet) in bullet_query.iter_mut() {
+                // arisu有个大的炮要单独设置
+                config.frame_timer.tick(time.delta());
+                if config.frame_timer.just_finished(){
+                    if let Some(atlas) = &mut bullet.texture_atlas {
+                        config.frame_timer = AnimationConfig::timer_from_fps(config.fps2p);
+                        atlas.index = (atlas.index+1) % 4;
+                    }
+                }
+        }
+        for (mut config, mut gun, mut state) in gun_query.iter_mut() {
+            match *state {
+                GunState::Fire => {
+                    config.frame_timer.tick(time.delta());
+                    if config.frame_timer.just_finished(){
+                        // info!("ok!");
+                        if let Some(atlas) = &mut gun.texture_atlas {
+                            config.frame_timer = AnimationConfig::timer_from_fps(config.fps2p);
+                            atlas.index += 1;
+                            if atlas.index == 8 {
+                                gun.image = source.image_gun.clone();
+                                gun.texture_atlas = Some(TextureAtlas {
+                                    layout: source.lay_out_gun.clone(),
+                                    index: 0,
+                                });
+                                *state = GunState::Normal;
+                                // println!("fire over");
+                            }
+                        }
+                    }
+                },
+                GunState::SP => {
+                    // arisu大招
+                }
+                _ => {},
+            }
+
+        }
+    }
+}
 fn animate_enemy_born(
     mut commands: Commands,
     time: Res<Time>,
@@ -858,8 +918,10 @@ fn animate_door_and_chest (
     ), (With<Chest>, Without<Door>, Without<Character>)>,
     time: Res<Time>,
     player_query: Query<& Transform, (With<Character>, Without<Door>, Without<Chest>)>,
+    mut windows: Query<&mut Window>,
     source: Res<GlobalRoomTextureAtlas>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut next_state: ResMut<NextState<InGameState>>,
 ) {
     if door_query.is_empty() && chest_query.is_empty() { return; }
     let player_transform = player_query.single();
@@ -935,7 +997,7 @@ fn animate_door_and_chest (
                 2 => { },
                 3  => { 
                     let distance = player_transform.translation.distance(transform.translation);
-                    if distance <= 75.0 {
+                    if distance <= 150.0 {
                         if keyboard_input.just_pressed(KeyCode::KeyF) {
                             chest.0 = 5;
                         }
@@ -943,7 +1005,7 @@ fn animate_door_and_chest (
                 },
                 4 => {
                     let distance = player_transform.translation.distance(transform.translation);
-                    if distance <= 75.0 {
+                    if distance <= 150.0 {
                         if keyboard_input.just_pressed(KeyCode::KeyF) {
                             chest.0 = 6;
                         }
@@ -957,6 +1019,13 @@ fn animate_door_and_chest (
                             aconfig.frame_timer = AnimationConfig::timer_from_fps(aconfig.fps2p);
                             if atlas.index < all - 1 {
                                 atlas.index = atlas.index + 1;
+                            } else {
+                                // 进入选buff界面
+                                if let Ok(mut window) = windows.get_single_mut() {
+                                    window.cursor_options.visible = true;
+                                    next_state.set(InGameState::ChoosingBuff);
+                                    chest.0 = 7;
+                                }
                             }
                         }
                     }
@@ -969,11 +1038,18 @@ fn animate_door_and_chest (
                             aconfig.frame_timer = AnimationConfig::timer_from_fps(aconfig.fps2p);
                             if atlas.index < all - 1 {
                                 atlas.index = atlas.index + 1;
+                            } else {
+                                // 进入选buff界面
+                                if let Ok(mut window) = windows.get_single_mut() {
+                                    window.cursor_options.visible = true;
+                                    next_state.set(InGameState::ChoosingBuff);
+                                    chest.0 = 7;
+                                }
                             }
                         }
                     }
                 },
-                _ => { },
+                _ => {},
             }
         }
     }

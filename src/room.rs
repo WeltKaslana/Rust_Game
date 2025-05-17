@@ -16,6 +16,9 @@ pub struct RoomPlugin;
 pub struct EnemyBorn;
 
 #[derive(Component)]
+pub struct Map;
+
+#[derive(Component)]
 pub struct Chest(pub i32);
 // 0:effect 1:big can't open 2: small can't open 3: big ready to open 4: small ready to open 5: big opening 6: small opening 
 
@@ -108,6 +111,13 @@ impl AssetsManager {
             self.map_index = 0;
         }
     }
+    // 用于在从游戏回到大厅和封面时删除地图
+    pub fn del_map(&mut self, commands: &mut Commands) {
+        if let Some(entity) = self.map_entity {
+            commands.entity(entity).despawn_recursive();
+        }
+        info!("map deleted!");
+    }
 }
 
 ////
@@ -125,7 +135,7 @@ impl Plugin for RoomPlugin {
             .add_plugins(RapierDebugRenderPlugin::default())
 
             // .add_systems(OnEnter(GameState::InGame), load_room)
-            .add_systems(Update, switch_map.run_if(in_state(GameState::InGame)))
+            // .add_systems(Update, switch_map.run_if(in_state(GameState::InGame)))
 
             // .add_systems(OnEnter(GameState::Loading), load_room)
             .add_systems(Startup, load_room)
@@ -191,27 +201,46 @@ fn load_room(
             ));
         },
     ));
-    // mgr.add_map(MapInfos::new(
-    //     &asset_server, 
-    //     "boss房2.tmx", 
-    //     "A finite orthogonal map with only object colliders", 
-    //     |c| {
-    //         c.insert((
-    //             TiledMapAnchor::Center,
-    //             TiledPhysicsSettings::<TiledPhysicsRapierBackend> {
-    //                 objects_filter: TiledName::All,
-    //                 // objects_layer_filter: TiledName::Names(vec![String::from("1")]),
-    //                 // tiles_objects_filter: TiledName::Names(vec![String::from("platform1")]),
-    //                 //用来过滤图块层
-    //                 // tiles_layer_filter: TiledName::Names(vec![String::from("decoration")]),
-    //                 //用来过滤指定图块层中的图块，对象层同理
-    //                 tiles_objects_filter: TiledName::All,
-    //                 ..default()
-    //             },
-    //         ));
-    //     },
-    // ));
-    // mgr.cycle_map(&mut commands);
+    mgr.add_map(MapInfos::new(
+        &asset_server, 
+        "普通房3.tmx", 
+        "A finite orthogonal map with only object colliders", 
+        |c| {
+            c.insert((
+                TiledMapAnchor::Center,
+                TiledPhysicsSettings::<TiledPhysicsRapierBackend> {
+                    objects_filter: TiledName::All,
+                    // objects_layer_filter: TiledName::Names(vec![String::from("1")]),
+                    // tiles_objects_filter: TiledName::Names(vec![String::from("platform1")]),
+                    //用来过滤图块层
+                    // tiles_layer_filter: TiledName::Names(vec![String::from("decoration")]),
+                    //用来过滤指定图块层中的图块，对象层同理
+                    tiles_objects_filter: TiledName::All,
+                    ..default()
+                },
+            ));
+        },
+    ));
+    mgr.add_map(MapInfos::new(
+        &asset_server, 
+        "boss房1.tmx", 
+        "A finite orthogonal map with only object colliders", 
+        |c| {
+            c.insert((
+                TiledMapAnchor::Center,
+                TiledPhysicsSettings::<TiledPhysicsRapierBackend> {
+                    objects_filter: TiledName::All,
+                    // objects_layer_filter: TiledName::Names(vec![String::from("1")]),
+                    // tiles_objects_filter: TiledName::Names(vec![String::from("platform1")]),
+                    //用来过滤图块层
+                    // tiles_layer_filter: TiledName::Names(vec![String::from("decoration")]),
+                    //用来过滤指定图块层中的图块，对象层同理
+                    tiles_objects_filter: TiledName::All,
+                    ..default()
+                },
+            ));
+        },
+    ));
     commands.insert_resource(mgr);
 }
 
@@ -240,17 +269,7 @@ fn check_collision(
         }
     }
 }
-fn check_contact(
-    q: Query<(&RapierContextSimulation)>,
-    b: Query<Entity, With<Bullet>>,
-) {
-    for r in q.iter() {
-        for bu in b.iter() {
-            
-        }
-        // r.contact_pairs_with(context_colliders, rigidbody_set, collider)
-    }
-}
+
 fn evt_object_created(
     mut commands: Commands,
     //敌人诞生动画还没加入到resources中，后续完善了就改用source2调用图片
@@ -309,6 +328,7 @@ fn evt_object_created(
                     (transform .translation.y - size.y) * 3.0, 
                     0.0)).with_scale(Vec3::splat(2.5)),
                 AnimationConfig::new(15),
+                Map,
                 Enemy,
                 EnemyBorn,
             ));
@@ -331,6 +351,7 @@ fn evt_object_created(
                     (transform .translation.y - size.y) * 3.0, 
                     0.0)).with_scale(Vec3::splat(2.5)),
                 AnimationConfig::new(15),
+                Map,
                 BossComponent,
                 EnemyBorn,
             ));
@@ -353,6 +374,7 @@ fn evt_object_created(
                     (transform .translation.y - size.y) * 3.0, 
                     -52.0)).with_scale(Vec3::splat(2.5)),
                 AnimationConfig::new(15),
+                Map,
                 Door(0),
             ));
             info!("door created!");
@@ -377,6 +399,7 @@ fn evt_object_created(
                             (transform .translation.y - size.y) * 3.0, 
                             -52.0)).with_scale(Vec3::splat(2.5)),
                         AnimationConfig::new(15),
+                        Map,
                         Chest(1),
                     )).with_child((
                         Sprite {
@@ -417,8 +440,9 @@ fn evt_object_created(
                         Transform::from_translation(Vec3::new(
                             (transform .translation.x - size.x) * 3.0, 
                             (transform .translation.y - size.y) * 3.0, 
-                            0.0)).with_scale(Vec3::splat(2.5)),
+                            -52.0)).with_scale(Vec3::splat(2.5)),
                         AnimationConfig::new(15),
+                        Map,
                         Chest(1),
                     ));
                 },
@@ -435,8 +459,9 @@ fn evt_object_created(
                         Transform::from_translation(Vec3::new(
                             (transform .translation.x - size.x) * 3.0, 
                             (transform .translation.y - size.y) * 3.0, 
-                            0.0)).with_scale(Vec3::splat(2.5)),
+                            -52.0)).with_scale(Vec3::splat(2.5)),
                         AnimationConfig::new(15),
+                        Map,
                         Chest(2),
                     ));
                 },
@@ -485,7 +510,6 @@ fn check_ifcomplete(
     player_query: Query<&Transform, With<Character>>,
 ) {
     if enemyclear_query1.is_empty() && enemyclear_query2.is_empty() && bossclear_query.is_empty() {
-        println! ("你过关!");
 
         let player_transform = player_query.single();
         let (mut door, door_transform) =door_query.single_mut();
@@ -500,6 +524,7 @@ fn check_ifcomplete(
 
         if distance <= 125.0 &&  door.0 == 3 {
             if keyboard_input.just_pressed(KeyCode::KeyE) && transition_query.is_empty() {
+                println! ("你过关!");
                 for trans in camera_query.iter() {
                     commands.spawn((
                         Sprite {

@@ -1,7 +1,8 @@
 use bevy::{dev_tools::states::*, prelude::*, time::Stopwatch};
 use crate::boss::Boss;
 use crate::gun::Bullet;
-use crate::{gamestate::GameState,
+use crate::{
+    gamestate::*,
     configs::*, 
     character::*, 
     gun::BulletHit
@@ -80,6 +81,20 @@ impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut App) {
         app
             // .add_systems(OnEnter(GameState::InGame), setup_enemy)
+            // .add_systems(
+            //     Update,
+            //         (
+            //             handle_enemy_move,
+            //             handle_enemy_animation,
+            //             handle_enemy_fire,
+            //             handle_sweeper_hit,
+            //             handle_bullet_move,
+            //             handle_enemy_death,
+            //             handle_enemy_bullet_collision_events,
+            //             handle_enemy_hurt_collision_events,
+            //             handle_enemy_hurt_collision_events_special,
+            //     ).run_if(in_state(GameState::InGame))
+            // )
             .add_systems(
                 Update,
                     (
@@ -92,9 +107,8 @@ impl Plugin for EnemyPlugin {
                         handle_enemy_bullet_collision_events,
                         handle_enemy_hurt_collision_events,
                         handle_enemy_hurt_collision_events_special,
-                ).run_if(in_state(GameState::InGame))
+                ).run_if(in_state(InGameState::Running))
             )
-            // .add_systems(Update, log_transitions::<GameState>)
             ;
     }
 }
@@ -1022,28 +1036,37 @@ fn handle_enemy_death(
 
 fn handle_enemy_hurt_collision_events(
     // mut commands: Commands,
+    buff_query: Query<&Buff>,
     player_query: Query<Entity, (With<Bullet>)>,
     mut collision_events: EventReader<CollisionEvent>,
     mut enemy_query: Query<(Entity, &mut Health), (With<Enemy>, Without<Bullet>)>,
+    source: Res<GlobalCharacterTextureAtlas>,
 ) {
     for collision_event in collision_events.read() {
         if player_query.is_empty() || enemy_query.is_empty() {
             return;
         }
 
+        let buff = buff_query.single();
+        let vulnerable = match source.id {
+            // 不同子弹伤害不同，后续可以叠加dot之类的伤害
+            2 => 3.0,
+            _ => 1.0,
+        };
+        let bulletdamage = ((buff.4 - 1) as f32 * 0.25 + 1.0) * vulnerable;
         for (enemy, mut health) in &mut enemy_query.iter_mut() {
             match collision_event {
                 CollisionEvent::Started(entity1,entity2, _) => {
                     if entity2.eq(&enemy) {
                         if let Ok(b) = player_query.get(*entity1) {
                             // commands.entity(*entity1).despawn();
-                            health.0 -= BULLET_DAMAGE;
+                            health.0 -= BULLET_DAMAGE * bulletdamage;
                         }
                     }
                     if entity1.eq(&enemy) {
                         if let Ok(b) = player_query.get(*entity2) {
                             // commands.entity(*entity2).despawn();
-                            health.0 -= BULLET_DAMAGE;
+                            health.0 -= BULLET_DAMAGE * bulletdamage;
                         }
                     }
                 },

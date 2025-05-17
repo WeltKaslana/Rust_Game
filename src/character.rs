@@ -133,6 +133,19 @@ impl Plugin for PlayerPlugin {
                     // handle_play_bullet_collision_events,
             ).run_if(in_state(HomeState::Running))
             )
+            // .add_systems(
+            //     Update,
+            //         (
+            //             handle_player_death,
+            //             handle_player_move3,
+            //             handle_player_skill2,
+            //             handle_player_skill3,
+            //             handle_grenade_despawn,
+            //             handle_player_skill4,
+            //             // handle_player_enemy_collision_events,
+            //             handle_player_bullet_collision_events
+            //     ).run_if(in_state(GameState::InGame))
+            // )
             .add_systems(
                 Update,
                     (
@@ -144,7 +157,7 @@ impl Plugin for PlayerPlugin {
                         handle_player_skill4,
                         // handle_player_enemy_collision_events,
                         handle_player_bullet_collision_events
-                ).run_if(in_state(GameState::InGame))
+                ).run_if(in_state(InGameState::Running))
             )
             ;
     }
@@ -160,7 +173,7 @@ fn setup_player(
         image: source.image_idle.clone(),
         texture_atlas: Some(TextureAtlas {
             layout: source.lay_out_idle.clone(),
-            index: 1,
+            index: 0,
         }),
         ..Default::default()
         },
@@ -176,7 +189,7 @@ fn setup_player(
         //音效播放间隔计时器
         PlayerTimer(Stopwatch::default()),
         // 状态栏
-        Buff(5, 1, 1, 1, 2, 1, 1),
+        Buff(1, 1, 1, 1, 1, 1, 1),
 
         Collider::cuboid(9.0, 16.5),
 
@@ -242,12 +255,23 @@ fn reload_player(
                         index: 0,
                     });
                 },
-                _ => {},
+                _ => {
+                    // 可能有bug
+                    player.image = source.image_idle.clone();
+                    player.texture_atlas = Some(TextureAtlas {
+                        layout: source.lay_out_idle.clone(),
+                        index: 0,
+                    });
+                },
             }
         }
         for mut gun in gun_query.iter_mut() {
             info!("gun reload!");
             gun.image = source.image_gun.clone();
+            gun.texture_atlas = Some(TextureAtlas {
+                layout: source.lay_out_gun.clone(),
+                index: 0,
+            });
         }
         info!("reload player!");
 
@@ -1105,6 +1129,7 @@ fn handle_player_skill4 (
                 ..Default::default()
             },
             Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(player_transform.translation.x, player_transform.translation.y, 31.0)),
+            Player,
             Drone,
             State(0),
             AnimationConfig::new(10),
