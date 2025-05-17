@@ -4,7 +4,7 @@ use bevy::state::commands;
 use bevy::transform;
 use bevy::{dev_tools::states::*, prelude::*, time::Stopwatch};
 use crate::{gamestate::*,
-    configs::*,character::*, gun::Bullet, enemy::*};
+    configs::*,character::*, gun::Bullet, enemy::*, room::Map};
 use crate::*;
 use rand::Rng;
 use character::AnimationConfig;
@@ -140,6 +140,7 @@ pub fn set_boss(
         },
         ColliderMassProperties::Mass(15000.0),
         CollisionGroups::new(Group::GROUP_3, Group::GROUP_4),
+        Map,
         )
     );
 
@@ -163,6 +164,7 @@ pub fn set_boss(
                 timer2: Stopwatch::new(),
             },
             Skillflag(0),
+            Map,
         )
     );//导弹仓
 
@@ -186,6 +188,7 @@ pub fn set_boss(
                 timer2: Stopwatch::new(),
             },
             Skillflag(0),
+            Map,
         )
     );//机枪盖
 
@@ -209,6 +212,7 @@ pub fn set_boss(
                 timer2: Stopwatch::new(),
             },
             Skillflag(0),
+            Map,
         )
     );//机枪
 }
@@ -805,6 +809,7 @@ fn handle_bossbullet_setup(
                                         GravityScale(0.0),
                                         Collider::cuboid(6.0, 6.0),
                                         ActiveEvents::COLLISION_EVENTS,
+                                        Map,
                                         )
                                     );
                                 } else {
@@ -828,6 +833,7 @@ fn handle_bossbullet_setup(
                                         GravityScale(0.0),
                                         Collider::cuboid(6.0, 6.0),
                                         ActiveEvents::COLLISION_EVENTS,
+                                        Map,
                                         )
                                     );
                                 }
@@ -892,6 +898,7 @@ fn handle_bossbullet_setup(
                                         GravityScale(0.0),
                                         Collider::cuboid(11.0, 5.0),
                                         ActiveEvents::COLLISION_EVENTS,
+                                        Map,
                                         )
                                     );
                                 } else {
@@ -915,6 +922,7 @@ fn handle_bossbullet_setup(
                                         GravityScale(0.0),
                                         Collider::cuboid(11.0, 5.0),
                                         ActiveEvents::COLLISION_EVENTS,
+                                        Map,
                                         )
                                     );
                                 }
@@ -994,6 +1002,7 @@ fn handle_boss_death(
             Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(loc.translation.x, loc.translation.y, -50.0)),
             AnimationConfig::new(10),
             BossDeathEffect,
+            Map,
         )
         );
     }

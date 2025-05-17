@@ -5,13 +5,15 @@ use crate::{
     gamestate::*,
     configs::*, 
     character::*, 
-    gun::BulletHit
+    gun::BulletHit,
+    room::Map,
 };
 use crate::*;
 use rand::Rng;
 use character::AnimationConfig;
 use bevy_rapier2d::prelude::*;
 use std::time::Duration;
+
 
 pub struct EnemyPlugin;
 
@@ -196,6 +198,7 @@ pub fn set_enemy(
                 ColliderMassProperties::Mass(150.0),
                 CollisionGroups::new(Group::GROUP_3, Group::GROUP_4),
             ));
+            enemy_entity.insert(Map);
         },
         EnemyType::DroneMissile=>{
             let mut enemy_entity =
@@ -240,6 +243,7 @@ pub fn set_enemy(
                 ColliderMassProperties::Mass(150.0),
                 CollisionGroups::new(Group::GROUP_3, Group::GROUP_4),
             ));
+            enemy_entity.insert(Map);
         },
         EnemyType::DroneVulcan=>{
             let mut enemy_entity =
@@ -284,6 +288,7 @@ pub fn set_enemy(
                 ColliderMassProperties::Mass(150.0),
                 CollisionGroups::new(Group::GROUP_3, Group::GROUP_4),
             ));
+            enemy_entity.insert(Map);
         },
         EnemyType::UnknownGuardianTypeF=>{
             let mut enemy_entity =
@@ -328,6 +333,7 @@ pub fn set_enemy(
                 ColliderMassProperties::Mass(150.0),
                 CollisionGroups::new(Group::GROUP_3, Group::GROUP_4),
             ));
+            enemy_entity.insert(Map);
         },
     }
 }
@@ -885,6 +891,7 @@ fn handle_enemy_fire(
                                             GravityScale(0.0),
                                             Collider::cuboid(11.0, 5.0),
                                             ActiveEvents::COLLISION_EVENTS,
+                                            Map,
                                             )
                                         );
                                     },
@@ -919,6 +926,7 @@ fn handle_enemy_fire(
                                             GravityScale(0.0),
                                             Collider::cuboid(6.0, 6.0),
                                             ActiveEvents::COLLISION_EVENTS,
+                                            Map,
                                             )
                                         );
                                     },
@@ -953,6 +961,7 @@ fn handle_enemy_fire(
                                             GravityScale(0.0),
                                             Collider::cuboid(6.0, 6.0),
                                             ActiveEvents::COLLISION_EVENTS,
+                                            Map
                                             )
                                         );
                                     },
@@ -1028,6 +1037,7 @@ fn handle_enemy_death(
                 Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(loc.translation.x, loc.translation.y, -50.0)),
                 AnimationConfig::new(10),
                 EnemyDeathEffect,
+                Map,
             )
             );
         }
@@ -1153,6 +1163,7 @@ fn handle_enemy_bullet_collision_events(
                             },
                             AnimationConfig::new(15),
                             BulletHit,
+                            Map,
                         ));
 
                     } else if entity2.eq(&bulletentity) {
@@ -1182,6 +1193,7 @@ fn handle_enemy_bullet_collision_events(
                             },
                             AnimationConfig::new(15),
                             BulletHit,
+                            Map,
                         ));
                     }
                 }
