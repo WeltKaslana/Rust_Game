@@ -7,10 +7,10 @@ use bevy_rapier2d::prelude::*;
 use crate::GlobalRoomTextureAtlas;
 use crate::{
     boss::{
-        set_boss, Boss, BossComponent, BossDeathEffect, BossState, Direction, Health, Skillflag
+        set_boss, Boss, BossComponent, BossDeathEffect, BossState, Direction, Skillflag
     }, 
     character::{
-        AnimationConfig, Character, Drone, DroneBullet, PlayerState, State, GrenadeHit,
+        AnimationConfig, Character, Drone, DroneBullet, PlayerState, State, GrenadeHit, Health
     }, 
     enemy::{
         set_enemy, BulletDirection, Enemy, EnemyBullet, EnemyDeathEffect, EnemyState, EnemyType, Fireflag, PatrolState

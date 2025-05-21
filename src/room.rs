@@ -8,7 +8,7 @@ use bevy_rapier2d::{prelude::*};
 use rand::Rng;
 
 use crate::{
-    boss::{self, BossComponent}, character::{AnimationConfig, Character}, enemy::Enemy, gamestate::GameState, gui::Transition, gun::Bullet, resources::*
+    boss::{self, Boss, BossComponent, BossSetupEvent}, character::{AnimationConfig, Character}, enemy::Enemy, gamestate::GameState, gui::Transition, gun::Bullet, resources::*
 };
 pub struct RoomPlugin;
 
@@ -287,6 +287,8 @@ fn evt_object_created(
     source2: Res<GlobalEnemyTextureAtlas>,
     // mut next_state: ResMut<NextState<GameState>>,
     source3: Res<GlobalRoomTextureAtlas>,
+
+    mut events: EventWriter<BossSetupEvent>,
     
 ) {
     let mut size = Vec2::ZERO;
@@ -339,6 +341,7 @@ fn evt_object_created(
         }
         if name.as_str() == "Object(Boss)" {
             // let layout_born = TextureAtlasLayout::from_grid(UVec2::splat(48),12,1,None,None);
+            events.send(BossSetupEvent);
             commands.spawn((
                 Sprite {
                     image: source2.image_bron.clone(),//后续改用source2

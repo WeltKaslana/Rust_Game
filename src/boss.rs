@@ -4,7 +4,7 @@ use bevy::state::commands;
 use bevy::transform;
 use bevy::{dev_tools::states::*, prelude::*, time::Stopwatch};
 use crate::{gamestate::*,
-    configs::*,character::*, gun::Bullet, enemy::*, room::Map};
+    configs::*,character::{*, Health}, gun::Bullet, enemy::*, room::Map,};
 use crate::*;
 use rand::Rng;
 use character::AnimationConfig;
@@ -41,8 +41,8 @@ pub enum BossState {
     Move,
 }
 
-#[derive(Component)]
-pub struct Health(pub f32);
+// #[derive(Component)]
+// pub struct Health(pub f32);
 
 #[derive(Component)]
 pub struct Direction {
@@ -58,6 +58,12 @@ pub struct Timer {
     pub timer1: Stopwatch,
     pub timer2: Stopwatch,
 }
+
+#[derive(Event)]
+pub struct BossSetupEvent;
+
+#[derive(Event)]
+pub struct BossDeathEvent;
 
 impl Plugin for BossPlugin {
     fn build(&self, app: &mut App) {
@@ -75,6 +81,8 @@ impl Plugin for BossPlugin {
             //             handle_boss_charge_hurt,
             //     ).run_if(in_state(GameState::InGame))
             // )
+            .add_event::<BossSetupEvent>()
+            .add_event::<BossDeathEvent>()
             .add_systems(
                 Update,
                     (
@@ -103,6 +111,7 @@ pub fn set_boss(
     commands: &mut Commands,
     source: &Res<GlobalBossTextureAtlas>,
 ) { 
+
     let mut boss = 
     commands.spawn( (
         Sprite {
@@ -116,7 +125,7 @@ pub fn set_boss(
         Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(loc.x, loc.y, -50.0)),
         BossState::Idea,
         Boss::Body,
-        Health(BOOS_HEALTH),
+        Health(BOSS_HEALTH),
         Skillflag(0),
         Direction{
             x: 0.0,
@@ -346,7 +355,7 @@ fn handle_boss_skill(
     let dx = playerloc.translation.x - bossloc.translation.x;
     let dy = playerloc.translation.y - bossloc.translation.y;
     let mut rng = rand::rng();
-    if health.0 > BOOS_HEALTH/2.0 {
+    if health.0 > BOSS_HEALTH/2.0 {
         match *bossstate {
             BossState::Idea => {
                 timer.timer1.tick(time.delta());
@@ -980,12 +989,14 @@ fn handle_boss_death(
     mut boss_query: Query<(Entity, & Transform, & Health), (With<Boss>, Without<BossComponent>)>,
     mut bosscomponent_query: Query<Entity, (With<Boss>, With<BossComponent>)>,
     source: Res<GlobalBossTextureAtlas>,
+    mut events: EventWriter<BossDeathEvent>,
 ) {
     if boss_query.is_empty() {
         return;
     }
     let (entity, loc, health) = boss_query.single_mut();
     if health.0 <= 0.0 {
+        events.send(BossDeathEvent);
         commands.entity(entity).despawn();
         for bosscomponent in bosscomponent_query.iter_mut(){ 
             commands.entity(bosscomponent).despawn();
@@ -1068,3 +1079,4 @@ fn handle_boss_charge_hurt(
         _=> { },
     }
 }
+

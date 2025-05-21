@@ -4,7 +4,7 @@ use crate::gun::Bullet;
 use crate::{
     gamestate::*,
     configs::*, 
-    character::*, 
+    character::{* , Health}, 
     gun::BulletHit,
     room::Map,
 };
@@ -30,8 +30,8 @@ pub enum EnemyBullet {
     UnknownGuardian,
 } 
 
-#[derive(Component)]
-pub struct Health(pub f32);
+// #[derive(Component)]
+// pub struct Health(pub f32);
 
 #[derive(Component)]
 pub enum Idleflag {
