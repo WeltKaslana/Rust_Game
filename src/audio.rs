@@ -18,6 +18,8 @@ pub struct FireAudio;
 pub struct RunAudio;
 #[derive(Component)]
 pub struct JumpAudio;
+#[derive(Component)]
+pub struct InGameBGM;
 
 impl Plugin for GameAudioPlugin {
     fn build(&self, app: &mut App) {
@@ -30,7 +32,7 @@ impl Plugin for GameAudioPlugin {
             .add_systems(OnEnter(GameState::Home), audio_play_Home)
             .add_systems(OnExit(GameState::Home), pause)
             .add_systems(OnEnter(GameState::InGame), audio_play_Ingame)
-            .add_systems(OnExit(GameState::InGame), pause)
+            // .add_systems(OnExit(GameState::InGame), pause)
 
             .add_systems(Update,(
                         audio_fire,
@@ -46,11 +48,16 @@ impl Plugin for GameAudioPlugin {
             ;
     }
 }
-
+// 判断当前游戏中音乐是否在播放，避免进到下一房间时重复播放
+static mut hasplay: bool = false;
 fn audio_play__MainMenu(
     mut commands: Commands,
     asset_server: Res<AssetServer>, 
+    bgm_query: Query<Entity, With<InGameBGM>>,
 ) {
+    for e in bgm_query.iter() {
+        commands.entity(e).despawn_recursive();
+    }
     commands.spawn((
         AudioPlayer::new(asset_server.load("AudioClip/MainMenu - Takaramonogatari.wav")),
         PlaybackSettings::LOOP.with_volume(Volume::new(0.3)),
@@ -60,7 +67,11 @@ fn audio_play__MainMenu(
 fn audio_play_Home(
     mut commands: Commands,
     asset_server: Res<AssetServer>, 
+    bgm_query: Query<Entity, With<InGameBGM>>,
 ) {
+    for e in bgm_query.iter() {
+        commands.entity(e).despawn_recursive();
+    }
     commands.spawn((
         AudioPlayer::new(asset_server.load("AudioClip/Angel24 - Cotton Candy Island.wav")),
         PlaybackSettings::LOOP.with_volume(Volume::new(0.3)),
@@ -68,14 +79,27 @@ fn audio_play_Home(
 
 }
 
+
 fn audio_play_Ingame(
     mut commands: Commands,
-    asset_server: Res<AssetServer>, 
+    asset_server: Res<AssetServer>,
+    bgm_query: Query<Entity, With<InGameBGM>>, 
 ) {
-    commands.spawn((
-        AudioPlayer::new(asset_server.load("AudioClip/Level1 - Let me think about it.wav")),
-        PlaybackSettings::LOOP.with_volume(Volume::new(0.3)),
-    ));
+    let mut ifplay = false;
+    unsafe {
+        if hasplay == false {
+            hasplay = true;
+            ifplay = true;
+        }
+    }
+    if ifplay && bgm_query.is_empty() {
+        commands.spawn((
+            AudioPlayer::new(asset_server.load("AudioClip/Level1 - Let me think about it.wav")),
+            PlaybackSettings::LOOP.with_volume(Volume::new(0.3)),
+            InGameBGM,
+        ));
+    }
+
 }
 
 fn audio_fire (

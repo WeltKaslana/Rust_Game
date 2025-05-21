@@ -1,4 +1,4 @@
-use bevy::{asset, ecs::query, prelude::*, render::camera};
+use bevy::{asset, ecs::query, prelude::*, render::camera, utils::info};
 use encoding_rs::{GBK, UTF_8};
 
 use crate::{
@@ -36,6 +36,8 @@ pub struct CharacterSelectButton;
 #[derive(Component)]
 pub struct ChoosingBuffMenu;
 
+#[derive(Component)]
+pub struct GameOverMenu;
 // #[derive(Component)]
 // pub enum ButtonType {
 //     Close,
@@ -85,6 +87,10 @@ impl Plugin for GuiPlugin {
         .add_systems(OnEnter(InGameState::ChoosingBuff), setup_choosingbuffmenu)
         .add_systems(Update, handle_choosingbuffmenu.run_if(in_state(InGameState::ChoosingBuff)))
         .add_systems(OnExit(InGameState::ChoosingBuff), cleanup_choosingbuffmenu)
+
+        .add_systems(OnEnter(InGameState::GameOver), setup_gameovermenu)
+        .add_systems(Update, handle_gameovermenu.run_if(in_state(InGameState::GameOver)))
+        .add_systems(OnExit(InGameState::GameOver), cleanup_gameovermenu)
 
         .add_systems(Update, (animation1::<LeftSlide1>, animation1::<LeftSlide2>, animation2::<RightSlide1>, animation2::<RightSlide2>).run_if(in_state(GameState::MainMenu)))
         .add_systems(Update, statetransition)
@@ -228,7 +234,7 @@ fn handle_main_menu_buttons(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mouse_button_input: Res<ButtonInput<MouseButton>>,
     transition_query: Query<Entity, (With<Transition>, Without<Camera2d>)>,
-    camera_query: Query<&Transform, (With<Camera2d>, Without<Transition>)>,
+    mut camera_query: Query<(&Transform, &mut GameState), (With<Camera2d>, Without<Transition>)>,
 ) {
 
     if camera_query.is_empty() {
@@ -236,10 +242,12 @@ fn handle_main_menu_buttons(
     }
 
     if  (keyboard_input.get_just_pressed().count() > 0) && transition_query.is_empty() {
-        println!("Working!");
+        // println!("Working!");
 
-        let trans = camera_query.single().translation;
+        let (trans_transform, mut nextstate) = camera_query.single_mut();
+        let trans = trans_transform.translation;
 
+        *nextstate = GameState::Home;
         commands.spawn((
             Sprite {
                 image: asset_server.load("Menu_Transition1.png"),
@@ -260,7 +268,7 @@ fn handle_main_menu_buttons(
 fn statetransition(
     mut commands: Commands, 
     mut transition_query: Query<(&mut Transform, Entity), (With<Transition>, Without<Camera2d>)>,
-    camera_query: Query<&Transform, (With<Camera2d>, Without<Transition>)>,
+    mut camera_query: Query<(&Transform, &mut GameState), (With<Camera2d>, Without<Transition>)>,
     state: Res<State<GameState>>,
     mut mgr: ResMut<AssetsManager>,
     mut next_state: ResMut<NextState<GameState>>,
@@ -269,20 +277,67 @@ fn statetransition(
         return;
     }
     let (mut transform, e) = transition_query.single_mut();
-    let trans = camera_query.single().translation;
+    let (camera_transform, mut nextstate) = camera_query.single_mut();
+    let trans = camera_transform.translation;
     let x = trans.x;
     transform.translation.x += 20.0;
+    transform.translation.y = trans.y;
     let delta = transform.translation.x - x;
 
     // println!("delta: {}", delta);
+    // 根据nextstate来判断下一个要切换到的状态，同时将nextstate初始化为MainMenu
     match *state.get() {
+        // GameState::MainMenu if delta >= 400.0 && delta < 420.0 => {
+        //     next_state.set(GameState::Home);
+        //     // info!("transition to Home!");
+        // },
+        // GameState::Home if delta >= 400.0 && delta < 420.0 => {
+        //     next_state.set(GameState::Loading);
+        //     mgr.cycle_map(&mut commands);
+        //     // info!("transition to loading!");
+        // },
+        // GameState::Loading if delta >= 800.0 => {
+        //     next_state.set(GameState::InGame);
+        //     // info!("transition to game!");
+        // },
+
+        // GameState::InGame if delta >= 400.0 && delta < 420.0 => {
+        //     next_state.set(GameState::Loading);
+        //     mgr.cycle_map(&mut commands);
+        //     // info!("transition to loading!");
+        // },
         GameState::MainMenu if delta >= 400.0 && delta < 420.0 => {
-            next_state.set(GameState::Home);
+            match *nextstate {
+                GameState::Home => {
+                    next_state.set(GameState::Home);
+                    // info!("transition to game!");
+                },
+                _ => {},
+            }
+            // next_state.set(GameState::Home);
             // info!("transition to Home!");
         },
         GameState::Home if delta >= 400.0 && delta < 420.0 => {
-            next_state.set(GameState::Loading);
-            mgr.cycle_map(&mut commands);
+            println!("transition to {:?}!", *nextstate);
+            match *nextstate {
+                GameState::MainMenu => {
+                    *nextstate = GameState::None;
+                    next_state.set(GameState::MainMenu);
+                },
+                GameState::Loading => {
+                    *nextstate = GameState::None;
+                    mgr.cycle_map(&mut commands);
+                    next_state.set(GameState::Loading);
+                },
+                GameState::None  => {},
+                _ => {
+                    info!("Wrong state trasition!");
+                    *nextstate = GameState::None;
+                    next_state.set(GameState::MainMenu);
+                }
+            }
+            // next_state.set(GameState::Loading);
+            // mgr.cycle_map(&mut commands);
             // info!("transition to loading!");
         },
         GameState::Loading if delta >= 800.0 => {
@@ -291,11 +346,34 @@ fn statetransition(
         },
 
         GameState::InGame if delta >= 400.0 && delta < 420.0 => {
-            next_state.set(GameState::Loading);
-            mgr.cycle_map(&mut commands);
+            println!("transition to {:?}!", *nextstate);
+            match *nextstate {
+                GameState::MainMenu => {
+                    *nextstate = GameState::None;
+                    mgr.del_map(&mut commands);
+                    next_state.set(GameState::MainMenu);
+                },
+                GameState::Loading => {
+                    *nextstate = GameState::None;
+                    mgr.cycle_map(&mut commands);
+                    next_state.set(GameState::Loading);
+                },
+                GameState::Home => {
+                    mgr.del_map(&mut commands);
+                    *nextstate = GameState::None;
+                    next_state.set(GameState::Home);
+                },
+                GameState::None  => {},
+                _ => {
+                    info!("Wrong state trasition!");
+                    *nextstate = GameState::None;
+                    next_state.set(GameState::MainMenu);
+                }
+            }
+            // next_state.set(GameState::Loading);
+            // mgr.cycle_map(&mut commands);
             // info!("transition to loading!");
         },
-
         _ => {}
     }
 
@@ -358,9 +436,8 @@ fn handle_ingame_menu(
                     window.cursor_options.visible = false;
                     InGameState::Running
                 },
-                InGameState::ChoosingBuff => {
-                    InGameState::ChoosingBuff
-                },
+                InGameState::ChoosingBuff => {InGameState::ChoosingBuff},
+                InGameState::GameOver=>{InGameState::GameOver},
             }); 
         }
     }
@@ -532,7 +609,9 @@ fn setup_stopmenu(
 }
 
 fn handle_stopmenu1 (
-    camera_query: Query<&Transform, (With<Camera2d>, Without<PauseMenu>)>,
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut camera_query: Query<(&Transform, &mut GameState), (With<Camera2d>, Without<PauseMenu>)>,
     mut menu_query: Query<(&mut Transform, &PauseMenu,), (Without<Camera2d>, Without<Node>)>,
     mut interaction_query: Query<(
             &mut ImageNode,
@@ -544,12 +623,13 @@ fn handle_stopmenu1 (
     mut query: Query<&mut Node, (With<PauseMenu>, Without<Camera2d>)>,
     source: Res<GlobalMenuTextureAtlas>,
     mut next_state: ResMut<NextState<HomeState>>,
-    mut next_state2: ResMut<NextState<GameState>>,
+    // mut next_state2: ResMut<NextState<GameState>>,
 ) {
     if camera_query.is_empty() || menu_query.is_empty() {
         return;
     }
-    let loc = camera_query.single().translation.truncate();
+    let (camera_trans, mut nextstate) = camera_query.single_mut();
+    let loc = camera_trans.translation.truncate();
     for (mut trans, obj) in menu_query.iter_mut() {
         match *obj {
             PauseMenu::BorderUp => {
@@ -588,7 +668,17 @@ fn handle_stopmenu1 (
                                             window.cursor_options.visible = false;
                                         }
                                         next_state.set(HomeState::Running);
-                                        next_state2.set(GameState::MainMenu);
+                                        *nextstate = GameState::MainMenu;
+                                        commands.spawn((
+                                            Sprite {
+                                                image: asset_server.load("Menu_Transition1.png"),
+                                                ..Default::default()
+                                            },
+                                            Transform::from_scale(Vec3::new(0.7,0.7,0.5))
+                                                .with_translation(Vec3::new(loc.x-3200.0, loc.y, 100.0)),
+                                            Transition,
+                                        ));  
+                                        // next_state2.set(GameState::MainMenu);
                                     },
                                     _ => {}
                                 }
@@ -611,7 +701,8 @@ fn handle_stopmenu1 (
 
 fn handle_stopmenu2 (
     mut commands: Commands,
-    camera_query: Query<&Transform, (With<Camera2d>, Without<PauseMenu>)>,
+    asset_server: Res<AssetServer>,
+    mut camera_query: Query<(&Transform, &mut GameState), (With<Camera2d>, Without<PauseMenu>)>,
     mut menu_query: Query<(&mut Transform, &PauseMenu,), (Without<Camera2d>, Without<Node>)>,
     mut interaction_query: Query<(
             &mut ImageNode,
@@ -622,14 +713,14 @@ fn handle_stopmenu2 (
     mut windows: Query<&mut Window>,
     mut query: Query<&mut Node, (With<PauseMenu>, Without<Camera2d>)>,
     source: Res<GlobalMenuTextureAtlas>,
-    mut mgr: ResMut<AssetsManager>,
+    // mut mgr: ResMut<AssetsManager>,
     mut next_state: ResMut<NextState<InGameState>>,
-    mut next_state2: ResMut<NextState<GameState>>,
 ) {
     if camera_query.is_empty() || menu_query.is_empty() {
         return;
     }
-    let loc = camera_query.single().translation.truncate();
+    let (camera_trans, mut nextstate) = camera_query.single_mut();
+    let loc = camera_trans.translation.truncate();
     for (mut trans, obj) in menu_query.iter_mut() {
         match *obj {
             PauseMenu::BorderUp => {
@@ -667,10 +758,35 @@ fn handle_stopmenu2 (
                                         if let Ok(mut window) = windows.get_single_mut() {
                                             window.cursor_options.visible = false;
                                         }
-                                        mgr.del_map(&mut commands);
                                         next_state.set(InGameState::Running);
+                                        *nextstate = GameState::MainMenu;
+                                        commands.spawn((
+                                            Sprite {
+                                                image: asset_server.load("Menu_Transition1.png"),
+                                                ..Default::default()
+                                            },
+                                            Transform::from_scale(Vec3::new(0.7,0.7,0.5))
+                                                .with_translation(Vec3::new(loc.x-3200.0, loc.y, 100.0)),
+                                            Transition,
+                                        ));
                                         // 游戏内最好改成返回大厅
-                                        next_state2.set(GameState::MainMenu);
+                                        // next_state2.set(GameState::MainMenu);
+                                    },
+                                    "back to home" => {
+                                        if let Ok(mut window) = windows.get_single_mut() {
+                                            window.cursor_options.visible = false;
+                                        }
+                                        next_state.set(InGameState::Running);
+                                        *nextstate = GameState::Home;
+                                        commands.spawn((
+                                            Sprite {
+                                                image: asset_server.load("Menu_Transition1.png"),
+                                                ..Default::default()
+                                            },
+                                            Transform::from_scale(Vec3::new(0.7,0.7,0.5))
+                                                .with_translation(Vec3::new(loc.x-3200.0, loc.y, 100.0)),
+                                            Transition,
+                                        ));
                                     },
                                     _ => {}
                                 }
@@ -1559,6 +1675,21 @@ fn setup_choosingbuffmenu(
                 },
                 Button,
             ));
+            parent.spawn((
+                Name::new("buff3"),
+                // ImageNode::new(source.utaha_skill2.clone()),
+                ImageNode::new(asset_server.load("Icon_Buff_AbnormalUp.png")),
+                Node {
+                    width: Val::Percent(34.0),
+                    height: Val::Percent(33.6),
+                    top: Val::Percent(33.1),
+                    left: Val::Percent(67.9),
+                    align_items: AlignItems::Center,
+                    position_type: PositionType::Absolute,
+                    ..default()
+                },
+                Button,
+            ));
         });
 }
 
@@ -1625,6 +1756,12 @@ fn handle_choosingbuffmenu (
                                         }
                                         buff.4 += 2;
                                     },
+                                    "buff3" => {
+                                        if let Ok(mut window) = windows.get_single_mut() {
+                                            window.cursor_options.visible = false;
+                                        }
+                                        buff.1 += 1;
+                                    },
                                     _ => {}
                                 }
                                 next_state.set(InGameState::Running);
@@ -1648,6 +1785,181 @@ fn handle_choosingbuffmenu (
 fn cleanup_choosingbuffmenu (
     mut commands: Commands,
     query: Query<Entity, With<ChoosingBuffMenu>>,
+) {
+    for entity in query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+}
+
+fn setup_gameovermenu (
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    source: Res<GlobalMenuTextureAtlas>,
+) {
+   let font: Handle<Font> = asset_server.load("Fonts/FIXEDSYS-EXCELSIOR-301.ttf");
+    commands.spawn((
+        //底
+        ImageNode::new(source.menu.clone()),
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(130.0),
+            position_type: PositionType::Absolute,
+            left: Val::Percent(0.0),
+            top: Val::Percent(-10.0),
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            ..default()
+        },
+        GameOverMenu,
+    ))
+    .with_children(|parent| {
+            //顶
+            parent.spawn((
+                ImageNode::new(source.top.clone()),
+                Node {
+                    width: Val::Percent(70.0),
+                    height: Val::Percent(59.0),
+                    top: Val::Percent(20.7),
+                    left: Val::Percent(15.0),
+                    align_items: AlignItems::Center,
+                    position_type: PositionType::Absolute,
+                    ..default()
+                },
+            ))
+            .with_children(|parent| {
+                // 角色简介底
+                parent.spawn(( 
+                    ImageNode::new(source.list.clone()),
+                    Node {
+                        width: Val::Percent(45.0),
+                        height: Val::Percent(68.8),
+                        top: Val::Percent(10.7),
+                        left: Val::Percent(52.5),
+                        position_type: PositionType::Absolute,
+                        ..Default::default()
+                    }, 
+                ));
+                // 别针
+                parent.spawn(( 
+                    ImageNode::new(source.title.clone()),
+                    Node {
+                        width: Val::Percent(23.3),
+                        height: Val::Percent(16.5),
+                        top: Val::Percent(-4.2),
+                        left: Val::Percent(13.5),
+                        position_type: PositionType::Absolute,
+                        ..Default::default()
+                    }, 
+                ))                
+                .with_child((
+                    Text::new("Game Over!"),
+                    TextFont {
+                        font: font.clone(),
+                        font_size: 35.0,
+                        ..default()
+                    },
+                    TextColor(Color::rgb(0.0, 0.0, 0.0)),
+                    Node {
+                        top: Val::Percent(0.0),
+                        left: Val::Percent(20.0),
+                        position_type: PositionType::Absolute,
+                        ..Default::default()
+                    },
+                ));
+                // 按钮
+                parent.spawn(( 
+                    Name::new("back to home"),
+                    ImageNode::new(source.button.clone()),
+                    Node {
+                        width: Val::Percent(17.5),
+                        height: Val::Percent(7.4),
+                        top: Val::Percent(67.5),
+                        left: Val::Percent(66.7),
+                        position_type: PositionType::Absolute,
+                        ..Default::default()
+                   }, 
+                   Button,
+                ))
+                .with_child((
+                    Text::new("back to home"),
+                    TextFont {
+                        font: font.clone(),
+                        font_size: 20.0,
+                        ..default()
+                    },
+                    TextColor(Color::rgb(0.0, 0.0, 0.0)),
+                    Node {
+                        top: Val::Percent(0.0),
+                        left: Val::Percent(20.0),
+                        position_type: PositionType::Absolute,
+                        ..Default::default()
+                    },
+                ));
+            });
+        });
+}
+
+fn handle_gameovermenu (
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut camera_query: Query<(&Transform, &mut GameState), (With<Camera2d>, Without<PauseMenu>)>,
+    mut menu_query: Query<(&mut Transform, &PauseMenu,), (Without<Camera2d>, Without<Node>)>,
+    mut interaction_query: Query<(
+            &mut ImageNode,
+            &Interaction,
+            &Name,),
+        (Changed<Interaction>, With<Button>),
+    >,
+    mut windows: Query<&mut Window>,
+    mut query: Query<&mut Node, (With<PauseMenu>, Without<Camera2d>)>,
+    source: Res<GlobalMenuTextureAtlas>,
+    // mut mgr: ResMut<AssetsManager>,
+    mut next_state: ResMut<NextState<InGameState>>,
+) {
+    if camera_query.is_empty() {
+        return;
+    }
+    let (camera_trans, mut nextstate) = camera_query.single_mut();
+    let loc = camera_trans.translation.truncate();
+    for (mut image, interaction, name) in &mut interaction_query {
+        info!("interaction: ");
+        match *interaction {
+            Interaction::Pressed => {
+                println!("{}Clicked!", name);
+                match name.as_str() {
+                    "back to home" => {
+                        if let Ok(mut window) = windows.get_single_mut() {
+                            window.cursor_options.visible = false;
+                        }
+                        next_state.set(InGameState::Running);
+                        *nextstate = GameState::Home;
+                        commands.spawn((
+                            Sprite {
+                                image: asset_server.load("Menu_Transition1.png"),
+                                ..Default::default()
+                            },
+                            Transform::from_scale(Vec3::new(0.7,0.7,0.5))
+                                .with_translation(Vec3::new(loc.x-3200.0, loc.y, 100.0)),
+                            Transition,
+                        ));
+                    },
+                    _ => {}
+                }
+            },
+            Interaction::Hovered => {
+                println!("Hovered!");
+                image.image = source.button_hover.clone();
+            },
+            Interaction::None => {
+                image.image = source.button.clone();
+            },
+        }
+    }
+}
+
+fn cleanup_gameovermenu (
+    mut commands: Commands,
+    query: Query<Entity, With<GameOverMenu>>,
 ) {
     for entity in query.iter() {
         commands.entity(entity).despawn_recursive();

@@ -26,7 +26,10 @@ impl Plugin for FollowCameraPlugin {
 }
 
 fn setup_camera(mut commands: Commands) {
-    commands.spawn(Camera2d);
+    commands.spawn((
+        Camera2d,
+        GameState::None,
+    ));
 }
 fn update_camera(
     mut camera_query: Query<&mut Transform, With<Camera2d>>,
