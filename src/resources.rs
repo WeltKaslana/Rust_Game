@@ -536,6 +536,9 @@ pub struct GlobalEnemyTextureAtlas {
 
     pub layout_born: Handle<TextureAtlasLayout>,
     pub image_bron: Handle<Image>,
+
+    pub layout_gun_hit: Handle<TextureAtlasLayout>,
+    pub image_gun_hit: Handle<Image>,
 }
 
 impl GlobalEnemyTextureAtlas {
@@ -587,6 +590,10 @@ impl GlobalEnemyTextureAtlas {
         let layoutborn = TextureAtlasLayout::from_grid(UVec2::splat(48), 12, 1, None,None);
         let imagebeon = String::from("Entity_Spawn.png");
 
+        let layoutgunhit = TextureAtlasLayout::from_grid(UVec2::splat(32),6,1,None,None);
+        let imagegunhit = String::from("Shiroko_Hit_Effect.png");
+
+
         Self {
             layout_sweeper_idle: texture_atlas_layouts.add(layoutsweeperidle),
             image_sweeper_idle: asset_server.load(imagesweeperidle),
@@ -631,6 +638,9 @@ impl GlobalEnemyTextureAtlas {
 
             layout_born: texture_atlas_layouts.add(layoutborn),
             image_bron: asset_server.load(imagebeon),
+
+            layout_gun_hit: texture_atlas_layouts.add(layoutgunhit),
+            image_gun_hit: asset_server.load(imagegunhit),
         }
     }
 }

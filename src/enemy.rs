@@ -1127,7 +1127,7 @@ fn handle_enemy_bullet_collision_events(
     enemy_query: Query<Entity, (With<Enemy>, Without<EnemyBullet>, Without<Boss>)>,
     enemy_bullet_query: Query<(Entity, & Transform), (With<EnemyBullet>, Without<Enemy>, Without<Boss>)>,
     boss_query: Query<Entity, (With<Boss>, Without<Enemy>, Without<EnemyBullet>)>,
-    source: Res<GlobalCharacterTextureAtlas>,
+    source: Res<GlobalEnemyTextureAtlas>,
 ) {
     if enemy_bullet_query.is_empty() {
         return;
@@ -1151,7 +1151,7 @@ fn handle_enemy_bullet_collision_events(
                             Sprite {
                                 image: source.image_gun_hit.clone(),
                                 texture_atlas: Some(TextureAtlas {
-                                    layout: source.lay_out_gun_hit.clone(),
+                                    layout: source.layout_gun_hit.clone(),
                                     index: 0,
                                 }),
                                 ..default()
@@ -1181,7 +1181,7 @@ fn handle_enemy_bullet_collision_events(
                             Sprite {
                                 image: source.image_gun_hit.clone(),
                                 texture_atlas: Some(TextureAtlas {
-                                    layout: source.lay_out_gun_hit.clone(),
+                                    layout: source.layout_gun_hit.clone(),
                                     index: 0,
                                 }),
                                 ..default()
