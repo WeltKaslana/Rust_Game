@@ -236,7 +236,7 @@ fn handle_gun_fire(
     if !buff_query.is_empty() {
         let buff = buff_query.single();
         bullet_num = buff.0;
-        gun_speed = buff.1 as f32;
+        gun_speed += (buff.1 as f32 - 1.0) * 0.12;
         bullet_spread = buff.3 as f32;
         bullet_size += (buff.4 - 1) as f32 * 0.3;
     }

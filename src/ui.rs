@@ -63,6 +63,11 @@ fn setup_ui_all (
     asset_server: Res<AssetServer>,
     loc_query: Query<&Transform, With<Camera2d>>,
 ) {
+    unsafe {
+        // 初始化血条偏移量
+        bar_offset = 0.0;
+        buffer_offset = 0.0;
+    }
     if loc_query.is_empty() {
         return;
     }

@@ -3,10 +3,13 @@ use crate::{
     character::{
         AnimationConfig, 
         Character,
+        Player,
         ReloadPlayerEvent,
     }, 
     gamestate::*, 
     gui::Transition, 
+    ui::UI,
+    room::Map,
     resources::*,
 };
 use bevy_rapier2d::{
@@ -46,12 +49,32 @@ impl Plugin for HomePlugin {
     fn build(&self, app: &mut App) {
         app
             // .add_systems(Update, log_transitions::<GameState>)
-            .add_systems(OnEnter(GameState::Home), setup)
+            .add_systems(OnEnter(GameState::Home), (
+                clear_all.before(setup),
+                setup,
+            ))
             .add_systems(Update, (
                 check_state, 
                 update_wall,
             ).run_if(in_state(HomeState::Running)))
             .add_systems(OnExit(GameState::Home), cleanup);
+    }
+}
+
+fn clear_all(
+    mut commands: Commands,
+    query1: Query<Entity, (With<Player>, (Without<UI>, Without<Map>))>,
+    query2: Query<Entity, (With<UI>, (Without<Player>, Without<Map>))>,
+    query3: Query<Entity, (With<Map>, (Without<UI>, Without<Player>))>,
+) {
+    for entity in query1.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+    for entity in query2.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+    for entity in query3.iter() {
+        commands.entity(entity).despawn_recursive();
     }
 }
 
@@ -221,7 +244,7 @@ fn setup(
         Transform::from_translation(Vec3::new(0.0, -296.0, 10.0)),
         Home,
         ));
-
+    println!("Home set up!");
 }
 
 //更改角色
@@ -247,7 +270,7 @@ fn check_state(
     mut fridge_query: Query<(&Transform, &mut Sprite, &mut FridgeState), (With<Fridge>, Without<Character>, Without<Sora>)>,
     mut source: ResMut<GlobalHomeTextureAtlas>,
     // mut character_source: ResMut<GlobalCharacterTextureAtlas>,
-    camera_query: Query<&Transform, With<Camera2d>>,
+    mut camera_query: Query<(&Transform, &mut GameState), With<Camera2d>>,
     transition_query: Query<&mut Transform, (With<Transition>, Without<Character>, Without<Fridge>, Without<Sora>, Without<Camera2d>)>,
     // mut events: EventWriter<ReloadPlayerEvent>,
     mut next_state: ResMut<NextState<HomeState>>,
@@ -318,7 +341,7 @@ fn check_state(
             FridgeState::Open => {
                 if keyboard_input.just_pressed(KeyCode::KeyE) && transition_query.is_empty() {
                     info!("Game Start!");
-                    for trans in camera_query.iter() {
+                    for (trans, mut nextstate) in camera_query.iter_mut() {
                         commands.spawn((
                             Sprite {
                                 image: asset_server.load("Menu_Transition1.png"),
@@ -327,7 +350,9 @@ fn check_state(
                             Transform::from_scale(Vec3::new(0.7,0.7,0.5))
                                 .with_translation(Vec3::new(trans.translation.x-3200.0, trans.translation.y, 100.0)),
                             Transition,
-                        ));                     
+                        )); 
+                        // 下一状态设为InGame
+                        *nextstate = GameState::Loading;                    
                     }
 
                     //为了测试，先将状态转换到游戏中，游戏初始化状态之后再设置

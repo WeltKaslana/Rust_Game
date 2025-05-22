@@ -509,7 +509,7 @@ fn check_ifcomplete(
     enemyclear_query2: Query<Entity, (With<EnemyBorn>)>,
     bossclear_query: Query<Entity, (With<BossComponent>, Without<EnemyBorn>, Without<Enemy>)>,
     transition_query: Query<Entity, (With<Transition>, Without<Enemy>)>,
-    camera_query: Query<&Transform, With<Camera2d>>,
+    mut camera_query: Query<(&Transform, &mut GameState), With<Camera2d>>,
     mut door_query: Query<(&mut Door, & Transform), With<Door>>,
     mut chest_query: Query<&mut Chest, With<Chest>>,
     player_query: Query<&Transform, With<Character>>,
@@ -530,7 +530,7 @@ fn check_ifcomplete(
         if distance <= 125.0 &&  door.0 == 3 {
             if keyboard_input.just_pressed(KeyCode::KeyE) && transition_query.is_empty() {
                 println! ("你过关!");
-                for trans in camera_query.iter() {
+                for (trans, mut nextstate) in camera_query.iter_mut() {
                     commands.spawn((
                         Sprite {
                             image: asset_server.load("Menu_Transition1.png"),
@@ -539,7 +539,8 @@ fn check_ifcomplete(
                         Transform::from_scale(Vec3::new(0.7,0.7,0.5))
                             .with_translation(Vec3::new(trans.translation.x-3200.0, trans.translation.y, 100.0)),
                         Transition,
-                    ));                     
+                    )); 
+                    *nextstate = GameState::Loading;                    
                 }
             }
         }

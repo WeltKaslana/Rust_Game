@@ -1,3 +1,4 @@
+use bevy::ecs::event;
 use bevy::math::vec3;
 use bevy::sprite;
 use bevy::{
@@ -8,6 +9,7 @@ use bevy::{
 use bevy_rapier2d::prelude::*;
 
 use std::{time::Duration};
+use crate::gui::Transition;
 use crate::{
     gamestate::*,
     enemy::{
@@ -87,6 +89,10 @@ pub struct PlayerHurtEvent;
 
 #[derive(Event)]
 pub struct ReloadPlayerEvent(pub u8);
+
+#[derive(Event)]
+pub struct GameOverEvent;
+
 //定义角色动画帧率
 #[derive(Component)]
 
@@ -113,6 +119,7 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_event::<ReloadPlayerEvent>()
+            .add_event::<GameOverEvent>()
             .add_systems(OnEnter(GameState::Home), setup_player)
             .add_systems(Update, reload_player)
             // .add_systems(
@@ -782,7 +789,10 @@ fn handle_player_bullet_collision_events(
 
 fn handle_player_death(
     mut player_query: Query<&mut Health, With<Character>>,
-    mut next_state: ResMut<NextState<GameState>>,
+    mut windows: Query<&mut Window>,
+    query:  Query<Entity, With<Transition>>,
+    mut next_state: ResMut<NextState<InGameState>>,
+    mut events: EventWriter<GameOverEvent>,
 ) {
     if player_query.is_empty() {
         return;
@@ -791,7 +801,15 @@ fn handle_player_death(
     if health.0 <= 0.0 {
         //可以的话加个死亡动画慢动作
         health.0 = 0.0;
-        println!("Game Over!");
+        if query.is_empty() {
+            events.send(GameOverEvent);
+            println!("Game Over!");
+            if let Ok(mut window) = windows.get_single_mut() {
+                window.cursor_options.visible = true;
+            }
+            next_state.set(InGameState::GameOver);
+        }
+
         // next_state.set(GameState::OverMenu);//进结算界面
     }
 }
