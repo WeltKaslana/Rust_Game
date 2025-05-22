@@ -10,13 +10,13 @@ use crate::{
         set_boss, Boss, BossComponent, BossDeathEffect, BossState, Direction, Skillflag
     }, 
     character::{
-        AnimationConfig, Character, Drone, DroneBullet, PlayerState, State, GrenadeHit, Health
+        AnimationConfig, Character, Drone, DroneBullet, PlayerState, State, GrenadeHit, handle_player_skill4,
     }, 
     enemy::{
         set_enemy, BulletDirection, Enemy, EnemyBullet, EnemyDeathEffect, EnemyState, EnemyType, Fireflag, PatrolState
     }, 
     gamestate::*, 
-    gun::{self, Bullet, BulletHit, Cursor, Gun, GunFire, SpawnInstant, GunState, }, 
+    gun::{self, Bullet, BulletHit, Cursor, Gun, GunFire, SpawnInstant, GunState, BulletDamage, }, 
     home::{Fridge, FridgeState, Sora, SoraState}, 
     resources::{
         GlobalBossTextureAtlas, GlobalCharacterTextureAtlas, GlobalEnemyTextureAtlas, GlobalHomeTextureAtlas
@@ -180,18 +180,26 @@ fn animate_player_gun_and_bullet (
     ), (With<Gun>, Without<Bullet>)>,
     mut bullet_query: Query<(
         &mut AnimationConfig, 
+        & BulletDamage,
         &mut Sprite, 
     ), (With<Bullet>, Without<Gun>)>,
     source: Res<GlobalCharacterTextureAtlas>,
 ) {
     if source.id == 2 {
-        for (mut config, mut bullet) in bullet_query.iter_mut() {
+        for (mut config,damage , mut bullet) in bullet_query.iter_mut() {
                 // arisu有个大的炮要单独设置
                 config.frame_timer.tick(time.delta());
                 if config.frame_timer.just_finished(){
+                    let mut flame = 0;
+                    if damage.0 > 20.0 {
+                        // 光之剑
+                        flame = 8;
+                    } else {
+                        flame = 4;
+                    }
                     if let Some(atlas) = &mut bullet.texture_atlas {
                         config.frame_timer = AnimationConfig::timer_from_fps(config.fps2p);
-                        atlas.index = (atlas.index+1) % 4;
+                        atlas.index = (atlas.index+1) % flame;
                     }
                 }
         }
@@ -218,6 +226,28 @@ fn animate_player_gun_and_bullet (
                 },
                 GunState::SP => {
                     // arisu大招
+                    config.frame_timer.tick(time.delta());
+                    if config.frame_timer.just_finished(){
+                        // info!("ok!");
+                        if let Some(atlas) = &mut gun.texture_atlas {
+                            config.frame_timer = AnimationConfig::timer_from_fps(config.fps2p);
+                            atlas.index = match atlas.index {
+                                0..=11 => atlas.index + 1,
+                                12 => 9,
+                                18..=24 =>  atlas.index + 1,
+                                _ => 0
+                            };
+                            if atlas.index ==25 {
+                                // 退出大招模式
+                                gun.image = source.image_gun.clone();
+                                gun.texture_atlas = Some(TextureAtlas {
+                                    layout: source.lay_out_gun.clone(),
+                                    index: 0,
+                                });
+                                *state = GunState::Normal;
+                            }
+                        }
+                    }
                 }
                 _ => {},
             }
@@ -840,6 +870,7 @@ fn animate_droneskill (
                         DroneBullet,
                         Bullet,
                         gun::BulletDirection(dir),
+                        BulletDamage(5.0),
                         AnimationConfig::new(10),
                         SpawnInstant(Instant::now()),
                         
@@ -869,6 +900,7 @@ fn animate_droneskill (
                         DroneBullet,
                         Bullet,
                         gun::BulletDirection(dir),
+                        BulletDamage(5.0),
                         AnimationConfig::new(10),
                         SpawnInstant(Instant::now()),
                         

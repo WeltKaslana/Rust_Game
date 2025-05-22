@@ -1,4 +1,5 @@
 use std::f32::consts::PI;
+use bevy::input::keyboard;
 use bevy::utils::Instant;
 
 use bevy::math::{vec2, vec3};
@@ -7,11 +8,13 @@ use bevy::time::Stopwatch;
 use bevy_rapier2d::prelude::*;
 use rand::Rng;
 
+
 use crate::{
-    character::{Character, AnimationConfig, Player, Buff, },
+    character::{Character, AnimationConfig, Player, Buff, handle_player_skill4},
     gamestate::*,
     CursorPosition,
     GlobalCharacterTextureAtlas,
+    enemy::EnemyBullet,
     configs::{BULLET_SPAWN_INTERVAL, 
               BULLET_SPEED, 
               BULLET_TIME_SECS,
@@ -37,6 +40,9 @@ pub struct GunFire;
 pub struct Bullet;
 
 #[derive(Component)]
+pub struct BulletDamage(pub f32);
+
+#[derive(Component)]
 pub struct BulletHit;
 
 #[derive(Component)]
@@ -44,6 +50,9 @@ pub struct SpawnInstant(pub Instant);
 
 #[derive(Component)]
 pub struct BulletDirection(pub Vec3);
+
+#[derive(Component)]
+pub struct ArisuSPDamage(pub i8);
 
 #[derive(Component)]
 pub enum GunState {
@@ -168,6 +177,7 @@ fn setup_gun(
         GunState::Normal,
         Gun,
         GunTimer(Stopwatch::default()),
+        ArisuSPDamage(1),
         Player,
         ));
 }
@@ -216,9 +226,10 @@ fn handle_gun_transform(
 fn handle_gun_fire(
     time: Res<Time>,
     mut commands: Commands,
-    mut gun_query: Query<(&mut Sprite, &mut GunState, &Transform, &mut GunTimer), (With<Gun>, Without<Character>)>,
+    mut gun_query: Query<(&mut Sprite, &mut ArisuSPDamage, &mut GunState, &Transform, &mut GunTimer), (With<Gun>, Without<Character>)>,
     buff_query: Query<&Buff, (With<Character>, Without<Gun>)>,
     mouse_button_input: Res<ButtonInput<MouseButton>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
     mut ew: EventWriter<PlayerFireEvent>,
     source: Res<GlobalCharacterTextureAtlas>,
 ) {
@@ -241,13 +252,117 @@ fn handle_gun_fire(
         bullet_size += (buff.4 - 1) as f32 * 0.3;
     }
 
+
+
+    let (mut gun, mut arisu_damage, mut state, gun_transform, mut gun_timer) = gun_query.single_mut();
+    let gun_pos = gun_transform.translation.truncate();
+    let bullet_direction = gun_transform.local_x();
+
     if source.id == 2 {
+        // 处理爱丽丝4技能蓄力炮
         //arisu
         gun_speed /= 3.0;
+        if keyboard_input.pressed(KeyCode::ControlLeft){
+            // println!("大炮");
+            match *state {
+                
+                GunState::SP => {
+                    if let Some(atlas) = &gun.texture_atlas {
+                        if atlas.index<13 && atlas.index>8 {
+                            arisu_damage.0 += 1;
+                            if arisu_damage.0 > 120 {
+                                arisu_damage.0 = 120;
+                            }
+                        }
+                    }
+                },
+                _ => {
+                    *state = GunState::SP;
+                    // 蓄力计伤初始化
+                    arisu_damage.0 = 1;
+                    gun.image = source.image_gun_fire_special.clone();
+                    gun.texture_atlas = Some(TextureAtlas {
+                        layout: source.layout_gun_fire_special.clone(),
+                        index: 0,
+                    });
+                }
+            }
+            return;
+            //  光之剑优先级比开火高
+        }
+        if keyboard_input.just_released(KeyCode::ControlLeft) {
+            match *state {
+                GunState::SP => {
+                    // 光之剑进入发射阶段
+                    if let Some(atlas) = &mut gun.texture_atlas {
+                        atlas.index = 18;
+                    }
+                    println!("arisu damage: {}", arisu_damage.0);
+
+                },
+                _ =>{}
+            }
+            //枪口焰动画
+            commands.spawn((Sprite {
+                image: source.image_gun_fire_effect.clone(),
+                texture_atlas: Some(TextureAtlas {
+                    layout: source.lay_out_gun_fire_effect.clone(),
+                    index: 0,
+                }),
+                ..Default::default()
+                },
+                Transform{
+                    translation: vec3(gun_pos.x + bullet_direction.x * 30.0, 
+                                    gun_pos.y + bullet_direction.y * 30.0, 
+                                    32.0),//深度要盖过枪
+                    rotation: Quat::from_rotation_z(bullet_direction.y.atan2(bullet_direction.x)),
+                    scale: Vec3::splat(2.5),
+                },
+                AnimationConfig::new(15),
+                GunFire,
+                Player,
+            ));
+
+            //光之剑生成
+            commands.spawn((
+                Sprite {
+                    image: source.image_bullet_special.clone(),
+                    texture_atlas: Some(TextureAtlas {
+                        layout: source.layout_bullet_special.clone(),
+                        index: 0,
+                    }),
+                    ..default()
+                },
+                Transform {
+                    translation: vec3(
+                        gun_pos.x + bullet_direction.x * 80.0, 
+                        gun_pos.y + bullet_direction.y * 80.0, 
+                        1.0),
+                    rotation: Quat::from_rotation_z(bullet_direction.y.atan2(bullet_direction.x)),
+                    scale: Vec3::splat(2.5) * bullet_size,
+                },
+                AnimationConfig::new(8),
+                Player,
+                Bullet,
+                BulletDirection(bullet_direction.clone().into()),
+                BulletDamage(40.0),
+                SpawnInstant(Instant::now()),
+                //碰撞体
+                Collider::ball(bullet_size * 15.0),
+
+                RigidBody::Dynamic,
+                GravityScale(0.0),
+                ColliderMassProperties::Mass(1000.0),
+                LockedAxes::ROTATION_LOCKED,
+                // Sensor,
+                // CollisionGroups::new(Group::GROUP_3, Group::GROUP_2),
+                ActiveEvents::COLLISION_EVENTS,
+            ));
+            return;
+            //  光之剑优先级比开火高
+        }
     }
 
-    let (mut gun, mut state, gun_transform, mut gun_timer) = gun_query.single_mut();
-    let gun_pos = gun_transform.translation.truncate();
     gun_timer.0.tick(time.delta());
 
     //如果tick在检测鼠标按键后就会出现单点不射击的情况
@@ -257,17 +372,23 @@ fn handle_gun_fire(
     // println!("mouse pressed!");
 
     let mut rng = rand::rng();
-    let bullet_direction = gun_transform.local_x();
+
     if gun_timer.0.elapsed_secs() >= BULLET_SPAWN_INTERVAL / gun_speed {
         gun_timer.0.reset();
         if source.id == 2 {//arisu枪有开火动画
-            gun.image = source.image_gun_fire.clone();
-            gun.texture_atlas = Some(TextureAtlas {
-                layout: source.layout_gun_fire.clone(),
-                index: 0,
-            });
-            *state = GunState::Fire;
-            // println!("arisu fire!");
+            match *state {
+                GunState::SP => {},
+                _ => {
+                    gun.image = source.image_gun_fire.clone();
+                    gun.texture_atlas = Some(TextureAtlas {
+                        layout: source.layout_gun_fire.clone(),
+                        index: 0,
+                    });
+                    *state = GunState::Fire;
+                    // println!("arisu fire!");
+                }
+            }
+
         }
         ew.send(PlayerFireEvent);
 
@@ -340,6 +461,7 @@ fn handle_gun_fire(
                 Player,
                 Bullet,
                 BulletDirection(dir),
+                BulletDamage(5.0),
                 SpawnInstant(Instant::now()),
                 //碰撞体
                 Collider::cuboid(2.0 * bullet_size, 1.0 * bullet_size),
@@ -377,6 +499,7 @@ fn handle_bullet_move(
 fn despawn_old_bullets(
     mut commands: Commands,
     bullet_query: Query<(&SpawnInstant, Entity, &Transform), (With<Bullet>, Without<Character>)>,
+    enemy_bullet_query: Query<Entity, (Without<Bullet>, With<EnemyBullet>)>,
     player_query: Query<Entity, (With<Character>, Without<Bullet>)>,
     mut collision_events: EventReader<CollisionEvent>,
     source: Res<GlobalCharacterTextureAtlas>,
@@ -395,17 +518,21 @@ fn despawn_old_bullets(
                 if let Ok((instant, e, transf)) = bullet_query.get(*entity1) {
                     if !bullet_query.get(*entity2).is_ok() && !player_query.get(*entity2).is_ok() {
                         // 子弹之间和子弹与玩家不碰撞
-                        commands.entity(*entity1).despawn();
-                        trans = transf.translation;
-                        flag = true;
+                        if source.id !=2 || !enemy_bullet_query.get(*entity2).is_ok() {
+                            // 爱丽丝的光之剑不会和敌人子弹碰撞
+                            commands.entity(*entity1).despawn();
+                            trans = transf.translation;
+                            flag = true;
+                        }
                     }
-
                 }
                 if let Ok((instant, e, transf)) = bullet_query.get(*entity2) {
                     if !bullet_query.get(*entity1).is_ok() && !player_query.get(*entity1).is_ok()  {
-                        commands.entity(*entity2).despawn();
-                        trans = transf.translation;
-                        flag = true;
+                        if source.id !=2 || !enemy_bullet_query.get(*entity1).is_ok() {
+                            commands.entity(*entity2).despawn();
+                            trans = transf.translation;
+                            flag = true;
+                        }
                     }
                 }
                 if flag {

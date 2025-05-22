@@ -341,6 +341,7 @@ fn statetransition(
             // info!("transition to loading!");
         },
         GameState::Loading if delta >= 800.0 => {
+            // mgr.cycle_map(&mut commands);
             next_state.set(GameState::InGame);
             // info!("transition to game!");
         },

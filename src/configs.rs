@@ -46,7 +46,7 @@ pub const BOSS_CHARGE_SPEED: f32 = 2.0 * 240.0 / fps as f32;
 pub const KD_TREE_REFRESH_RATE: f32 = 0.1;
 
 // Gun
-pub const BULLET_SPAWN_INTERVAL: f32 = 0.3;
+pub const BULLET_SPAWN_INTERVAL: f32 = 0.3 / 3.0;
 pub const BULLET_TIME_SECS: f32 = 3.0;
 pub const BULLET_SPEED: f32 = 8.0 * 100.0 / fps as f32;
 pub const BULLET_DAMAGE: f32 = 15.0 * 2.0;

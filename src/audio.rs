@@ -58,6 +58,9 @@ fn audio_play__MainMenu(
     for e in bgm_query.iter() {
         commands.entity(e).despawn_recursive();
     }
+    unsafe {
+        hasplay = false;
+    }
     commands.spawn((
         AudioPlayer::new(asset_server.load("AudioClip/MainMenu - Takaramonogatari.wav")),
         PlaybackSettings::LOOP.with_volume(Volume::new(0.3)),
@@ -71,6 +74,9 @@ fn audio_play_Home(
 ) {
     for e in bgm_query.iter() {
         commands.entity(e).despawn_recursive();
+    }
+    unsafe {
+        hasplay = false;
     }
     commands.spawn((
         AudioPlayer::new(asset_server.load("AudioClip/Angel24 - Cotton Candy Island.wav")),

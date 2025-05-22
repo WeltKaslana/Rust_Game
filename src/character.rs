@@ -1,8 +1,6 @@
 use bevy::ecs::event;
 use bevy::math::vec3;
-use bevy::sprite;
 use bevy::{
-    dev_tools::states::*, 
     prelude::*, 
     time::Stopwatch,
     ecs::world::DeferredWorld,};
@@ -17,7 +15,9 @@ use crate::{
         Enemy,},
     gun::{
         Gun,
+        GunState,
         BulletDirection,
+        ArisuSPDamage,
         SpawnInstant,},
 };
 use crate::*;
@@ -1103,68 +1103,148 @@ fn handle_player_move3(
 }
 
 
-fn handle_player_skill4 (
+pub fn handle_player_skill4 (
     mut commands: Commands,
     transform_query: Query<(&Sprite, &Transform), (With<Character>, Without<Drone>, Without<DroneBullet>, Without<Enemy>)>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    asset_server: Res<AssetServer>,
-    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    // asset_server: Res<AssetServer>,
+    // mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
     mut drone_query: Query<(&mut Sprite, & State), (With<Drone>, Without<DroneBullet>, Without<Enemy>, Without<Character>)>,
     mut drone_bullet_query: Query<(&Transform, &mut BulletDirection), (With<DroneBullet>, Without<Drone>, Without<Enemy>, Without<Character>)>,
     enemy_query: Query<&Transform, (With<Enemy>, Without<DroneBullet>, Without<Drone>, Without<Character>)>,
+    // arisu
+    // mut gun_query: Query<(&mut GunState, &mut ArisuSPDamage, &mut Sprite), With<Gun>>,
+
     source: Res<GlobalCharacterTextureAtlas>,
 ) {
     if transform_query.is_empty() {
         return;
     }
-    let (player, player_transform) = transform_query.single();
-    if !drone_query.is_empty() {//存在小飞机
-        let (mut drone, state) = drone_query.single_mut();
-        if state.0 != 0 {
-            // drone.image = asset_server.load("Shiroko_Drone_Fire.png");
-            // if let Some(atlas) = &mut drone.texture_atlas {
-            //     atlas.layout = texture_atlas_layouts.add(TextureAtlasLayout::from_grid(UVec2::splat(96),7,1,None,None));
-            // }
-            drone.image = source.image_drone_fire.clone();
-            if let Some(atlas) = &mut drone.texture_atlas {
-                atlas.layout = source.layout_drone_fire.clone();
+    match source.id {
+        1 => {
+            // shiroko drone
+            let (player, player_transform) = transform_query.single();
+            if !drone_query.is_empty() {//存在小飞机
+                let (mut drone, state) = drone_query.single_mut();
+                if state.0 != 0 {
+                    drone.image = source.image_drone_fire.clone();
+                    if let Some(atlas) = &mut drone.texture_atlas {
+                        atlas.layout = source.layout_drone_fire.clone();
+                    }
+                }
+            } else if keyboard_input.just_pressed(KeyCode::KeyQ)  {//不存在小飞机，则按Q生成小飞机
+                commands.spawn((
+                    Sprite {
+                        image:  source.image_drone_idle.clone(),
+                        texture_atlas: Some(TextureAtlas {
+                            layout: source.layout_drone_idle.clone(),
+                            index: 0,
+                        }),
+                        flip_x: player.flip_x,
+                        ..Default::default()
+                    },
+                    Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(player_transform.translation.x, player_transform.translation.y, 31.0)),
+                    Player,
+                    Drone,
+                    State(0),
+                    AnimationConfig::new(10),
+                ));
             }
-        }
-    } else if keyboard_input.just_pressed(KeyCode::KeyQ)  {//不存在小飞机，则按Q生成小飞机
-        commands.spawn((
-            Sprite {
-                // image: asset_server.load("Shiroko_Drone_Idle.png"),
-                // texture_atlas: Some(TextureAtlas {
-                //     layout: texture_atlas_layouts.add(TextureAtlasLayout::from_grid(UVec2::splat(64),7,1,None,None)),
-                //     index: 0,
-                // }),
-                image:  source.image_drone_idle.clone(),
-                texture_atlas: Some(TextureAtlas {
-                    layout: source.layout_drone_idle.clone(),
-                    index: 0,
-                }),
-                flip_x: player.flip_x,
-                ..Default::default()
-            },
-            Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(player_transform.translation.x, player_transform.translation.y, 31.0)),
-            Player,
-            Drone,
-            State(0),
-            AnimationConfig::new(10),
-        ));
-    }
-    if drone_bullet_query.is_empty() ||  enemy_query.is_empty() {
-        return ;
-    } else {
-        for (bullet_transform, mut bullet_direction) in drone_bullet_query.iter_mut() {
-            let mut dis = 99999.9;
-            for enemy_transform in enemy_query.iter() {
-                let d = (bullet_transform.translation - enemy_transform.translation).length();
-                if d < dis {
-                    dis = d;
-                    bullet_direction.0 = (enemy_transform.translation - bullet_transform.translation).normalize();
+            if drone_bullet_query.is_empty() ||  enemy_query.is_empty() {
+                return ;
+            } else {
+                for (bullet_transform, mut bullet_direction) in drone_bullet_query.iter_mut() {
+                    let mut dis = 99999.9;
+                    for enemy_transform in enemy_query.iter() {
+                        let d = (bullet_transform.translation - enemy_transform.translation).length();
+                        if d < dis {
+                            dis = d;
+                            bullet_direction.0 = (enemy_transform.translation - bullet_transform.translation).normalize();
+                        }
+                    }
                 }
             }
-        }
+        },
+        // 2 if !gun_query.is_empty() => {
+        //     let (mut gunstate, mut damage, mut gun) = gun_query.single_mut();
+        //     if keyboard_input.pressed(KeyCode::Space){
+        //         // println!("大炮");
+
+        //         match *gunstate {
+                    
+        //             GunState::SP => {
+        //                 if let Some(atlas) = &gun.texture_atlas {
+        //                     if atlas.index<13 && atlas.index>8 {
+        //                         damage.0 += 1;
+        //                     }
+        //                 }
+        //             },
+        //             _ => {
+        //                 *gunstate = GunState::SP;
+        //                 // 蓄力计伤初始化
+        //                 damage.0 = 1;
+        //                 gun.image = source.image_gun_fire_special.clone();
+        //                 gun.texture_atlas = Some(TextureAtlas {
+        //                     layout: source.layout_gun_fire_special.clone(),
+        //                     index: 0,
+        //                 });
+        //             }
+        //         }
+        //         if keyboard_input.just_released(KeyCode::Space) {
+        //             match *gunstate {
+        //                 GunState::SP => {
+        //                     // 光之剑进入发射阶段
+        //                     if let Some(atlas) = &mut gun.texture_atlas {
+        //                         atlas.index = 18;
+        //                     }
+        //                 },
+        //                 _ =>{}
+        //             }
+        //         }
+        //     }
+        // },
+        3 => {},
+        _ => {}
     }
+    // let (player, player_transform) = transform_query.single();
+    // if !drone_query.is_empty() {//存在小飞机
+    //     let (mut drone, state) = drone_query.single_mut();
+    //     if state.0 != 0 {
+    //         drone.image = source.image_drone_fire.clone();
+    //         if let Some(atlas) = &mut drone.texture_atlas {
+    //             atlas.layout = source.layout_drone_fire.clone();
+    //         }
+    //     }
+    // } else if keyboard_input.just_pressed(KeyCode::KeyQ)  {//不存在小飞机，则按Q生成小飞机
+    //     commands.spawn((
+    //         Sprite {
+    //             image:  source.image_drone_idle.clone(),
+    //             texture_atlas: Some(TextureAtlas {
+    //                 layout: source.layout_drone_idle.clone(),
+    //                 index: 0,
+    //             }),
+    //             flip_x: player.flip_x,
+    //             ..Default::default()
+    //         },
+    //         Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(player_transform.translation.x, player_transform.translation.y, 31.0)),
+    //         Player,
+    //         Drone,
+    //         State(0),
+    //         AnimationConfig::new(10),
+    //     ));
+    // }
+    // if drone_bullet_query.is_empty() ||  enemy_query.is_empty() {
+    //     return ;
+    // } else {
+    //     for (bullet_transform, mut bullet_direction) in drone_bullet_query.iter_mut() {
+    //         let mut dis = 99999.9;
+    //         for enemy_transform in enemy_query.iter() {
+    //             let d = (bullet_transform.translation - enemy_transform.translation).length();
+    //             if d < dis {
+    //                 dis = d;
+    //                 bullet_direction.0 = (enemy_transform.translation - bullet_transform.translation).normalize();
+    //             }
+    //         }
+    //     }
+    // }
 }

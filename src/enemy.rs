@@ -1,6 +1,6 @@
 use bevy::{dev_tools::states::*, prelude::*, time::Stopwatch};
 use crate::boss::Boss;
-use crate::gun::Bullet;
+use crate::gun::{Bullet, BulletDamage};
 use crate::{
     gamestate::*,
     configs::*, 
@@ -1047,7 +1047,7 @@ fn handle_enemy_death(
 fn handle_enemy_hurt_collision_events(
     // mut commands: Commands,
     buff_query: Query<&Buff>,
-    player_query: Query<Entity, (With<Bullet>)>,
+    player_query: Query<(Entity, &BulletDamage), (With<Bullet>)>,
     mut collision_events: EventReader<CollisionEvent>,
     mut enemy_query: Query<(Entity, &mut Health), (With<Enemy>, Without<Bullet>)>,
     source: Res<GlobalCharacterTextureAtlas>,
@@ -1058,11 +1058,17 @@ fn handle_enemy_hurt_collision_events(
         }
 
         let buff = buff_query.single();
-        let vulnerable = match source.id {
+        let mut vulnerable = match source.id {
             // 不同子弹伤害不同，后续可以叠加dot之类的伤害
             2 => 3.0,
             _ => 1.0,
         };
+        for (_, d) in player_query.iter() {
+            if d.0 > 20.0 {
+                // 光之剑
+                vulnerable = 12.0;
+            }
+        }
         let bulletdamage = ((buff.4 - 1) as f32 * 0.25 + 1.0) * vulnerable;
         for (enemy, mut health) in &mut enemy_query.iter_mut() {
             match collision_event {

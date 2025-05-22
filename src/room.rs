@@ -72,6 +72,13 @@ impl AssetsManager {
         }
     }
 
+    pub fn clear(&mut self, commands: &mut Commands) {
+        self.map_assets = Vec::new();
+        self.map_entity = None;
+        self.text_entity = commands.spawn(Text::from(AssetsManager::BASE_TEXT)).id();
+        self.map_index = 0;
+    }
+
     pub fn add_map(&mut self, map_infos: MapInfos) {
         self.map_assets.push(map_infos);
     }
@@ -82,13 +89,13 @@ impl AssetsManager {
             self.map_assets[self.map_index].path
         );
 
-        // Update displayed text
-        commands.entity(self.text_entity).insert(Text::from(format!(
-            "{}\nmap name = {}\n{}",
-            AssetsManager::BASE_TEXT,
-            self.map_assets[self.map_index].path,
-            self.map_assets[self.map_index].description
-        )));
+        // // Update displayed text
+        // commands.entity(self.text_entity).insert(Text::from(format!(
+        //     "{}\nmap name = {}\n{}",
+        //     AssetsManager::BASE_TEXT,
+        //     self.map_assets[self.map_index].path,
+        //     self.map_assets[self.map_index].description
+        // )));
 
         // Handle map update: despawn the map if it already exists
         if let Some(entity) = self.map_entity {
@@ -96,6 +103,7 @@ impl AssetsManager {
         }
 
         // Then spawn the new map
+        info!("map_index:{}",self.map_index);
         let mut entity_commands = commands.spawn((TiledMapHandle(
             self.map_assets[self.map_index].asset.to_owned(),
             ),
@@ -141,6 +149,7 @@ impl Plugin for RoomPlugin {
 
             // .add_systems(OnEnter(GameState::Loading), load_room)
             .add_systems(Startup, load_room)
+            .add_systems(OnEnter(GameState::Home), load_room1)
             .add_systems(Update, (
                 // check_collision,
                 // check_contact,
@@ -159,70 +168,43 @@ impl Plugin for RoomPlugin {
 }   
 fn load_room(
     mut commands: Commands, 
-    asset_server: Res<AssetServer>,
 ) {
-    let mut mgr = AssetsManager::new(&mut commands);
-    
-    mgr.add_map(MapInfos::new(
-        &asset_server, 
-        "普通房1.tmx", 
-        "A finite orthogonal map with only object colliders", 
-        |c| {
-            c.insert((
-                TiledMapAnchor::Center,
-                TiledPhysicsSettings::<TiledPhysicsRapierBackend> {
-                    objects_filter: TiledName::All,
-                    // objects_layer_filter: TiledName::Names(vec![String::from("1")]),
-                    // tiles_objects_filter: TiledName::Names(vec![String::from("platform1")]),
-                    //用来过滤图块层
-                    // tiles_layer_filter: TiledName::Names(vec![String::from("decoration")]),
-                    //用来过滤指定图块层中的图块，对象层同理
-                    tiles_objects_filter: TiledName::All,
-                    ..default()
-                },
-            ));
-        },
-    ));
-    mgr.add_map(MapInfos::new(
-        &asset_server, 
-        "普通房2.tmx", 
-        "A finite orthogonal map with only object colliders", 
-        |c| {
-            c.insert((
-                TiledMapAnchor::Center,
-                TiledPhysicsSettings::<TiledPhysicsRapierBackend> {
-                    objects_filter: TiledName::All,
-                    // objects_layer_filter: TiledName::Names(vec![String::from("1")]),
-                    // tiles_objects_filter: TiledName::Names(vec![String::from("platform1")]),
-                    //用来过滤图块层
-                    // tiles_layer_filter: TiledName::Names(vec![String::from("decoration")]),
-                    //用来过滤指定图块层中的图块，对象层同理
-                    tiles_objects_filter: TiledName::All,
-                    ..default()
-                },
-            ));
-        },
-    ));
-    mgr.add_map(MapInfos::new(
-        &asset_server, 
-        "普通房3.tmx", 
-        "A finite orthogonal map with only object colliders", 
-        |c| {
-            c.insert((
-                TiledMapAnchor::Center,
-                TiledPhysicsSettings::<TiledPhysicsRapierBackend> {
-                    objects_filter: TiledName::All,
-                    // objects_layer_filter: TiledName::Names(vec![String::from("1")]),
-                    // tiles_objects_filter: TiledName::Names(vec![String::from("platform1")]),
-                    //用来过滤图块层
-                    // tiles_layer_filter: TiledName::Names(vec![String::from("decoration")]),
-                    //用来过滤指定图块层中的图块，对象层同理
-                    tiles_objects_filter: TiledName::All,
-                    ..default()
-                },
-            ));
-        },
-    ));
+    let mgr = AssetsManager::new(&mut commands);
+    commands.insert_resource(mgr);
+}
+fn load_room1(
+    mut commands: Commands, 
+    asset_server: Res<AssetServer>,
+    mut mgr: ResMut<AssetsManager>,
+) {
+    mgr.clear(&mut commands);
+    // 普通房数量
+    let room_size = 7;
+    // 普通房长度
+    let len = 4;
+    for _ in 1..=len {
+        let path = format!("普通房{}.tmx", rand::rng().random_range(1..room_size));
+        mgr.add_map(MapInfos::new(
+            &asset_server, 
+            &path, 
+            "A finite orthogonal map with only object colliders", 
+            |c| {
+                c.insert((
+                    TiledMapAnchor::Center,
+                    TiledPhysicsSettings::<TiledPhysicsRapierBackend> {
+                        objects_filter: TiledName::All,
+                        // objects_layer_filter: TiledName::Names(vec![String::from("1")]),
+                        // tiles_objects_filter: TiledName::Names(vec![String::from("platform1")]),
+                        //用来过滤图块层
+                        // tiles_layer_filter: TiledName::Names(vec![String::from("decoration")]),
+                        //用来过滤指定图块层中的图块，对象层同理
+                        tiles_objects_filter: TiledName::All,
+                        ..default()
+                    },
+                ));
+            },
+        ));
+    }
     mgr.add_map(MapInfos::new(
         &asset_server, 
         "boss房1.tmx", 
@@ -243,9 +225,7 @@ fn load_room(
             ));
         },
     ));
-    commands.insert_resource(mgr);
 }
-
 fn switch_map(
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
