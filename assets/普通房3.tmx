@@ -179,22 +179,7 @@
   <object id="5" name="Enemy" x="129.333" y="231">
    <point/>
   </object>
-  <object id="6" name="Enemy" x="175" y="174">
-   <point/>
-  </object>
-  <object id="7" name="Enemy" x="250.333" y="175">
-   <point/>
-  </object>
   <object id="8" name="Enemy" x="209.667" y="125.333">
-   <point/>
-  </object>
-  <object id="9" name="Enemy" x="306" y="202.333">
-   <point/>
-  </object>
-  <object id="10" name="Enemy" x="322" y="316">
-   <point/>
-  </object>
-  <object id="11" name="Enemy" x="306.333" y="363">
    <point/>
   </object>
   <object id="12" name="chest" x="125" y="188.667">

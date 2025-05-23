@@ -176,22 +176,10 @@
   <object id="5" name="Enemy" x="164.5" y="654.5">
    <point/>
   </object>
-  <object id="7" name="Enemy" x="529" y="678.5">
-   <point/>
-  </object>
-  <object id="8" name="Enemy" x="442.5" y="450">
-   <point/>
-  </object>
   <object id="9" name="Enemy" x="396" y="400">
    <point/>
   </object>
-  <object id="10" name="Enemy" x="311" y="375">
-   <point/>
-  </object>
   <object id="11" name="Enemy" x="221.5" y="424.5">
-   <point/>
-  </object>
-  <object id="12" name="Enemy" x="256.5" y="337">
    <point/>
   </object>
   <object id="13" name="Enemy" x="370" y="324.5">
@@ -201,12 +189,6 @@
    <point/>
   </object>
   <object id="15" name="Enemy" x="292" y="242.5">
-   <point/>
-  </object>
-  <object id="16" name="Enemy" x="324" y="148.5">
-   <point/>
-  </object>
-  <object id="17" name="Enemy" x="386" y="206.5">
    <point/>
   </object>
   <object id="18" name="Enemy" x="394.5" y="121.5">
