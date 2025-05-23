@@ -1,4 +1,5 @@
 use std::f32::consts::PI;
+use bevy::ecs::event::EventCursor;
 use bevy::input::keyboard;
 use bevy::utils::Instant;
 
@@ -10,7 +11,7 @@ use rand::Rng;
 
 
 use crate::{
-    character::{Character, AnimationConfig, Player, Buff, handle_player_skill4},
+    character::{Character, AnimationConfig, Player, Buff, PlayerSkill4Event},
     gamestate::*,
     CursorPosition,
     GlobalCharacterTextureAtlas,
@@ -63,11 +64,14 @@ pub enum GunState {
 
 #[derive(Event)]
 pub struct PlayerFireEvent;
+#[derive(Event)]
+pub struct PlayerSkill4FireEvent;
 
 impl Plugin for GunPlugin {
     fn build(&self, app: &mut App) {
         app
         .add_event::<PlayerFireEvent>()
+        .add_event::<PlayerSkill4FireEvent>()
         .add_systems(OnEnter(GameState::Home), (setup_gun,setup_cursor))
         // .add_systems(
         //     Update,(
@@ -231,6 +235,8 @@ fn handle_gun_fire(
     mouse_button_input: Res<ButtonInput<MouseButton>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut ew: EventWriter<PlayerFireEvent>,
+    mut events: EventWriter<PlayerSkill4Event>,
+    mut events2: EventWriter<PlayerSkill4FireEvent>,
     source: Res<GlobalCharacterTextureAtlas>,
 ) {
     //枪的开火没法通用，ARISU的枪和子弹甚至有开火动画，而UTAHA居然用的不是枪
@@ -285,6 +291,7 @@ fn handle_gun_fire(
                         layout: source.layout_gun_fire_special.clone(),
                         index: 0,
                     });
+                    events.send(PlayerSkill4Event);
                 }
             }
             return;
@@ -298,7 +305,7 @@ fn handle_gun_fire(
                         atlas.index = 18;
                     }
                     println!("arisu damage: {}", arisu_damage.0);
-
+                    events2.send(PlayerSkill4FireEvent);
                 },
                 _ =>{}
             }

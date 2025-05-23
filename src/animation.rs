@@ -111,7 +111,8 @@ fn animate_player(
         &mut Sprite, 
         &mut PlayerState, 
         &mut KinematicCharacterController,
-    ), With<Character>>,
+    ), (With<Character>, Without<Gun>)>,
+    mut gun_query: Query<&mut Visibility, (With<Gun>, Without<Character>)>,
     source: Res<GlobalCharacterTextureAtlas>,
 ) {
     if player_query.is_empty() {
@@ -155,9 +156,22 @@ fn animate_player(
                         }
                         2 => {
                             //arisu
+                            atlas.index = atlas.index + 1;
+                            if atlas.index == 11 {
+                                atlas.index = 0;
+                                *state = PlayerState::Jumpover;
+                                controller.filter_groups = None;
+                                // arisu的光之剑需要隐藏
+                                for mut gun in gun_query.iter_mut() {
+                                    *gun = Visibility::Visible;
+                                }
+                            }
                         }
-                        _ => {
+                        3 => {
                             //Utaha
+                        },
+                        _ => {
+                            
                         }
                     }
                 },
