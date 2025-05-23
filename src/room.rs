@@ -1,14 +1,14 @@
 use bevy::{
-    animation::transition, color::palettes::css::{BLUE, GREEN, RED}, dev_tools::states::*, ecs::{component::ComponentId, system::EntityCommands, world::DeferredWorld}, math::{Vec3, VectorSpace}, prelude::*, utils::info 
+    animation::transition, color::palettes::css::{BLUE, GREEN, RED}, dev_tools::states::*, ecs::{component::ComponentId, system::EntityCommands, world::DeferredWorld}, math::{Vec3, VectorSpace}, prelude::*, time::Stopwatch, utils::info 
     };
 use bevy_ecs_tiled::{prelude::*,};
 // use bevy_ecs_tilemap::{map::TilemapSize, TilemapBundle};
-
+use std::time::Duration;
 use bevy_rapier2d::{prelude::*};
 use rand::Rng;
 
 use crate::{
-    boss::{self, Boss, BossComponent, BossSetupEvent}, character::{AnimationConfig, Character}, enemy::Enemy, gamestate::GameState, gui::Transition, gun::Bullet, resources::*
+    boss::{self, Boss, BossComponent, BossSetupEvent}, character::{AnimationConfig, Character, Health}, enemy::{Enemy, EnemybornPoint, Enemybornduration, Enemybornflag, Enemyterm}, gamestate::GameState, gui::Transition, gun::Bullet, resources::*
 };
 pub struct RoomPlugin;
 
@@ -280,6 +280,8 @@ fn evt_object_created(
         // println!("size:{}, {}", temp.tilemap_size.x,temp.tilemap_size.y);
     };
     size *= 8.0;
+    let mut termrng = rand::rng();
+    let term = termrng.random_range(1..=3);
 
     for e in object_events.read() {
         let Ok((name, mut transform)) = object_query.get_mut(e.entity) else {
@@ -316,8 +318,60 @@ fn evt_object_created(
                 Enemy,
                 EnemyBorn,
             ));
+            let duration = Duration::from_millis(1000);
+            commands.spawn((
+                Transform::from_translation(Vec3::new(
+                    (transform .translation.x - size.x) * 3.0, 
+                    (transform .translation.y - size.y) * 3.0, 
+                    0.0)).with_scale(Vec3::splat(2.5)),
+                EnemybornPoint,
+                Enemybornduration{
+                    timer: Stopwatch::new(),
+                    duration,
+                },
+                Enemyterm(term),
+                Enemybornflag(false),
+                Map,
+            ));
             info!("enemy created! ");
             // next_state.set(GameState::InGame);
+        }
+        if name.as_str() == "Object(Enemy1)" {
+            // let layout_born = TextureAtlasLayout::from_grid(UVec2::splat(48),12,1,None,None);
+            commands.spawn((
+                Sprite {
+                    image: source2.image_bron.clone(),//后续改用source2
+                    texture_atlas: Some(TextureAtlas {
+                        layout: source2.layout_born.clone(),
+                        index: 0,
+                    }),
+                    ..Default::default()
+                },
+                Transform::from_translation(Vec3::new(
+                    (transform .translation.x - size.x) * 3.0, 
+                    (transform .translation.y - size.y) * 3.0, 
+                    0.0)).with_scale(Vec3::splat(2.5)),
+                AnimationConfig::new(15),
+                Map,
+                Enemy,
+                EnemyBorn,
+            ));
+            let duration = Duration::from_millis(1000);
+            commands.spawn((
+                Transform::from_translation(Vec3::new(
+                    (transform .translation.x - size.x) * 3.0, 
+                    (transform .translation.y - size.y) * 3.0, 
+                    0.0)).with_scale(Vec3::splat(2.5)),
+                EnemybornPoint,
+                Enemybornduration{
+                    timer: Stopwatch::new(),
+                    duration,
+                },
+                Enemyterm(10),
+                Enemybornflag(false),
+                Map,
+            ));
+            info!("enemy created! ");
         }
         if name.as_str() == "Object(Boss)" {
             // let layout_born = TextureAtlasLayout::from_grid(UVec2::splat(48),12,1,None,None);
@@ -485,7 +539,7 @@ fn check_ifcomplete(
     mut commands: Commands,
     asset_server: Res<AssetServer>,//test
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    enemyclear_query1: Query<Entity, (With<Enemy>, Without<EnemyBorn>, Without<BossComponent>)>,
+    mut enemyclear_query1: Query<(&mut Health), (With<Enemy>, Without<EnemyBorn>, Without<BossComponent>)>,
     enemyclear_query2: Query<Entity, (With<EnemyBorn>)>,
     bossclear_query: Query<Entity, (With<BossComponent>, Without<EnemyBorn>, Without<Enemy>)>,
     transition_query: Query<Entity, (With<Transition>, Without<Enemy>)>,
@@ -493,8 +547,88 @@ fn check_ifcomplete(
     mut door_query: Query<(&mut Door, & Transform), With<Door>>,
     mut chest_query: Query<&mut Chest, With<Chest>>,
     player_query: Query<&Transform, With<Character>>,
+    mut bornplace_query: Query<(&Transform, &mut Enemybornflag, &mut Enemybornduration, &mut Enemyterm), With<EnemybornPoint>>,
+    source: Res<GlobalEnemyTextureAtlas>,
+    time: Res<Time>,
+    mut timer_query: Query<&mut Enemybornduration, (With<Enemybornduration>, Without<EnemybornPoint>)>,
 ) {
-    if enemyclear_query1.is_empty() && enemyclear_query2.is_empty() && bossclear_query.is_empty() {
+
+    let mut flag = true;
+    let mut timerng = rand::rng();
+    // let mut st = timer_query.single_mut();
+    for (transform, mut bornflag, mut duration, mut term) in bornplace_query.iter_mut() {
+        if bornflag.0 == true {
+            flag = false;
+            match term.0 {
+                0 => {continue;},
+                1..=3 => {
+                    bornflag.0 = false;
+                    term.0 -= 1;
+                    commands.spawn((
+                        Sprite {
+                            image: source.image_bron.clone(),//后续改用source2
+                            texture_atlas: Some(TextureAtlas {
+                                layout: source.layout_born.clone(),
+                                index: 0,
+                            }),
+                            ..Default::default()
+                        },
+                        Transform::from_translation(Vec3::new(
+                            transform.translation.x, 
+                            transform.translation.y,
+                            0.0)).with_scale(Vec3::splat(2.5)),
+                        AnimationConfig::new(15),
+                        Map,
+                        Enemy,
+                        EnemyBorn,
+                    ));
+                },
+                _ => {
+                    duration.timer.tick(time.delta());
+                    if duration.timer.elapsed() >= duration.duration {
+                        duration.timer.reset();
+                        let random_duration = Duration::from_millis(timerng.random_range(3000..=5000));
+                        duration.duration = random_duration;
+                        commands.spawn((
+                            Sprite {
+                                image: source.image_bron.clone(),//后续改用source2
+                                texture_atlas: Some(TextureAtlas {
+                                    layout: source.layout_born.clone(),
+                                    index: 0,
+                                }),
+                                ..Default::default()
+                            },
+                            Transform::from_translation(Vec3::new(
+                                transform.translation.x, 
+                                transform.translation.y,
+                                0.0)).with_scale(Vec3::splat(2.5)),
+                            AnimationConfig::new(15),
+                            Map,
+                            Enemy,
+                            EnemyBorn,
+                        ));
+                    }
+                    // st.timer.tick(time.delta());
+                    // // println!("{:?}",time.delta());
+                    // if st.timer.elapsed() >= st.duration {
+                    //     st.timer.reset();
+                    //     bornflag.0 = false;
+                    //     term.0 = 0;
+                    //     for mut health in enemyclear_query1.iter_mut() {
+                    //         health.0 = 0.0;
+                    //     }
+                    // }
+                }
+            }
+        } else if bornflag.0 == false && term.0 != 0 {
+            if enemyclear_query1.is_empty() && enemyclear_query2.is_empty() {
+                bornflag.0 = true;
+                flag = false;
+            }
+        }
+    }
+
+    if enemyclear_query1.is_empty() && enemyclear_query2.is_empty() && bossclear_query.is_empty() && flag == true {
 
         let player_transform = player_query.single();
         let (mut door, door_transform) =door_query.single_mut();
@@ -520,7 +654,7 @@ fn check_ifcomplete(
                             .with_translation(Vec3::new(trans.translation.x-3200.0, trans.translation.y, 100.0)),
                         Transition,
                     )); 
-                    *nextstate = GameState::Loading;                    
+                    *nextstate = GameState::Loading;
                 }
             }
         }

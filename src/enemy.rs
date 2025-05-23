@@ -1,12 +1,13 @@
+use bevy::transform;
 use bevy::{dev_tools::states::*, prelude::*, time::Stopwatch};
 use crate::boss::Boss;
-use crate::gun::{Bullet, BulletDamage};
+use crate::gun::Bullet;
 use crate::{
     gamestate::*,
     configs::*, 
     character::{* , Health}, 
     gun::BulletHit,
-    room::Map,
+    room::{Map, EnemyBorn},
 };
 use crate::*;
 use rand::Rng;
@@ -78,6 +79,21 @@ pub struct PatrolState {
     pub patrol_duration: Duration,
 }
 
+#[derive(Component)]
+pub struct EnemybornPoint;
+
+#[derive(Component)]
+pub struct Enemyterm(pub u8);
+
+#[derive(Component)]
+pub struct Enemybornduration{
+    pub timer: Stopwatch,
+    pub duration: Duration,
+}
+
+#[derive(Component)]
+pub struct Enemybornflag(pub bool);
+
 
 impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut App) {
@@ -109,6 +125,7 @@ impl Plugin for EnemyPlugin {
                         handle_enemy_bullet_collision_events,
                         handle_enemy_hurt_collision_events,
                         handle_enemy_hurt_collision_events_special,
+                        // handle_enemy_bron,
                 ).run_if(in_state(InGameState::Running))
             )
             ;
@@ -1047,7 +1064,7 @@ fn handle_enemy_death(
 fn handle_enemy_hurt_collision_events(
     // mut commands: Commands,
     buff_query: Query<&Buff>,
-    player_query: Query<(Entity, &BulletDamage), (With<Bullet>)>,
+    player_query: Query<Entity, (With<Bullet>)>,
     mut collision_events: EventReader<CollisionEvent>,
     mut enemy_query: Query<(Entity, &mut Health), (With<Enemy>, Without<Bullet>)>,
     source: Res<GlobalCharacterTextureAtlas>,
@@ -1058,17 +1075,11 @@ fn handle_enemy_hurt_collision_events(
         }
 
         let buff = buff_query.single();
-        let mut vulnerable = match source.id {
+        let vulnerable = match source.id {
             // 不同子弹伤害不同，后续可以叠加dot之类的伤害
             2 => 3.0,
             _ => 1.0,
         };
-        for (_, d) in player_query.iter() {
-            if d.0 > 20.0 {
-                // 光之剑
-                vulnerable = 12.0;
-            }
-        }
         let bulletdamage = ((buff.4 - 1) as f32 * 0.25 + 1.0) * vulnerable;
         for (enemy, mut health) in &mut enemy_query.iter_mut() {
             match collision_event {
