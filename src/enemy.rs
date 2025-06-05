@@ -31,8 +31,8 @@ pub enum EnemyBullet {
     UnknownGuardian,
 } 
 
-// #[derive(Component)]
-// pub struct Health(pub f32);
+#[derive(Event)]
+pub struct BaseSetupEvent;
 
 #[derive(Component)]
 pub enum Idleflag {
@@ -128,6 +128,7 @@ impl Plugin for EnemyPlugin {
                         // handle_enemy_bron,
                 ).run_if(in_state(InGameState::Running))
             )
+            .add_event::<BaseSetupEvent>()
             ;
     }
 }

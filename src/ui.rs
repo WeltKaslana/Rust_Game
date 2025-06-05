@@ -1,7 +1,5 @@
 use bevy::{
-    dev_tools::states::*, 
-    prelude::*, 
-    color::palettes::css::{BLUE, GREEN, RED},};
+    color::palettes::css::{BLUE, GREEN, RED}, dev_tools::states::*, prelude::*, scene::ron::de};
 
 use crate::{
     boss::{self, Boss, BossDeathEvent, BossSetupEvent}, character::{
@@ -10,6 +8,8 @@ use crate::{
         Player,
         PlayerHurtEvent
     }, gamestate::GameState, room::Map, PLAYER_HEALTH, BOSS_HEALTH,
+    enemy::{BaseSetupEvent},
+    room::{Progress}
 };
 
 pub struct UIPlugin;
@@ -32,6 +32,12 @@ pub struct Bossbar;
 #[derive(Component)]
 pub struct Bossbufferbar;
 
+#[derive(Component)]
+pub struct TimerUI;
+
+#[derive(Component)]
+pub struct Timerbar;
+
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut App) {
         app
@@ -44,6 +50,9 @@ impl Plugin for UIPlugin {
             handle_boss_ui_setup,
             handle_boss_ui_update,
             handle_boss_ui_delete,
+            handle_timer_ui_setup,
+            handle_timer_ui_update,
+            handle_timer_ui_delete,
         ))
         // .add_systems(Update, log_transitions::<GameState>)
         ;
@@ -57,6 +66,9 @@ static mut bar_offset:f32 = 0.0;
 const  BOSSUI_OFFSET: Vec3 = Vec3::new(0.0, 300.0, 0.0);
 static mut boss_buffer_offset:f32 = 0.0;
 static mut boss_bar_offset:f32 = 0.0;
+
+const TIMER_OFFSET: Vec3 = Vec3::new(0.0, 300.0, 0.0);
+static mut timer_offset:f32 = 0.0;
 
 fn setup_ui_all (
     mut commands: Commands,
@@ -356,5 +368,91 @@ fn handle_boss_ui_delete(
             commands.entity(entity).despawn();
         }
         break;
+    }
+}
+
+
+fn handle_timer_ui_setup(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut setupevent: EventReader<BaseSetupEvent>,
+    camera_query: Query<&Transform, With<Camera2d>>,
+) {
+    if camera_query.is_empty() {
+        return;
+    }
+    let loc = camera_query.single().translation.truncate();
+    for _ in setupevent.read() {
+        unsafe {
+            timer_offset = 0.0;
+        }
+        commands.spawn((
+            Sprite {
+                image: asset_server.load("UI_Hub_PlayerHealth_Bar.png"),
+                ..default()
+            },
+            Transform::from_scale(Vec3::splat(1.0))
+            .with_translation(Vec3::new(loc.x, loc.y, 90.0) + TIMER_OFFSET ),
+            TimerUI,
+            Map,
+        ));
+        commands.spawn((
+            Sprite {
+                image: asset_server.load("UI_Hub_PlayerHealth_2.png"),
+                ..default()
+            },
+            Transform::from_scale(Vec3::splat(1.0))
+            .with_translation(Vec3::new(loc.x, loc.y, 80.0) + TIMER_OFFSET ),
+            TimerUI,
+            Timerbar,
+            Map,
+        ));
+        break;
+    }
+}
+
+fn handle_timer_ui_update(
+    camera_query: Query<&Transform, (With<Camera2d>, Without<TimerUI>)>,
+    progress_query: Query<&Progress, With<Progress>>,
+    mut bar_query: Query<&mut Transform, (With<Timerbar>, With<TimerUI>, Without<Camera2d>)>,
+    mut ui_query: Query<&mut Transform, (Without<Timerbar>, With<TimerUI>, Without<Camera2d>)>
+) {
+    if camera_query.is_empty() ||progress_query.is_empty() || bar_query.is_empty() || ui_query.is_empty() {
+        return;
+    }
+    let progress = progress_query.single();
+    let mut bar = bar_query.single_mut();
+    let loc = camera_query.single().translation.truncate();
+
+    unsafe {
+        bar.translation = Vec3::new(loc.x + timer_offset, loc.y, bar.translation.z) + TIMER_OFFSET;
+    }
+
+    let mut trans = ui_query.single_mut();
+    trans.translation = Vec3::new(loc.x, loc.y, trans.translation.z) + TIMER_OFFSET;
+    
+    let mut delta = bar.scale.x;
+    let barwidth = 582.0;
+    bar.scale.x = progress.0 / 90.0 * barwidth;
+    delta -= bar.scale.x;
+
+    unsafe {
+        let temp = delta * 0.5 * barwidth;
+        timer_offset -= temp;
+        bar.translation.x -= temp;//提前响应，不然左侧会有瑕疵
+    }
+}
+
+fn handle_timer_ui_delete(
+    mut commands: Commands,
+    timer_query: Query<Entity, With<Progress>>,
+    ui_query: Query<Entity, With<TimerUI>>,
+) {
+    if ui_query.is_empty() {
+        return;
+    }
+    if timer_query.is_empty() {
+        let entity = ui_query.single();
+        commands.entity(entity).despawn();
     }
 }

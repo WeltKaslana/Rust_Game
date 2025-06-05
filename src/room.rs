@@ -1,5 +1,5 @@
 use bevy::{
-    animation::transition, color::palettes::css::{BLUE, GREEN, RED}, dev_tools::states::*, ecs::{component::ComponentId, system::EntityCommands, world::DeferredWorld}, math::{Vec3, VectorSpace}, prelude::*, time::Stopwatch, utils::info 
+    animation::transition, color::palettes::css::{BLUE, GREEN, RED}, dev_tools::states::*, ecs::{component::ComponentId, system::EntityCommands, world::DeferredWorld}, log::tracing_subscriber::fmt::time, math::{Vec3, VectorSpace}, prelude::*, time::Stopwatch, utils::info 
     };
 use bevy_ecs_tiled::{prelude::*,};
 // use bevy_ecs_tilemap::{map::TilemapSize, TilemapBundle};
@@ -8,7 +8,7 @@ use bevy_rapier2d::{prelude::*};
 use rand::Rng;
 
 use crate::{
-    boss::{self, Boss, BossComponent, BossSetupEvent}, character::{AnimationConfig, Character, Health}, enemy::{Enemy, EnemybornPoint, Enemybornduration, Enemybornflag, Enemyterm}, gamestate::GameState, gui::Transition, gun::Bullet, resources::*
+    boss::{self, Boss, BossComponent, BossSetupEvent}, character::{AnimationConfig, Character, Health}, enemy::{Enemy, EnemybornPoint, Enemybornduration, Enemybornflag, Enemyterm, BaseSetupEvent}, gamestate::GameState, gui::Transition, gun::Bullet, resources::*
 };
 pub struct RoomPlugin;
 
@@ -17,6 +17,9 @@ pub struct EnemyBorn;
 
 #[derive(Component)]
 pub struct Map;
+
+#[derive(Component)]
+pub struct Progress(pub f32);
 
 #[derive(Component)]
 pub struct Chest(pub i32);
@@ -157,10 +160,11 @@ impl Plugin for RoomPlugin {
                 evt_map_created,
                 ).run_if(in_state(GameState::Loading)))
             .add_systems(OnEnter(GameState::Loading),(
-                del_door_chest,
+                del_door_chest_base,
             ))
             .add_systems(Update, (
                 check_ifcomplete,
+                handle_base_timer,
             ).run_if(in_state(GameState::InGame)))
             // .add_systems(Update, log_transitions::<GameState>)
             ;
@@ -255,8 +259,8 @@ fn check_collision(
 fn evt_object_created(
     mut commands: Commands,
     //敌人诞生动画还没加入到resources中，后续完善了就改用source2调用图片
-    // asset_server: Res<AssetServer>,
-    // mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    asset_server: Res<AssetServer>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 
     mut object_events: EventReader<TiledObjectCreated>,
     mut object_query: Query<(&Name, &mut Transform), (With<TiledMapObject>, Without<Character>)>,
@@ -269,6 +273,7 @@ fn evt_object_created(
     source3: Res<GlobalRoomTextureAtlas>,
 
     mut events: EventWriter<BossSetupEvent>,
+    mut events2: EventWriter<BaseSetupEvent>,
     
 ) {
     let mut size = Vec2::ZERO;
@@ -336,7 +341,7 @@ fn evt_object_created(
             info!("enemy created! ");
             // next_state.set(GameState::InGame);
         }
-        if name.as_str() == "Object(Enemy1)" {
+        if name.as_str() == "Object(Enemy1)" {//重复刷怪点
             // let layout_born = TextureAtlasLayout::from_grid(UVec2::splat(48),12,1,None,None);
             commands.spawn((
                 Sprite {
@@ -397,7 +402,25 @@ fn evt_object_created(
             info!("boss created! ");
             // next_state.set(GameState::InGame);
         }
-
+        if name.as_str() == "Object(base)" { 
+            events2.send(BaseSetupEvent);
+            commands.spawn((
+                Sprite {
+                    image: asset_server.load("Prenapaters _Statue.png"),
+                    ..Default::default()
+                },
+                Transform::from_translation(Vec3::new(
+                    (transform .translation.x - size.x) * 3.0, 
+                    (transform .translation.y - size.y) * 3.0, 
+                    0.0)).with_scale(Vec3::splat(2.5)),
+                Map,
+                Progress(0.0),
+                Enemybornduration{
+                    timer: Stopwatch::new(),
+                    duration: Duration::from_secs(1),
+                }
+            ));
+        }
         if name.as_str() == "Object(door)" {
             commands.spawn((
                 Sprite {
@@ -550,7 +573,6 @@ fn check_ifcomplete(
     mut bornplace_query: Query<(&Transform, &mut Enemybornflag, &mut Enemybornduration, &mut Enemyterm), With<EnemybornPoint>>,
     source: Res<GlobalEnemyTextureAtlas>,
     time: Res<Time>,
-    mut timer_query: Query<&mut Enemybornduration, (With<Enemybornduration>, Without<EnemybornPoint>)>,
 ) {
 
     let mut flag = true;
@@ -587,7 +609,7 @@ fn check_ifcomplete(
                     duration.timer.tick(time.delta());
                     if duration.timer.elapsed() >= duration.duration {
                         duration.timer.reset();
-                        let random_duration = Duration::from_millis(timerng.random_range(3000..=5000));
+                        let random_duration = Duration::from_millis(timerng.random_range(500..=2000));
                         duration.duration = random_duration;
                         commands.spawn((
                             Sprite {
@@ -608,16 +630,6 @@ fn check_ifcomplete(
                             EnemyBorn,
                         ));
                     }
-                    // st.timer.tick(time.delta());
-                    // // println!("{:?}",time.delta());
-                    // if st.timer.elapsed() >= st.duration {
-                    //     st.timer.reset();
-                    //     bornflag.0 = false;
-                    //     term.0 = 0;
-                    //     for mut health in enemyclear_query1.iter_mut() {
-                    //         health.0 = 0.0;
-                    //     }
-                    // }
                 }
             }
         } else if bornflag.0 == false && term.0 != 0 {
@@ -662,10 +674,11 @@ fn check_ifcomplete(
 
 }
 
-fn del_door_chest(
+fn del_door_chest_base(
     mut commands: Commands,
     door_query: Query<Entity, With<Door>>,
     chest_query: Query<Entity, With<Chest>>,
+    base_query: Query<Entity, With<Progress>>
 ) {
     if !door_query.is_empty() {
         let entity = door_query.single();
@@ -676,6 +689,30 @@ fn del_door_chest(
             commands.entity(entity).despawn();
         }
     }
+    if !base_query.is_empty() {
+        let entity = base_query.single();
+        commands.entity(entity).despawn();
+    }
 }
 
-
+fn handle_base_timer(
+    mut base_query: Query<(&mut Progress, &mut Enemybornduration), With<Progress>>,
+    mut enemybornpoint_query: Query<&mut Enemyterm, With<Enemybornflag>>,
+    time: Res<Time>,
+) {
+    if base_query.is_empty() {
+        return ;
+    }
+    let (mut progress, mut dtimer) = base_query.single_mut();
+    dtimer.timer.tick(time.delta());
+    if dtimer.timer.elapsed() >= dtimer.duration {
+        progress.0 += 1.0;
+        dtimer.timer.reset();
+        println!("进度:{}", progress.0);
+        if progress.0 >= 30.0 {
+            for mut enemyterm in enemybornpoint_query.iter_mut() {
+                enemyterm.0 = 0;
+            }
+        }
+    }
+}   
