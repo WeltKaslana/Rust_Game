@@ -78,7 +78,7 @@ static mut boss_buffer_offset:f32 = 0.0;
 static mut boss_bar_offset:f32 = 0.0;
 
 const TIMER_OFFSET: Vec3 = Vec3::new(0.0, 300.0, 0.0);
-static mut timer_offset:f32 = 0.0;
+static mut timer_offset:f32 = -291.0;
 
 fn setup_ui_all (
     mut commands: Commands,
@@ -715,7 +715,7 @@ fn handle_timer_ui_update(
     
     let mut delta = bar.scale.x;
     let barwidth = 582.0;
-    bar.scale.x = progress.0 / 90.0 * barwidth;
+    bar.scale.x = progress.0 / 90.0;
     delta -= bar.scale.x;
 
     unsafe {

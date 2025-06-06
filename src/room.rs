@@ -8,7 +8,7 @@ use bevy_rapier2d::{prelude::*};
 use rand::Rng;
 
 use crate::{
-    boss::{self, Boss, BossComponent, BossSetupEvent}, character::{AnimationConfig, Character, Health}, enemy::{Enemy, EnemybornPoint, Enemybornduration, Enemybornflag, Enemyterm, BaseSetupEvent}, gamestate::GameState, gui::Transition, gun::Bullet, resources::*
+    boss::{self, Boss, BossComponent, BossSetupEvent}, character::{AnimationConfig, Character, Health}, enemy::{BaseSetupEvent, Enemy, EnemybornPoint, Enemybornduration, Enemybornflag, Enemyterm}, gamestate::{GameState, InGameState}, gui::Transition, gun::Bullet, resources::*
 };
 pub struct RoomPlugin;
 
@@ -166,6 +166,9 @@ impl Plugin for RoomPlugin {
                 check_ifcomplete,
                 handle_base_timer,
             ).run_if(in_state(GameState::InGame)))
+            .add_systems(Update, (
+                handle_base_timer,
+            ).run_if(in_state(InGameState::Running)))
             // .add_systems(Update, log_transitions::<GameState>)
             ;
     }
@@ -183,9 +186,9 @@ fn load_room1(
 ) {
     mgr.clear(&mut commands);
     // 普通房数量
-    let room_size = 7;
+    let room_size = 8;
     // 普通房长度
-    let len = 4;
+    let len = 2;
     for _ in 1..=len {
         let path = format!("普通房{}.tmx", rand::rng().random_range(1..room_size));
         mgr.add_map(MapInfos::new(
@@ -373,7 +376,7 @@ fn evt_object_created(
                     duration,
                 },
                 Enemyterm(10),
-                Enemybornflag(false),
+                Enemybornflag(true),
                 Map,
             ));
             info!("enemy created! ");
@@ -414,7 +417,7 @@ fn evt_object_created(
                     (transform .translation.y - size.y) * 3.0, 
                     0.0)).with_scale(Vec3::splat(2.5)),
                 Map,
-                Progress(0.0),
+                Progress(1.0),
                 Enemybornduration{
                     timer: Stopwatch::new(),
                     duration: Duration::from_secs(1),
@@ -582,7 +585,7 @@ fn check_ifcomplete(
         if bornflag.0 == true {
             flag = false;
             match term.0 {
-                0 => {continue;},
+                0 => {flag = true;},
                 1..=3 => {
                     bornflag.0 = false;
                     term.0 -= 1;
@@ -630,6 +633,7 @@ fn check_ifcomplete(
                             EnemyBorn,
                         ));
                     }
+                    
                 }
             }
         } else if bornflag.0 == false && term.0 != 0 {
@@ -705,11 +709,11 @@ fn handle_base_timer(
     }
     let (mut progress, mut dtimer) = base_query.single_mut();
     dtimer.timer.tick(time.delta());
-    if dtimer.timer.elapsed() >= dtimer.duration {
+    if dtimer.timer.elapsed() >= dtimer.duration  && progress.0 < 90.0 {
         progress.0 += 1.0;
         dtimer.timer.reset();
         println!("进度:{}", progress.0);
-        if progress.0 >= 30.0 {
+        if progress.0 >= 90.0 {
             for mut enemyterm in enemybornpoint_query.iter_mut() {
                 enemyterm.0 = 0;
             }

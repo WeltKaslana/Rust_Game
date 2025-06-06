@@ -94,6 +94,9 @@ pub struct Enemybornduration{
 #[derive(Component)]
 pub struct Enemybornflag(pub bool);
 
+#[derive(Event)]
+pub struct EnemyDeathEvent(pub Vec2);
+
 
 impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut App) {
@@ -113,6 +116,7 @@ impl Plugin for EnemyPlugin {
             //             handle_enemy_hurt_collision_events_special,
             //     ).run_if(in_state(GameState::InGame))
             // )
+            .add_event::<EnemyDeathEvent>()
             .add_systems(
                 Update,
                     (
@@ -1036,6 +1040,7 @@ fn handle_enemy_death(
     mut commands: Commands,
     mut enemy_query: Query<(Entity, & Health, & Transform), With<Enemy>>,
     source: Res<GlobalEnemyTextureAtlas>,
+    mut event: EventWriter<EnemyDeathEvent>
 ) {
     if enemy_query.is_empty() {
         return;
@@ -1059,6 +1064,7 @@ fn handle_enemy_death(
             )
             );
         }
+        event.send(EnemyDeathEvent(Vec2::new(loc.translation.x, loc.translation.y)));
     }
 }
 
