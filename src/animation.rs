@@ -31,23 +31,6 @@ pub struct AnimationPlugin;
 impl Plugin for AnimationPlugin {
     fn build(&self, app: &mut App) {
         app
-        // .add_systems(Update, log_transitions::<GameState>)
-        // .add_systems(
-        //     Update,
-        //     (
-        //         animate_player,
-        //         animate_enemy_born,
-        //         animate_enemy,
-        //         flip_gun_sprite_y,
-        //         flip_player_sprite_x,
-        //         animate_gunfire,
-        //         animate_enemy_bullet,
-        //         animate_boss,
-        //         boss_filpx,
-        //         enemyboss_death_effect,
-        //         animate_droneskill,
-        //         animate_door_and_chest,
-        //     ).run_if(in_state(GameState::InGame)),)
         .add_systems(
             Update,
             (
@@ -69,6 +52,7 @@ impl Plugin for AnimationPlugin {
                 (
                     animate_player,
                     animate_player_gun_and_bullet,
+                    animate_droneskill,
                     flip_player_sprite_x,
                     flip_gun_sprite_y,
                     animate_gunfire,
@@ -169,6 +153,19 @@ fn animate_player(
                         }
                         3 => {
                             //Utaha
+                            atlas.index = match atlas.index {
+                                0..2 => atlas.index + 1,
+                                2 => 5,
+                                5..8 => atlas.index + 1,
+                                8 => 10,
+                                10..=14 => atlas.index + 1,
+                                _ => 0,
+                            };
+                            if atlas.index == 15 {
+                                atlas.index = 0;
+                                *state = PlayerState::Jumpover;
+                                controller.filter_groups = None;
+                            }
                         },
                         _ => {
                             

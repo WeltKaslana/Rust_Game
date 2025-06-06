@@ -4,6 +4,7 @@ use crate::{
         AnimationConfig, 
         Character,
         Player,
+        PlayerState,
         ReloadPlayerEvent,
     }, 
     gamestate::*, 
@@ -265,7 +266,7 @@ fn check_state(
     asset_server: Res<AssetServer>,
     // mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut player_query: Query<&Transform, (With<Character>, Without<Sora>, Without<Fridge>)>,
+    player_query: Query<(&Transform, &PlayerState), (With<Character>, Without<Sora>, Without<Fridge>)>,
     mut sora_query: Query<(&Transform, &mut Sprite, &mut SoraState), (With<Sora>, Without<Fridge>, Without<Character>)>,
     mut fridge_query: Query<(&Transform, &mut Sprite, &mut FridgeState), (With<Fridge>, Without<Character>, Without<Sora>)>,
     mut source: ResMut<GlobalHomeTextureAtlas>,
@@ -279,9 +280,9 @@ fn check_state(
         // println!("empty1!");
         return;
     }
-    let player_pos = player_query.single().translation;
-    // let (mut player, pos) = player_query.single_mut();
-    // let player_pos = pos.translation;
+    // let player_pos = player_query.single().translation;
+    let (pos, player_state) = player_query.single();
+    let player_pos = pos.translation;
 
     let (sora_transform, mut sora_sprite, mut sora_state) = sora_query.single_mut();
     let (fridge_transform, mut fridge_sprite, mut fridge_state) = fridge_query.single_mut();
@@ -289,16 +290,16 @@ fn check_state(
     if (sora_transform.translation.x - player_pos.x).abs() < 100.0 {
         // println!("activate Sora!");
         if keyboard_input.just_pressed(KeyCode::KeyE) {
-            println!("Menu!");
-            if let Ok(mut window) = windows.get_single_mut() {
-                window.cursor_options.visible = true;
+            match *player_state {
+                PlayerState::Jump | PlayerState::Dodge => {},
+                _ => {
+                    println!("Menu!");
+                    if let Ok(mut window) = windows.get_single_mut() {
+                        window.cursor_options.visible = true;
+                    }
+                    next_state.set(HomeState::Reloading);
+                },
             }
-            next_state.set(HomeState::Reloading);
-
-            // test
-            // reload_player(2, &asset_server, &mut texture_atlas_layouts, character_source);
-            // events.send(ReloadPlayerEvent);
-            //
         }
         match *sora_state {
             SoraState::Loop => {

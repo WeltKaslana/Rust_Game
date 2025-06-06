@@ -1,23 +1,28 @@
 use bevy::{
-    color::palettes::css::{BLUE, GREEN, RED}, dev_tools::states::*, prelude::*, scene::ron::de};
+    color::palettes::css::{BLUE, GREEN, RED}, dev_tools::states::*, prelude::*, scene::ron::de, text::cosmic_text::ttf_parser::name};
+use bevy_rapier2d::na::ComplexField;
 
 use crate::{
-    boss::{self, Boss, BossDeathEvent, BossSetupEvent}, character::{
-        Character,
-        Health,
-        Player,
-        PlayerHurtEvent
-    }, gamestate::GameState, room::Map, PLAYER_HEALTH, BOSS_HEALTH,
-    enemy::{BaseSetupEvent},
-    room::{Progress}
+    boss::{Boss, BossDeathEvent, BossSetupEvent}, 
+    character::{
+        Character, Health, Player, PlayerHurtEvent, ReloadPlayerEvent, Skill2Timer, Skill3Timer, Skill4Timer
+    }, 
+    enemy::BaseSetupEvent, 
+    gamestate::GameState, room::{Map, Progress}, 
+    GlobalCharacterTextureAtlas, GlobalMenuTextureAtlas,
+    configs::*,
 };
 
 pub struct UIPlugin;
 
 #[derive(Component)]
+pub struct PlayerHealthBarBottom;
+#[derive(Component)]
 pub struct Bar;
 #[derive(Component)]
 pub struct BufferBar;
+#[derive(Component)]
+pub struct SkillIcon;
 #[derive(Component)]
 pub struct UI;
 #[derive(Component)]
@@ -47,6 +52,7 @@ impl Plugin for UIPlugin {
             hurtui,
             // update_ui,
             handle_state_bar,
+            handle_player_skill,
             handle_boss_ui_setup,
             handle_boss_ui_update,
             handle_boss_ui_delete,
@@ -54,12 +60,16 @@ impl Plugin for UIPlugin {
             handle_timer_ui_update,
             handle_timer_ui_delete,
         ))
-        // .add_systems(Update, log_transitions::<GameState>)
         ;
     }
 }
 //ui相对于摄像头的偏移量
 const UI_OFFSET: Vec3 = Vec3::new(-590.0, 240.0, 0.0);
+const SKILL_OFFSET: [Vec3; 3]= [
+    Vec3::new(530.0, -250.0, 0.0), 
+    Vec3::new(630.0, -250.0, 0.0), 
+    Vec3::new(730.0, -250.0, 0.0), 
+];
 static mut buffer_offset:f32 = 0.0;
 static mut bar_offset:f32 = 0.0;
 
@@ -74,6 +84,8 @@ fn setup_ui_all (
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     loc_query: Query<&Transform, With<Camera2d>>,
+    source: Res<GlobalCharacterTextureAtlas>,
+    source1: Res<GlobalMenuTextureAtlas>,
 ) {
     unsafe {
         // 初始化血条偏移量
@@ -83,8 +95,10 @@ fn setup_ui_all (
     if loc_query.is_empty() {
         return;
     }
-    let loc = loc_query.single().translation.truncate();
     //将UI设置的坐标生成为相对相机坐标
+    let loc = loc_query.single().translation.truncate();
+    
+    let font = asset_server.load("Fonts/FIXEDSYS-EXCELSIOR-301.ttf");
     //血条框
     commands.spawn((
         Sprite {
@@ -95,12 +109,13 @@ fn setup_ui_all (
         //     .with_translation(Vec3::new(-630.0, -350.0, 110.0)),
         Transform::from_scale(Vec3::splat(0.5))
         .with_translation(Vec3::new(loc.x ,loc.y ,90.0) + UI_OFFSET),
+        PlayerHealthBarBottom,
         UI,
     ))
     .with_child((
         Text2d::new(format!("{}/{}",PLAYER_HEALTH,PLAYER_HEALTH)),
         TextFont {
-            font: asset_server.load("Fonts/FIXEDSYS-EXCELSIOR-301.ttf"),
+            font: font.clone(),
             font_size: 35.0,
             ..default()
         }, 
@@ -134,6 +149,97 @@ fn setup_ui_all (
         Bar,
         UI,
     ));
+    // 三个技能图标
+    commands.spawn((
+        Name::new("Skill2"),
+        Sprite {
+                image: match source.id {
+                    1 => source1.shiroko_skill2.clone(),
+                    2 => source1.arisu_skill2.clone(),
+                    3 => source1.utaha_skill2.clone(),
+                    _ => {
+                        println!("Wrong id, connot set skill icon");
+                        source1.shiroko_skill2.clone()
+                    }
+                },
+                ..Default::default()
+            },
+        Transform::from_scale(Vec3::splat(0.8))
+            .with_translation(SKILL_OFFSET[0] + Vec3::new(loc.x, loc.y, 90.0)),
+        SkillIcon,
+        UI, 
+    )).with_child((
+        Name::new("Skill2"),
+        Text2d::new(format!("{}", SKILL2_CD as i32)),
+        TextFont {
+            font: font.clone(),
+            font_size: 60.0,
+            ..default()
+        }, 
+        TextColor(Color::rgb(123.0, 157.0, 131.0)),
+        Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
+    ));
+
+    commands.spawn((
+        Name::new("Skill3"),
+        Sprite {
+                image: match source.id {
+                    1 => source1.shiroko_skill3.clone(),
+                    2 => source1.arisu_skill3.clone(),
+                    3 => source1.utaha_skill3.clone(),
+                    _ => {
+                        println!("Wrong id, connot set skill icon");
+                        source1.shiroko_skill3.clone()
+                    }
+                },
+                ..Default::default()
+            },
+        Transform::from_scale(Vec3::splat(0.8))
+            .with_translation(SKILL_OFFSET[1] + Vec3::new(loc.x, loc.y, 90.0)),
+        SkillIcon,
+        UI, 
+    )).with_child((
+        Name::new("Skill3"),
+        Text2d::new(format!("{}", SKILL3_CD as i32)),
+        TextFont {
+            font: font.clone(),
+            font_size: 60.0,
+            ..default()
+        }, 
+        TextColor(Color::rgb(123.0, 157.0, 131.0)),
+        Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
+    ));
+
+    commands.spawn((
+        Name::new("Skill4"),
+        Sprite {
+                image: match source.id {
+                    1 => source1.shiroko_skill4.clone(),
+                    2 => source1.arisu_skill4.clone(),
+                    3 => source1.utaha_skill4.clone(),
+                    _ => {
+                        println!("Wrong id, connot set skill icon");
+                        source1.shiroko_skill4.clone()
+                    }
+                },
+                ..Default::default()
+            },
+        Transform::from_scale(Vec3::splat(0.8))
+            .with_translation(SKILL_OFFSET[2] + Vec3::new(loc.x, loc.y, 90.0)),
+        SkillIcon,
+        UI, 
+    )).with_child((
+        Name::new("Skill4"),
+        Text2d::new(format!("{}", SKILL4_CD as i32)),
+        TextFont {
+            font: font.clone(),
+            font_size: 60.0,
+            ..default()
+        }, 
+        TextColor(Color::rgb(123.0, 157.0, 131.0)),
+        Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
+    ));
+
 }
 
 
@@ -145,7 +251,7 @@ fn handle_state_bar(
     mut bar_query: Query<&mut Transform, (With<Bar>, Without<BufferBar>, Without<Character>, Without<Camera2d>)>,
     mut text_query: Query<&mut Text2d, With<Health>>,//后续可能文本框不止这一个，需要加限制过滤
     query2: Query<Entity, (With<Hurtui>, Without<Camera2d>)>,
-    mut ui_query: Query<&mut Transform, (With<UI>, Without<Camera2d>, Without<BufferBar>, Without<Bar>, Without<Character>)>,
+    mut ui_query: Query<&mut Transform, (With<PlayerHealthBarBottom>, Without<Camera2d>, Without<BufferBar>, Without<Bar>, Without<Character>)>,
 ) {
     if health_query.is_empty() ||buffer_query.is_empty() || bar_query.is_empty() || loc_query.is_empty(){
         return;
@@ -210,6 +316,182 @@ fn handle_state_bar(
             commands.entity(entity).despawn();
         }
 
+    }
+}
+
+fn handle_player_skill(
+    mut events: EventReader<ReloadPlayerEvent>,
+    timer_query: Query<(&Skill2Timer, &Skill3Timer, &Skill4Timer), (With<Character>, Without<Camera2d>, Without<SkillIcon>)>,
+    loc_query: Query<&Transform, (With<Camera2d>, Without<SkillIcon>)>,
+    mut skill_query: Query<(&mut Transform, &mut Sprite, &Name), (With<SkillIcon>, Without<Camera2d>)>,
+    mut text_query: Query<(&mut Text2d, &Name, &mut Visibility)>,
+    player_source: Res<GlobalCharacterTextureAtlas>,
+    source: Res<GlobalMenuTextureAtlas>,
+) {
+    if loc_query.is_empty() || skill_query.is_empty() {
+        return;
+    }
+    // 获取技能冷却时间,有后续多角色访问崩溃的风险
+    let (timer2, timer3, timer4) = timer_query.single();
+    // println!("Skill2: {}, Skill3: {}, Skill4: {}", timer2.0.elapsed_secs().ceil() as i32, timer3.0.elapsed_secs().ceil() as i32, timer4.0.elapsed_secs().ceil() as i32);
+    
+    // 处理角色切换
+    let mut reload = false;
+    for _ in events.read() {
+        reload = true;
+        break;
+    }
+
+    let loc = loc_query.single().translation.truncate();
+    for (mut trans, mut icon, name) in skill_query.iter_mut() {
+        match name.as_str() {
+            "Skill2" => {
+                trans.translation = Vec3::new(loc.x, loc.y, 90.0) + SKILL_OFFSET[0];
+                let cd = timer2.0.elapsed_secs();
+                if cd < 0.017 || (reload && cd < SKILL2_CD) { // 1/60
+                    icon.image = match player_source.id {
+                        1 => {
+                            source.shiroko_skill2_cool.clone()
+                        },
+                        2 => {
+                            source.arisu_skill2_cool.clone()
+                        },
+                        3 => {
+                           source.utaha_skill2_cool.clone()
+                        },
+                        _ => {
+                            println!("Wrong id, connot set skill icon");
+                            source.shiroko_skill2_cool.clone()
+                        }
+                    };
+                } else if cd > SKILL2_CD && cd <= SKILL2_CD + 0.017 || (reload && cd >= SKILL2_CD) { 
+                    icon.image = match player_source.id {
+                        1 => {
+                            source.shiroko_skill2.clone()
+                        },
+                        2 => {
+                            source.arisu_skill2.clone()
+                        },
+                        3 => {
+                           source.utaha_skill2.clone()
+                        },
+                        _ => {
+                            println!("Wrong id, connot set skill icon");
+                            source.shiroko_skill2.clone()
+                        }
+                    };
+                }
+            },
+            "Skill3" => {
+                trans.translation = Vec3::new(loc.x, loc.y, 90.0) + SKILL_OFFSET[1];
+                let cd = timer3.0.elapsed_secs();
+                if cd < 0.017 || (reload && cd < SKILL3_CD) { // 1/60
+                    icon.image = match player_source.id {
+                        1 => {
+                            source.shiroko_skill3_cool.clone()
+                        },
+                        2 => {
+                            source.arisu_skill3_cool.clone()
+                        },
+                        3 => {
+                           source.utaha_skill3_cool.clone()
+                        },
+                        _ => {
+                            println!("Wrong id, connot set skill icon");
+                            source.shiroko_skill3_cool.clone()
+                        }
+                    };
+                } else if cd > SKILL3_CD && cd <= SKILL3_CD + 0.017 || (reload && cd >= SKILL3_CD) { 
+                    icon.image = match player_source.id {
+                        1 => {
+                            source.shiroko_skill3.clone()
+                        },
+                        2 => {
+                            source.arisu_skill3.clone()
+                        },
+                        3 => {
+                           source.utaha_skill3.clone()
+                        },
+                        _ => {
+                            println!("Wrong id, connot set skill icon");
+                            source.shiroko_skill3.clone()
+                        }
+                    };
+                }
+            },
+            "Skill4" => {
+                trans.translation = Vec3::new(loc.x, loc.y, 90.0) + SKILL_OFFSET[2];
+                let cd = timer4.0.elapsed_secs();
+                if cd < 0.017 || (reload && cd < SKILL4_CD) { // 1/60
+                    icon.image = match player_source.id {
+                        1 => {
+                            source.shiroko_skill4_cool.clone()
+                        },
+                        2 => {
+                            source.arisu_skill4_cool.clone()
+                        },
+                        3 => {
+                           source.utaha_skill4_cool.clone()
+                        },
+                        _ => {
+                            println!("Wrong id, connot set skill icon");
+                            source.shiroko_skill4_cool.clone()
+                        }
+                    };
+                } else if cd > SKILL4_CD && cd <= SKILL4_CD + 0.017 || (reload && cd >= SKILL4_CD) { 
+                    icon.image = match player_source.id {
+                        1 => {
+                            source.shiroko_skill4.clone()
+                        },
+                        2 => {
+                            source.arisu_skill4.clone()
+                        },
+                        3 => {
+                           source.utaha_skill4.clone()
+                        },
+                        _ => {
+                            println!("Wrong id, connot set skill icon");
+                            source.shiroko_skill4.clone()
+                        }
+                    };
+                }
+            },
+            _ => {
+                println!("Wrong icon, connot update skill icon");
+            }
+        }
+    }
+    for (mut cd, name, mut vis) in text_query.iter_mut() {
+        match name.as_str() {
+            "Skill2" => {
+                let temp = timer2.0.elapsed_secs();
+                cd.0 = format!("{}", (SKILL2_CD - temp).ceil() as i32);
+                if temp > SKILL2_CD {
+                    *vis = Visibility::Hidden;
+                } else {
+                    *vis = Visibility::Visible;
+                }
+            },
+            "Skill3" => {
+                let temp = timer3.0.elapsed_secs();
+                cd.0 = format!("{}", (SKILL3_CD - temp).ceil() as i32);
+                if temp > SKILL3_CD {
+                    *vis = Visibility::Hidden;
+                } else {
+                    *vis = Visibility::Visible;
+                }
+            },
+            "Skill4" => {
+                let temp = timer4.0.elapsed_secs();
+                cd.0 = format!("{}", (SKILL4_CD - temp).ceil() as i32);
+                if temp > SKILL4_CD {
+                    *vis = Visibility::Hidden;
+                } else {
+                    *vis = Visibility::Visible;
+                }
+            },
+            _ => {}
+        }
     }
 }
 

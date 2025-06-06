@@ -1283,62 +1283,62 @@ fn setup_soramenu(
                         ..Default::default()
                     },
                 ));
-                parent.spawn((
-                    Name::new("bookmark_atlas"),
-                    ImageNode::new(source.bookmark.clone()),
-                    Node {
-                        width: Val::Percent(7.7),
-                        height: Val::Percent(10.7),
-                        top: Val::Percent(21.0),
-                        left: Val::Percent(-7.6),
-                        position_type: PositionType::Absolute,
-                        ..Default::default()
-                    },  
-                    Button,
-                ))
-                .with_child((
-                    Text::new("Atlas"),
-                    TextFont {
-                        // font: font.clone(),
-                        font_size: 15.0,
-                        ..default()
-                    },
-                    TextColor(Color::rgb(10.0, 0.0, 7.0)),
-                    Node {
-                        top: Val::Percent(0.0),
-                        left: Val::Percent(20.0),
-                        position_type: PositionType::Absolute,
-                        ..Default::default()
-                    },
-                ));
-                parent.spawn((
-                    Name::new("bookmark_room"),
-                    ImageNode::new(source.bookmark.clone()),
-                    Node {
-                        width: Val::Percent(7.7),
-                        height: Val::Percent(10.7),
-                        top: Val::Percent(35.2),
-                        left: Val::Percent(-7.6),
-                        position_type: PositionType::Absolute,
-                        ..Default::default()
-                    },  
-                    Button,
-                ))
-                .with_child((
-                    Text::new("Room"),
-                    TextFont {
-                        // font: font.clone(),
-                        font_size: 15.0,
-                        ..default()
-                    },
-                    TextColor(Color::rgb(10.0, 0.0, 7.0)),
-                    Node {
-                        top: Val::Percent(0.0),
-                        left: Val::Percent(20.0),
-                        position_type: PositionType::Absolute,
-                        ..Default::default()
-                    },
-                ));
+                // parent.spawn((
+                //     Name::new("bookmark_atlas"),
+                //     ImageNode::new(source.bookmark.clone()),
+                //     Node {
+                //         width: Val::Percent(7.7),
+                //         height: Val::Percent(10.7),
+                //         top: Val::Percent(21.0),
+                //         left: Val::Percent(-7.6),
+                //         position_type: PositionType::Absolute,
+                //         ..Default::default()
+                //     },  
+                //     Button,
+                // ))
+                // .with_child((
+                //     Text::new("Atlas"),
+                //     TextFont {
+                //         // font: font.clone(),
+                //         font_size: 15.0,
+                //         ..default()
+                //     },
+                //     TextColor(Color::rgb(10.0, 0.0, 7.0)),
+                //     Node {
+                //         top: Val::Percent(0.0),
+                //         left: Val::Percent(20.0),
+                //         position_type: PositionType::Absolute,
+                //         ..Default::default()
+                //     },
+                // ));
+                // parent.spawn((
+                //     Name::new("bookmark_room"),
+                //     ImageNode::new(source.bookmark.clone()),
+                //     Node {
+                //         width: Val::Percent(7.7),
+                //         height: Val::Percent(10.7),
+                //         top: Val::Percent(35.2),
+                //         left: Val::Percent(-7.6),
+                //         position_type: PositionType::Absolute,
+                //         ..Default::default()
+                //     },  
+                //     Button,
+                // ))
+                // .with_child((
+                //     Text::new("Room"),
+                //     TextFont {
+                //         // font: font.clone(),
+                //         font_size: 15.0,
+                //         ..default()
+                //     },
+                //     TextColor(Color::rgb(10.0, 0.0, 7.0)),
+                //     Node {
+                //         top: Val::Percent(0.0),
+                //         left: Val::Percent(20.0),
+                //         position_type: PositionType::Absolute,
+                //         ..Default::default()
+                //     },
+                // ));
             });
         });
 }

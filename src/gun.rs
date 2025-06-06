@@ -10,6 +10,8 @@ use bevy_rapier2d::prelude::*;
 use rand::Rng;
 
 
+use crate::character::Skill4Timer;
+use crate::SKILL4_CD;
 use crate::{
     character::{Character, AnimationConfig, Player, Buff, PlayerSkill4Event},
     gamestate::*,
@@ -73,14 +75,6 @@ impl Plugin for GunPlugin {
         .add_event::<PlayerFireEvent>()
         .add_event::<PlayerSkill4FireEvent>()
         .add_systems(OnEnter(GameState::Home), (setup_gun,setup_cursor))
-        // .add_systems(
-        //     Update,(
-        //         handle_gun_transform,
-        //         handle_cursor_transform,
-        //         handle_gun_fire,
-        //         handle_bullet_move,
-        //         despawn_old_bullets,
-        //     ).run_if(in_state(GameState::Home)))
         .add_systems(
         Update,(
             handle_gun_transform,
@@ -231,7 +225,7 @@ fn handle_gun_fire(
     time: Res<Time>,
     mut commands: Commands,
     mut gun_query: Query<(&mut Sprite, &mut ArisuSPDamage, &mut GunState, &Transform, &mut GunTimer), (With<Gun>, Without<Character>)>,
-    buff_query: Query<&Buff, (With<Character>, Without<Gun>)>,
+    mut player_query: Query<(&Buff, &mut Skill4Timer), (With<Character>, Without<Gun>)>,
     mouse_button_input: Res<ButtonInput<MouseButton>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut ew: EventWriter<PlayerFireEvent>,
@@ -242,7 +236,7 @@ fn handle_gun_fire(
     //枪的开火没法通用，ARISU的枪和子弹甚至有开火动画，而UTAHA居然用的不是枪
     //没法写通用的逻辑
     //后续考虑根据内存中的角色id判断角色，然后写不同的开火逻辑
-    if gun_query.is_empty() {
+    if gun_query.is_empty() || player_query.is_empty() || source.id == 3 {
         return;
     }
 
@@ -250,13 +244,12 @@ fn handle_gun_fire(
     let mut bullet_num = 1;
     let mut bullet_size =  1.0;
     let mut bullet_spread = 1.0;
-    if !buff_query.is_empty() {
-        let buff = buff_query.single();
-        bullet_num = buff.0;
-        gun_speed += (buff.1 as f32 - 1.0) * 0.12;
-        bullet_spread = buff.3 as f32;
-        bullet_size += (buff.4 - 1) as f32 * 0.3;
-    }
+
+    let (buff, mut skill_timer) = player_query.single_mut();
+    bullet_num = buff.0;
+    gun_speed += (buff.1 as f32 - 1.0) * 0.12;
+    bullet_spread = buff.3 as f32;
+    bullet_size += (buff.4 - 1) as f32 * 0.3;
 
 
 
@@ -267,8 +260,14 @@ fn handle_gun_fire(
     if source.id == 2 {
         // 处理爱丽丝4技能蓄力炮
         //arisu
+        skill_timer.0.tick(time.delta());
         gun_speed /= 3.0;
-        if keyboard_input.pressed(KeyCode::ControlLeft){
+        if keyboard_input.pressed(KeyCode::ControlLeft) {
+            if skill_timer.0.elapsed_secs() < SKILL4_CD {
+                // println!("arisu skill4 cd!");
+                return;
+            }
+            skill_timer.0.reset();
             // println!("大炮");
             match *state {
                 
@@ -307,7 +306,9 @@ fn handle_gun_fire(
                     println!("arisu damage: {}", arisu_damage.0);
                     events2.send(PlayerSkill4FireEvent);
                 },
-                _ =>{}
+                _ =>{
+                    return;
+                }
             }
             //枪口焰动画
             commands.spawn((Sprite {
@@ -511,7 +512,7 @@ fn despawn_old_bullets(
     mut collision_events: EventReader<CollisionEvent>,
     source: Res<GlobalCharacterTextureAtlas>,
 ) {
-    for (instant, e, trans) in bullet_query.iter() {
+    for (instant, e, _) in bullet_query.iter() {
         if instant.0.elapsed().as_secs_f32() > BULLET_TIME_SECS {
             // println!("Despawning bullet!");
             commands.entity(e).despawn();
@@ -522,7 +523,7 @@ fn despawn_old_bullets(
             CollisionEvent::Started(entity1, entity2, _) => {
                 let mut flag = false;
                 let mut trans = Vec3::splat(-100.0);
-                if let Ok((instant, e, transf)) = bullet_query.get(*entity1) {
+                if let Ok((_, e, transf)) = bullet_query.get(*entity1) {
                     if !bullet_query.get(*entity2).is_ok() && !player_query.get(*entity2).is_ok() {
                         // 子弹之间和子弹与玩家不碰撞
                         if source.id !=2 || !enemy_bullet_query.get(*entity2).is_ok() {
@@ -533,7 +534,7 @@ fn despawn_old_bullets(
                         }
                     }
                 }
-                if let Ok((instant, e, transf)) = bullet_query.get(*entity2) {
+                if let Ok((_, e, transf)) = bullet_query.get(*entity2) {
                     if !bullet_query.get(*entity1).is_ok() && !player_query.get(*entity1).is_ok()  {
                         if source.id !=2 || !enemy_bullet_query.get(*entity1).is_ok() {
                             commands.entity(*entity2).despawn();

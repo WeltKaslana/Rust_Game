@@ -1,10 +1,10 @@
-use bevy::ecs::event;
 use bevy::math::vec3;
 use bevy::{
     prelude::*, 
     time::Stopwatch,
     ecs::world::DeferredWorld,};
 use bevy_rapier2d::prelude::*;
+use bevy::utils::Instant;
 
 use std::{time::Duration};
 use crate::gui::Transition;
@@ -31,6 +31,9 @@ pub struct Character;
 pub struct Player;
 
 #[derive(Component)]
+pub struct Shield;
+
+#[derive(Component)]
 pub struct Drone;
 
 #[derive(Component)]
@@ -53,6 +56,15 @@ pub struct Velocity(pub f32);
 
 #[derive(Component)]
 pub struct PlayerTimer(pub Stopwatch);
+
+#[derive(Component)]
+pub struct Skill2Timer(pub Stopwatch);
+
+#[derive(Component)]
+pub struct Skill3Timer(pub Stopwatch);
+
+#[derive(Component)]
+pub struct Skill4Timer(pub Stopwatch);
 
 #[derive(Component, Default)]
 pub enum PlayerState {
@@ -141,7 +153,9 @@ impl Plugin for PlayerPlugin {
                     handle_player_move2,
                     handle_player_skill2,
                     handle_player_skill3,
+                    handle_player_skill4,
                     handle_grenade_despawn,
+                    handle_shield_despawn,
                     // handle_play_bullet_collision_events,
             ).run_if(in_state(HomeState::Running))
             )
@@ -153,6 +167,7 @@ impl Plugin for PlayerPlugin {
                         handle_player_skill2,
                         handle_player_skill3,
                         handle_grenade_despawn,
+                        handle_shield_despawn,
                         handle_player_skill4,
                         handle_player_enemy_parry_events,
                         handle_player_bullet_collision_events
@@ -205,6 +220,11 @@ fn setup_player(
             .insert(KinematicCharacterController {
                 ..Default::default()
             });
+        player.insert((
+            Skill2Timer(Stopwatch::default()),
+            Skill3Timer(Stopwatch::default()),
+            Skill4Timer(Stopwatch::default()),
+        ));
 
     //插入碰撞组件和移动控制组件
     // player
@@ -227,9 +247,10 @@ fn setup_player(
 fn reload_player(
     mut events: EventReader<ReloadPlayerEvent>,
     mut player_query: Query<(&mut Sprite, &PlayerState), (With<Character>, Without<Gun>)>,
-    mut gun_query: Query<&mut Sprite, (With<Gun>, Without<Character>)>,
+    mut gun_query: Query<(&mut Sprite, &mut Visibility), (With<Gun>, Without<Character>)>,
     source: Res<GlobalCharacterTextureAtlas>,
 ) {//角色重载
+    // 如果不同角色对应技能cd不同，技能cd可能要重新刷新
     for _ in events.read() {
         for (mut player, player_state) in player_query.iter_mut() {
             match *player_state {
@@ -264,13 +285,14 @@ fn reload_player(
                 },
             }
         }
-        for mut gun in gun_query.iter_mut() {
+        for (mut gun, mut vis) in gun_query.iter_mut() {
             info!("gun reload!");
             gun.image = source.image_gun.clone();
             gun.texture_atlas = Some(TextureAtlas {
                 layout: source.lay_out_gun.clone(),
                 index: 0,
             });
+            *vis = Visibility::Visible;
         }
         info!("reload player!");
 
@@ -565,11 +587,13 @@ fn handle_player_skills1(
     }
 }
 fn handle_player_skill2(
+    time: Res<Time>,
     mut player_query: Query<(
         &mut Sprite, 
         &mut PlayerState,
         &mut Velocity,
         &mut KinematicCharacterController,
+        &mut Skill2Timer,
     ), (With<Character>, Without<Gun>)>,
     mut gun_query: Query<&mut Visibility, (With<Gun>, Without<Character>)>,
     mut events: EventWriter<PlayerSkill2Event>,
@@ -579,76 +603,91 @@ fn handle_player_skill2(
     if player_query.is_empty() {
         return;
     }
-    if keyboard_input.just_pressed(KeyCode::ShiftLeft) {
-        for (mut player, mut player_state, mut V, mut controller) in player_query.iter_mut() {
-            match *player_state {
-                PlayerState::Jump => {
-                    V.0 = 0.0;
-                    *player_state = PlayerState::Dodge;
+    
+    for (mut player, mut player_state, mut V, mut controller, mut timer) in player_query.iter_mut() {
+        
+        timer.0.tick(time.delta());
+        // println!("timer={}", timer.0.elapsed_secs().ceil() as i8);
+        if !keyboard_input.just_pressed(KeyCode::ShiftLeft) {
+            return;
+        }
+        if timer.0.elapsed_secs() < SKILL2_CD {
+            //技能冷却中
+            info!("skill2 is cooling down!");
+            return;
+        }
+        timer.0.reset();
 
-                    if let Some(image) = source.image_skill.clone() {
-                        player.image = image;
-                    } else {
-                        //Utaha skill
+        match *player_state {
+            PlayerState::Jump => {
+                V.0 = 0.0;
+                *player_state = PlayerState::Dodge;
 
-                    }
-                    if let Some(layout) = source.lay_out_skill.clone() {
-                        player.texture_atlas = Some(TextureAtlas {
-                            layout: layout,
-                            index: 0,
-                        });
-                    } else {
-                        //Utaha skill
+                if let Some(image) = source.image_skill.clone() {
+                    player.image = image;
+                } else {
+                    //Utaha skill
 
-                    }
-                    if source.id == 2 {
-                        // arisu的光之剑需要隐藏
-                        for mut gun in gun_query.iter_mut() {
-                            *gun = Visibility::Hidden;
-                        }
-                    } else {
-                        //使得玩家不与敌人产生碰撞，但arisu要盾反
-                        controller.filter_groups = Some(CollisionGroups::new(Group::GROUP_1, Group::GROUP_2));
-                    }
-                    events.send(PlayerSkill2Event);
-                },
-                PlayerState::Dodge => {},
-                _ => {
-                    *player_state = PlayerState::Dodge;
-                    events.send(PlayerSkill2Event);
-                    if let Some(image) = source.image_skill.clone() {
-                        player.image = image;
-                    } else {
-                        //Utaha skill
+                }
+                if let Some(layout) = source.lay_out_skill.clone() {
+                    player.texture_atlas = Some(TextureAtlas {
+                        layout: layout,
+                        index: 0,
+                    });
+                } else {
+                    //Utaha skill
 
+                }
+                if source.id == 2 {
+                    // arisu的光之剑需要隐藏
+                    for mut gun in gun_query.iter_mut() {
+                        *gun = Visibility::Hidden;
                     }
-                    if let Some(layout) = source.lay_out_skill.clone() {
-                        player.texture_atlas = Some(TextureAtlas {
-                            layout: layout,
-                            index: 0,
-                        });
-                    } else {
-                        //Utaha skill
+                } else {
+                    //使得玩家不与敌人产生碰撞，但arisu要盾反
+                    controller.filter_groups = Some(CollisionGroups::new(Group::GROUP_1, Group::GROUP_2));
+                }
+                events.send(PlayerSkill2Event);
+            },
+            PlayerState::Dodge => {},
+            _ => {
+                *player_state = PlayerState::Dodge;
+                events.send(PlayerSkill2Event);
+                if let Some(image) = source.image_skill.clone() {
+                    player.image = image;
+                } else {
+                    //Utaha skill
 
+                }
+                if let Some(layout) = source.lay_out_skill.clone() {
+                    player.texture_atlas = Some(TextureAtlas {
+                        layout: layout,
+                        index: 0,
+                    });
+                } else {
+                    //Utaha skill
+
+                }
+                if source.id == 2 {
+                    // arisu的光之剑需要隐藏
+                    for mut gun in gun_query.iter_mut() {
+                        *gun = Visibility::Hidden;
                     }
-                    if source.id == 2 {
-                        // arisu的光之剑需要隐藏
-                        for mut gun in gun_query.iter_mut() {
-                            *gun = Visibility::Hidden;
-                        }
-                    } else {
-                        //使得玩家不与敌人产生碰撞
-                        controller.filter_groups = Some(CollisionGroups::new(Group::GROUP_1, Group::GROUP_2));
-                    }
-                },
-            }
+                } else {
+                    //使得玩家不与敌人产生碰撞
+                    controller.filter_groups = Some(CollisionGroups::new(Group::GROUP_1, Group::GROUP_2));
+                }
+            },
         }
     }
 }
 fn handle_player_skill3 (
+    time: Res<Time>,
     mut commands: Commands,
-    player_query: Query<(
+    mut player_query: Query<(
+        Entity,
         &Transform,
+        &mut Skill3Timer,
     ), (With<Character>, Without<Gun>)>,
     gun_query: Query<&Transform, (With<Gun>, Without<Character>)>,
     mut grenade_query: Query<(&mut Transform, &BulletDirection, &mut Velocity), (With<Grenade>, Without<Character>, Without<Gun>)>,
@@ -658,33 +697,61 @@ fn handle_player_skill3 (
     if player_query.is_empty() || gun_query.is_empty() {
         return;
     }
-    if mouse_button_input.just_pressed(MouseButton::Right) {
-        let gun_transform = gun_query.single();
-        let direction = gun_transform.local_x();
-        for (trans,) in player_query.iter() {
-            commands.spawn((
-                Sprite {
-                    image: source.image_grenade.clone(),
-                    ..Default::default()
-                },
-                Transform::from_translation(trans.translation.clone()).with_scale(Vec3::splat(2.5)),
-                BulletDirection(Vec3::new(direction.x,direction.y,direction.z,)),
-                Player,
-                Grenade,
-                Velocity(0.5),
-                Collider::ball(7.0),
-                RigidBody::Dynamic,
-                GravityScale(0.0),
-                ColliderMassProperties::Mass(1000.0),
-                ActiveEvents::COLLISION_EVENTS,
-            ));
-        }
-    }
+    // 手雷的运动
     for (mut trans, dir, mut V) in grenade_query.iter_mut() {
         trans.translation += dir.0.normalize() * Vec3::splat(BULLET_SPEED);
         trans.translation.y -= V.0;
         V.0 += 0.2;
         trans.translation.z = 30.0;
+    }
+
+    let gun_transform = gun_query.single();
+    let direction = gun_transform.local_x();
+    for (player, trans, mut timer) in player_query.iter_mut() {
+        timer.0.tick(time.delta());
+        // println!("timer3={}", timer.0.elapsed_secs().ceil() as i8);
+        if !mouse_button_input.just_pressed(MouseButton::Right) {
+            return;
+        }
+        if timer.0.elapsed_secs() < SKILL3_CD {
+            //技能冷却中
+            info!("skill3 is cooling down!");
+            return;
+        }
+        timer.0.reset();
+        
+        match source.id {
+            3 => {
+                commands.entity(player).with_child((
+                    Sprite {
+                        image: source.image_shield.clone(),
+                        ..Default::default()
+                    },
+                    Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)).with_scale(Vec3::splat(0.6)),
+                    Player,
+                    Shield,
+                    SpawnInstant(Instant::now()),
+                ));
+            },
+            _ => {
+                commands.spawn((
+                    Sprite {
+                        image: source.image_grenade.clone(),
+                        ..Default::default()
+                    },
+                    Transform::from_translation(trans.translation.clone()).with_scale(Vec3::splat(2.5)),
+                    BulletDirection(Vec3::new(direction.x,direction.y,direction.z,)),
+                    Player,
+                    Grenade,
+                    Velocity(0.5),
+                    Collider::ball(7.0),
+                    RigidBody::Dynamic,
+                    GravityScale(0.0),
+                    ColliderMassProperties::Mass(1000.0),
+                    ActiveEvents::COLLISION_EVENTS,
+                ));
+            }
+        }
     }
 }
 
@@ -742,6 +809,115 @@ fn handle_grenade_despawn (
     }
 }
 
+fn handle_shield_despawn (
+    mut commands: Commands,
+    loc_query: Query<&Transform, (With<Character>, Without<EnemyBullet>)>,
+    shield_query: Query<(Entity, &SpawnInstant), (With<Shield>, Without<EnemyBullet>)>,
+    enemy_bullet_query: Query<(Entity, &Transform), (With<EnemyBullet>, Without<Shield>)>,
+) {
+    if shield_query.is_empty() || loc_query.is_empty() {
+        return;
+    }
+
+    let loc = loc_query.single().translation;
+
+    for (shield, instant) in shield_query.iter() {
+        if instant.0.elapsed().as_secs_f32() > 1.5 {// 后续更改持续时间
+            // 1.5秒后消失
+            commands.entity(shield).despawn();
+            continue;
+        }
+        for (b, btrans) in enemy_bullet_query.iter() { 
+            if btrans.translation.distance(loc) < 70.0 {
+                commands.entity(b).despawn();
+                println!("shield hit by bullet!");
+                // 后续加个子弹消除的特效
+            }
+        }
+    }
+}
+
+pub fn handle_player_skill4 (
+    time: Res<Time>,
+    mut commands: Commands,
+    mut transform_query: Query<(&Sprite, &Transform, &mut Skill4Timer), (With<Character>, Without<Drone>, Without<DroneBullet>, Without<Enemy>)>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut drone_query: Query<(&mut Sprite, & State), (With<Drone>, Without<DroneBullet>, Without<Enemy>, Without<Character>)>,
+    mut drone_bullet_query: Query<(&Transform, &mut BulletDirection), (With<DroneBullet>, Without<Drone>, Without<Enemy>, Without<Character>)>,
+    enemy_query: Query<&Transform, (With<Enemy>, Without<DroneBullet>, Without<Drone>, Without<Character>)>,
+    mut events: EventWriter<PlayerSkill4Event>,
+    source: Res<GlobalCharacterTextureAtlas>,
+) {
+    if transform_query.is_empty() {
+        return;
+    }
+    match source.id {
+        1 => {
+            // shiroko drone
+            let (player, player_transform, mut timer) = transform_query.single_mut();
+            timer.0.tick(time.delta());
+            // println!("timer4={}", timer.0.elapsed_secs().ceil() as i8);
+
+            if drone_bullet_query.is_empty() ||  enemy_query.is_empty() {
+            } else {
+                for (bullet_transform, mut bullet_direction) in drone_bullet_query.iter_mut() {
+                    let mut dis = 99999.9;
+                    for enemy_transform in enemy_query.iter() {
+                        let d = (bullet_transform.translation - enemy_transform.translation).length();
+                        if d < dis {
+                            dis = d;
+                            bullet_direction.0 = (enemy_transform.translation - bullet_transform.translation).normalize();
+                        }
+                    }
+                }
+            }
+
+            if !drone_query.is_empty() {//存在小飞机
+                let (mut drone, state) = drone_query.single_mut();
+                if state.0 != 0 {
+                    drone.image = source.image_drone_fire.clone();
+                    if let Some(atlas) = &mut drone.texture_atlas {
+                        atlas.layout = source.layout_drone_fire.clone();
+                    }
+                }
+            } else if keyboard_input.just_pressed(KeyCode::KeyQ)  {//不存在小飞机，则按Q生成小飞机
+                if timer.0.elapsed_secs() < SKILL4_CD {
+                    //技能冷却中
+                    info!("skill4 is cooling down!");
+                    return;
+                }
+                timer.0.reset();
+                commands.spawn((
+                    Sprite {
+                        image:  source.image_drone_idle.clone(),
+                        texture_atlas: Some(TextureAtlas {
+                            layout: source.layout_drone_idle.clone(),
+                            index: 0,
+                        }),
+                        flip_x: player.flip_x,
+                        ..Default::default()
+                    },
+                    Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(player_transform.translation.x, player_transform.translation.y, 31.0)),
+                    Player,
+                    Drone,
+                    State(0),
+                    AnimationConfig::new(10),
+                ));
+                events.send(PlayerSkill4Event);
+            }
+
+        },
+        2 => {
+            // arisu的技能为光之剑蓄力，放在了gun开火的函数中
+        },
+        3 => {
+            let (player, player_transform, mut timer) = transform_query.single_mut();
+            timer.0.tick(time.delta());
+        },
+        _ => {}
+    }
+}
+
 fn handle_player_bullet_collision_events(
     // mut commands: Commands,
     mut events: EventWriter<PlayerHurtEvent>,
@@ -749,6 +925,7 @@ fn handle_player_bullet_collision_events(
     mut player_query: Query<(Entity, &mut Health, &PlayerState), With<Character>>,
     mut collision_events: EventReader<CollisionEvent>,
     enemy_query: Query<Entity, With<EnemyBullet>>,
+    shield_query: Query<Entity, (With<Shield>)>,
     source: Res<GlobalCharacterTextureAtlas>,
 ) {
     for collision_event in collision_events.read() {
@@ -771,18 +948,16 @@ fn handle_player_bullet_collision_events(
                                 }
                             },
                             _ => {
-                                // commands.entity(*entity2).despawn();
-                                health.0 -= ENEMY_DAMAGE * 5.0;
+                                if shield_query.is_empty() {
+                                    health.0 -= ENEMY_DAMAGE * 5.0;
+                                }
                             },
                         }
                         if health.0 <= 0.0 {
                             health.0 = 0.0;
                         }
                         events.send(PlayerHurtEvent); 
-                    }
-                    // commands.entity(*entity2).despawn();
-                    // health.0 -= ENEMY_DAMAGE * 5.0;
-                    // events.send(PlayerHurtEvent);                  
+                    }                
                 }  
                 if entity2.eq(&player) {
                     if let Ok(e) = enemy_query.get(*entity1) {
@@ -795,15 +970,13 @@ fn handle_player_bullet_collision_events(
                                 }
                             },
                             _ => {
-                                // commands.entity(*entity1).despawn();
-                                health.0 -= ENEMY_DAMAGE * 5.0;
+                                if shield_query.is_empty() {
+                                    health.0 -= ENEMY_DAMAGE * 5.0;
+                                }
                             },
                         }
                         events.send(PlayerHurtEvent);
-                    }
-                    // commands.entity(*entity1).despawn();
-                    // health.0 -= ENEMY_DAMAGE * 5.0; 
-                    // events.send(PlayerHurtEvent);                 
+                    }               
                 }            
             }
             CollisionEvent::Stopped(entity1, entity2, _) => {
@@ -915,6 +1088,7 @@ fn handle_player_move2(
         // println!("jump!");
         match *player_state {
             PlayerState::Jump => {},
+            PlayerState::Dodge => {},
             _=> {
                 player.image = source.image_jump.clone();
                 player.texture_atlas = Some(TextureAtlas {
@@ -1010,7 +1184,7 @@ fn handle_player_move2(
             }
         },
         PlayerState::Dodge => {
-            if source.id == 1 {
+            if source.id == 1 || source.id == 3 {
                 if player.flip_x {
                     delta.x -= 2.0;
                 }
@@ -1054,7 +1228,7 @@ fn handle_player_move3(
 
         match *player_state {
             PlayerState::Dodge => {
-                if source.id == 1 {
+                if source.id == 1 || source.id == 3 {
                     let gun_transform = gun_query.single();
                     let direction = gun_transform.local_x();
                     controller.translation = Some(
@@ -1120,69 +1294,3 @@ fn handle_player_move3(
 }
 
 
-pub fn handle_player_skill4 (
-    mut commands: Commands,
-    transform_query: Query<(&Sprite, &Transform), (With<Character>, Without<Drone>, Without<DroneBullet>, Without<Enemy>)>,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut drone_query: Query<(&mut Sprite, & State), (With<Drone>, Without<DroneBullet>, Without<Enemy>, Without<Character>)>,
-    mut drone_bullet_query: Query<(&Transform, &mut BulletDirection), (With<DroneBullet>, Without<Drone>, Without<Enemy>, Without<Character>)>,
-    enemy_query: Query<&Transform, (With<Enemy>, Without<DroneBullet>, Without<Drone>, Without<Character>)>,
-    mut events: EventWriter<PlayerSkill4Event>,
-    source: Res<GlobalCharacterTextureAtlas>,
-) {
-    if transform_query.is_empty() {
-        return;
-    }
-    match source.id {
-        1 => {
-            // shiroko drone
-            let (player, player_transform) = transform_query.single();
-            if !drone_query.is_empty() {//存在小飞机
-                let (mut drone, state) = drone_query.single_mut();
-                if state.0 != 0 {
-                    drone.image = source.image_drone_fire.clone();
-                    if let Some(atlas) = &mut drone.texture_atlas {
-                        atlas.layout = source.layout_drone_fire.clone();
-                    }
-                }
-            } else if keyboard_input.just_pressed(KeyCode::KeyQ)  {//不存在小飞机，则按Q生成小飞机
-                commands.spawn((
-                    Sprite {
-                        image:  source.image_drone_idle.clone(),
-                        texture_atlas: Some(TextureAtlas {
-                            layout: source.layout_drone_idle.clone(),
-                            index: 0,
-                        }),
-                        flip_x: player.flip_x,
-                        ..Default::default()
-                    },
-                    Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(player_transform.translation.x, player_transform.translation.y, 31.0)),
-                    Player,
-                    Drone,
-                    State(0),
-                    AnimationConfig::new(10),
-                ));
-                events.send(PlayerSkill4Event);
-            }
-            if drone_bullet_query.is_empty() ||  enemy_query.is_empty() {
-                return ;
-            } else {
-                for (bullet_transform, mut bullet_direction) in drone_bullet_query.iter_mut() {
-                    let mut dis = 99999.9;
-                    for enemy_transform in enemy_query.iter() {
-                        let d = (bullet_transform.translation - enemy_transform.translation).length();
-                        if d < dis {
-                            dis = d;
-                            bullet_direction.0 = (enemy_transform.translation - bullet_transform.translation).normalize();
-                        }
-                    }
-                }
-            }
-        },
-        2 => {
-            // arisu的技能为光之剑蓄力，放在了gun开火的函数中
-        },
-        3 => {},
-        _ => {}
-    }
-}

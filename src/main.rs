@@ -58,6 +58,7 @@ fn main() {
         .add_sub_state::<InGameState>()
         .add_systems(Startup, set_rate)
         .add_systems(Update, log_transitions::<GameState>)
+        // .add_systems(Update, exit) // 测试退出程序
         .run();
 }
 
@@ -65,5 +66,14 @@ fn set_rate(
     mut settings: ResMut<bevy_framepace::FramepaceSettings>,
 ) {
     settings.limiter = Limiter::from_framerate(70.0); 
+}
+
+fn exit(
+    mut app_exit_events: EventWriter<AppExit>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+) {
+    if keyboard_input.just_pressed(KeyCode::KeyO) {
+        app_exit_events.send(AppExit::Success);
+    }
 }
 

@@ -17,6 +17,8 @@ pub struct RunAudio;
 #[derive(Component)]
 pub struct JumpAudio;
 #[derive(Component)]
+pub struct HurtAudio;
+#[derive(Component)]
 pub struct InGameBGM;
 
 #[derive(Resource,Default)]
@@ -321,15 +323,15 @@ fn player_jump(
 fn player_hurt(
     mut commands: Commands,
     mut events: EventReader<PlayerHurtEvent>,
-    // mut query: Query<Entity, With<HurtAudio>>,
+    query: Query<Entity, With<HurtAudio>>,
     source:  Res<GameAudioSource>,
     player: Res<GlobalCharacterTextureAtlas>,
 ) {
     for _ in events.read() {
-        // for e in query.iter_mut() {
-        //     // println!("despawn jump audio");
-        //     commands.entity(e).despawn();
-        // }
+        for e in query.iter() {
+            // println!("despawn jump audio");
+            commands.entity(e).despawn();
+        }
         let possible = rand::rng().random_range(0..9);
         let index = rand::rng().random_range(0..3);
         let audio = match player.id {
@@ -345,7 +347,7 @@ fn player_hurt(
             commands.spawn((
                 AudioPlayer::new(audio[index].clone()),
                 PlaybackSettings::default().with_volume(Volume::new(0.9)),
-                JumpAudio,
+                HurtAudio,
             ));
         }
 

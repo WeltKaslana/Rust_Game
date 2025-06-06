@@ -1,5 +1,6 @@
 use std::path;
 
+use bevy::render::texture::TRANSPARENT_IMAGE_HANDLE;
 use bevy::text;
 use bevy::{dev_tools::states::*, prelude::*};
 use bevy::window::PrimaryWindow;
@@ -62,6 +63,9 @@ pub struct GlobalCharacterTextureAtlas {
     pub layout_gun_fire: Handle<TextureAtlasLayout>,
     pub image_gun_fire: Handle<Image>,
 
+    pub layout_shield_back: Handle<TextureAtlasLayout>,
+    pub image_shield_back: Handle<Image>,
+
     pub layout_gun_fire_special: Handle<TextureAtlasLayout>,
     pub image_gun_fire_special: Handle<Image>,
 
@@ -70,7 +74,19 @@ pub struct GlobalCharacterTextureAtlas {
 
     // utaha
     // 炮台和小无人机
-    // to do
+    pub layout_attack: Handle<TextureAtlasLayout>,
+    pub image_attack: Handle<Image>,
+
+    pub image_shield: Handle<Image>,
+
+    pub layout_MK1: Handle<TextureAtlasLayout>,
+    pub image_MK1: Handle<Image>,
+
+    pub layout_MK2_born: Handle<TextureAtlasLayout>,
+    pub image_MK2_born: Handle<Image>,
+    pub image_MK2_head: Handle<Image>,
+    pub image_MK2_body: Handle<Image>,
+
 }
 
 impl GlobalCharacterTextureAtlas {
@@ -120,6 +136,9 @@ impl GlobalCharacterTextureAtlas {
         let mut layout_gun_fire = TextureAtlasLayout::from_grid(UVec2::splat(64),8,1,None,None);
         let mut path_gun_fire = String::from("Arisu_Gun_Fire.png");
 
+        let mut layout_shield_back = TextureAtlasLayout::from_grid(UVec2::splat(96),11,1,None,None);
+        let mut path_shield_back = String::from("Arisu_Shield_Effect.png");
+
         let mut layout_gun_fire_special = TextureAtlasLayout::from_grid(UVec2::splat(96),9,3,None,None);
         let mut path_gun_fire_special = String::from("Arisu_Gun_Fire_Special.png");
 
@@ -127,7 +146,19 @@ impl GlobalCharacterTextureAtlas {
         let mut path_bullet_special = String::from("Arisu_Projectile_Big.png");
         
         // utaha
-        // to do
+        let mut layout_attack = TextureAtlasLayout::from_grid(UVec2::splat(96),7,1,None,None);
+        let mut path_attack = String::from("Utaha_Weapon_Attack.png");
+        
+        let mut path_shield = String::from("Abnormal_Aura.png");
+
+        let mut layout_MK1 = TextureAtlasLayout::from_grid(UVec2::splat(64),4,2,None,None);
+        let mut path_MK1 = String::from("Utaha_MK1.png");
+
+        let mut layout_MK2_born = TextureAtlasLayout::from_grid(UVec2::new(96, 256),8,1,None,None);
+        let mut path_MK2_born = String::from("Utaha_MK2_Effect.png");
+        let mut path_MK2_head = String::from("Utaha_MK2_Weapon.png");
+        let mut path_MK2_body = String::from("Utaha_MK2.png");
+
 
         match id {
             1 => {//Shiroko
@@ -166,7 +197,7 @@ impl GlobalCharacterTextureAtlas {
                 path_idle = String::from("Utaha_Idle.png");
                 path_jump = String::from("Utaha_Jump.png");
                 path_skill = String::from("Utaha_Secondary.png");
-                // path_gun =  String::from("Utaha_Weapon.png"); 
+                path_gun =  String::from("Utaha_Weapon.png"); 
             }
             _ => {},
         }
@@ -218,6 +249,9 @@ impl GlobalCharacterTextureAtlas {
             layout_gun_fire: texture_atlas_layouts.add(layout_gun_fire),
             image_gun_fire: asset_server.load(path_gun_fire),
 
+            layout_shield_back: texture_atlas_layouts.add(layout_shield_back),
+            image_shield_back: asset_server.load(path_shield_back),
+
             layout_gun_fire_special: texture_atlas_layouts.add(layout_gun_fire_special),
             image_gun_fire_special: asset_server.load(path_gun_fire_special),
 
@@ -225,7 +259,18 @@ impl GlobalCharacterTextureAtlas {
             image_bullet_special: asset_server.load(path_bullet_special),
 
             // utaha
-            // to do
+            layout_attack: texture_atlas_layouts.add(layout_attack),
+            image_attack: asset_server.load(path_attack),
+
+            image_shield: asset_server.load(path_shield),
+
+            layout_MK1: texture_atlas_layouts.add(layout_MK1),
+            image_MK1: asset_server.load(path_MK1),
+
+            layout_MK2_born: texture_atlas_layouts.add(layout_MK2_born),
+            image_MK2_born: asset_server.load(path_MK2_born),
+            image_MK2_head: asset_server.load(path_MK2_head),
+            image_MK2_body: asset_server.load(path_MK2_body),
         }
     }
 }
@@ -300,7 +345,9 @@ pub struct GlobalMenuTextureAtlas {
     pub shiroko_skill2: Handle<Image>,
     pub shiroko_skill3: Handle<Image>,
     pub shiroko_skill4: Handle<Image>,
-
+    pub shiroko_skill2_cool: Handle<Image>,
+    pub shiroko_skill3_cool: Handle<Image>,
+    pub shiroko_skill4_cool: Handle<Image>,
 
     pub arisu: Handle<Image>,
     pub arisu_hover: Handle<Image>,
@@ -309,6 +356,9 @@ pub struct GlobalMenuTextureAtlas {
     pub arisu_skill2: Handle<Image>,
     pub arisu_skill3: Handle<Image>,
     pub arisu_skill4: Handle<Image>,
+    pub arisu_skill2_cool: Handle<Image>,
+    pub arisu_skill3_cool: Handle<Image>,
+    pub arisu_skill4_cool: Handle<Image>,
 
     pub utaha: Handle<Image>,
     pub utaha_hover: Handle<Image>,
@@ -317,6 +367,9 @@ pub struct GlobalMenuTextureAtlas {
     pub utaha_skill2: Handle<Image>,
     pub utaha_skill3: Handle<Image>,
     pub utaha_skill4: Handle<Image>,
+    pub utaha_skill2_cool: Handle<Image>,
+    pub utaha_skill3_cool: Handle<Image>,
+    pub utaha_skill4_cool: Handle<Image>,
 }
 
 impl GlobalMenuTextureAtlas {
@@ -344,6 +397,9 @@ impl GlobalMenuTextureAtlas {
         let path_shiroko_skill2 = String::from("Skill_Shiroko_2.png");
         let path_shiroko_skill3 = String::from("Skill_Shiroko_3.png");
         let path_shiroko_skill4 = String::from("Skill_Shiroko_4.png");
+        let path_shiroko_skill2_cool = String::from("Skill_Shiroko_2_cool.png");
+        let path_shiroko_skill3_cool = String::from("Skill_Shiroko_3_cool.png");
+        let path_shiroko_skill4_cool = String::from("Skill_Shiroko_4_cool.png");
 
         let path_arisu = String::from("UI_Hub_Portrait_Arisu.png");
         let path_arisu_hover = String::from("UI_Hub_Portrait_Arisu_Hover.png");
@@ -352,6 +408,9 @@ impl GlobalMenuTextureAtlas {
         let path_arisu_skill2 = String::from("Skill_Arisu_2.png");
         let path_arisu_skill3 = String::from("Skill_Arisu_3.png");
         let path_arisu_skill4 = String::from("Skill_Arisu_4.png");
+        let path_arisu_skill2_cool = String::from("Skill_Arisu_2_cool.png");
+        let path_arisu_skill3_cool = String::from("Skill_Arisu_3_cool.png");
+        let path_arisu_skill4_cool = String::from("Skill_Arisu_4_cool.png");
 
         let path_utaha = String::from("UI_Hub_Portrait_Utaha.png");
         let path_utaha_hover = String::from("UI_Hub_Portrait_Utaha_Hover.png");
@@ -360,6 +419,9 @@ impl GlobalMenuTextureAtlas {
         let path_utaha_skill2 = String::from("Skill_Utaha_2.png");
         let path_utaha_skill3 = String::from("Skill_Utaha_3.png");
         let path_utaha_skill4 = String::from("Skill_Utaha_4.png");
+        let path_utaha_skill2_cool = String::from("Skill_Utaha_2_cool.png");
+        let path_utaha_skill3_cool = String::from("Skill_Utaha_3_cool.png");
+        let path_utaha_skill4_cool = String::from("Skill_Utaha_4_cool.png"); 
 
         Self {
             close: asset_server.load(path_close),
@@ -383,6 +445,9 @@ impl GlobalMenuTextureAtlas {
             shiroko_skill2: asset_server.load(path_shiroko_skill2),
             shiroko_skill3: asset_server.load(path_shiroko_skill3),
             shiroko_skill4: asset_server.load(path_shiroko_skill4),
+            shiroko_skill2_cool: asset_server.load(path_shiroko_skill2_cool),
+            shiroko_skill3_cool: asset_server.load(path_shiroko_skill3_cool),
+            shiroko_skill4_cool: asset_server.load(path_shiroko_skill4_cool),
 
             arisu: asset_server.load(path_arisu),
             arisu_hover: asset_server.load(path_arisu_hover),
@@ -391,6 +456,9 @@ impl GlobalMenuTextureAtlas {
             arisu_skill2: asset_server.load(path_arisu_skill2),
             arisu_skill3: asset_server.load(path_arisu_skill3),
             arisu_skill4: asset_server.load(path_arisu_skill4),
+            arisu_skill2_cool: asset_server.load(path_arisu_skill2_cool),
+            arisu_skill3_cool: asset_server.load(path_arisu_skill3_cool),
+            arisu_skill4_cool: asset_server.load(path_arisu_skill4_cool),
 
             utaha: asset_server.load(path_utaha),
             utaha_hover: asset_server.load(path_utaha_hover),
@@ -399,6 +467,9 @@ impl GlobalMenuTextureAtlas {
             utaha_skill2: asset_server.load(path_utaha_skill2),
             utaha_skill3: asset_server.load(path_utaha_skill3),
             utaha_skill4: asset_server.load(path_utaha_skill4),
+            utaha_skill2_cool: asset_server.load(path_utaha_skill2_cool),
+            utaha_skill3_cool: asset_server.load(path_utaha_skill3_cool),
+            utaha_skill4_cool: asset_server.load(path_utaha_skill4_cool),
         }
     }
 }

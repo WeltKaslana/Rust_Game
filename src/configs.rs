@@ -25,6 +25,9 @@ pub const PLAYER_JUMP_SPEED: f32 = 4.0;
 pub const PLAYER_GRAVITY: f32 = 0.2;
 pub const PLAYER_JUMP_COUNTS: usize = 3;
 pub const GRENADE_BOOM_RANGE:f32 = 150.0;
+pub const SKILL2_CD: f32 = 6.0;
+pub const SKILL3_CD: f32 = 3.0;
+pub const SKILL4_CD: f32 = 4.0;
 
 // Enemy
 pub const MAX_NUM_ENEMIES: usize = 20000;

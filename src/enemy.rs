@@ -1,12 +1,12 @@
 use bevy::transform;
 use bevy::{dev_tools::states::*, prelude::*, time::Stopwatch};
-use crate::boss::Boss;
-use crate::gun::Bullet;
+
 use crate::{
     gamestate::*,
     configs::*, 
-    character::{* , Health}, 
-    gun::BulletHit,
+    character::*, 
+    gun::{BulletHit, Bullet},
+    boss::Boss,
     room::{Map, EnemyBorn},
 };
 use crate::*;
@@ -1235,6 +1235,7 @@ fn handle_sweeper_hit(
         &mut Fireflag,
         & PatrolState,
     ), (With<Enemy>, Without<Character>)>,
+    mut events: EventWriter<PlayerHurtEvent>,
 ) {
     if player_query.is_empty() || enemy_query.is_empty() {
         return;
@@ -1258,6 +1259,7 @@ fn handle_sweeper_hit(
                                                     _=> { 
                                                         *flag = Fireflag::Done;
                                                         health.0 -=ENEMY_DAMAGE;
+                                                        events.send(PlayerHurtEvent);
                                                     },
                                                 }
                                             },
@@ -1273,6 +1275,7 @@ fn handle_sweeper_hit(
                                                     _=> { 
                                                         *flag = Fireflag::Done;
                                                         health.0 -=ENEMY_DAMAGE;
+                                                        events.send(PlayerHurtEvent);
                                                     },
                                                 }
                                             },
