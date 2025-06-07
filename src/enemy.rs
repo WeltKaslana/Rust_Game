@@ -5,7 +5,7 @@ use crate::{
     gamestate::*,
     configs::*, 
     character::*, 
-    gun::{BulletHit, Bullet},
+    gun::{BulletHit, Bullet, GunState, Gun},
     boss::Boss,
     room::{Map, EnemyBorn},
 };
@@ -101,21 +101,6 @@ pub struct EnemyDeathEvent(pub Vec2);
 impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut App) {
         app
-            // .add_systems(OnEnter(GameState::InGame), setup_enemy)
-            // .add_systems(
-            //     Update,
-            //         (
-            //             handle_enemy_move,
-            //             handle_enemy_animation,
-            //             handle_enemy_fire,
-            //             handle_sweeper_hit,
-            //             handle_bullet_move,
-            //             handle_enemy_death,
-            //             handle_enemy_bullet_collision_events,
-            //             handle_enemy_hurt_collision_events,
-            //             handle_enemy_hurt_collision_events_special,
-            //     ).run_if(in_state(GameState::InGame))
-            // )
             .add_event::<EnemyDeathEvent>()
             .add_systems(
                 Update,
@@ -1063,8 +1048,8 @@ fn handle_enemy_death(
                 Map,
             )
             );
+            event.send(EnemyDeathEvent(Vec2::new(loc.translation.x, loc.translation.y)));
         }
-        event.send(EnemyDeathEvent(Vec2::new(loc.translation.x, loc.translation.y)));
     }
 }
 
@@ -1118,7 +1103,7 @@ fn handle_enemy_hurt_collision_events_special(
 ) {
     for collision_event in collision_events.read() {
         if grenade_query.is_empty() || enemy_query.is_empty() {
-            return;
+            break;
         }
         match collision_event {
             CollisionEvent::Started(entity1, entity2, _) => {

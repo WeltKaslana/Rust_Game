@@ -29,6 +29,7 @@ pub struct GameAudioSource {
     pub in_game_bgm: Handle<AudioSource>,
     pub walk: Handle<AudioSource>,
     pub jump: Handle<AudioSource>,
+
     // shiroko
     pub shiroko_hurt: [Handle<AudioSource>;3],
     pub shiroko_shout: [Handle<AudioSource>;3],
@@ -245,7 +246,7 @@ fn audio_fire (
     source:  Res<GameAudioSource>,
     player: Res<GlobalCharacterTextureAtlas>,
 ) {
-    for _ in events.read() {
+    for PlayerFireEvent(id) in events.read() {
         for e in query.iter_mut() {
             // println!("despawn fire audio");
             commands.entity(e).despawn();
@@ -253,7 +254,11 @@ fn audio_fire (
         let audio = match player.id {
             1 => source.shiroko_gun_fire.clone(),
             2 => source.arisu_gun_fire.clone(),
-            3 => source.utaha_attack.clone(),
+            3 => match id {
+                0 => source.shiroko_gun_fire.clone(),
+                1 => source.utaha_attack.clone(),
+                _ => source.shiroko_gun_fire.clone(),
+            },
             _ => {
                 dbg!("wrong player id!");
                 source.shiroko_gun_fire.clone()

@@ -269,6 +269,7 @@ fn statetransition(
     mut commands: Commands, 
     mut transition_query: Query<(&mut Transform, Entity), (With<Transition>, Without<Camera2d>)>,
     mut camera_query: Query<(&Transform, &mut GameState), (With<Camera2d>, Without<Transition>)>,
+    clear_query: Query<Entity, (With<Player>, Without<Gun>, Without<Character>, Without<Cursor>, Without<Camera2d>)>,
     state: Res<State<GameState>>,
     mut mgr: ResMut<AssetsManager>,
     mut next_state: ResMut<NextState<GameState>>,
@@ -287,25 +288,6 @@ fn statetransition(
     // println!("delta: {}", delta);
     // 根据nextstate来判断下一个要切换到的状态，同时将nextstate初始化为MainMenu
     match *state.get() {
-        // GameState::MainMenu if delta >= 400.0 && delta < 420.0 => {
-        //     next_state.set(GameState::Home);
-        //     // info!("transition to Home!");
-        // },
-        // GameState::Home if delta >= 400.0 && delta < 420.0 => {
-        //     next_state.set(GameState::Loading);
-        //     mgr.cycle_map(&mut commands);
-        //     // info!("transition to loading!");
-        // },
-        // GameState::Loading if delta >= 800.0 => {
-        //     next_state.set(GameState::InGame);
-        //     // info!("transition to game!");
-        // },
-
-        // GameState::InGame if delta >= 400.0 && delta < 420.0 => {
-        //     next_state.set(GameState::Loading);
-        //     mgr.cycle_map(&mut commands);
-        //     // info!("transition to loading!");
-        // },
         GameState::MainMenu if delta >= 400.0 && delta < 420.0 => {
             match *nextstate {
                 GameState::Home => {
@@ -314,8 +296,6 @@ fn statetransition(
                 },
                 _ => {},
             }
-            // next_state.set(GameState::Home);
-            // info!("transition to Home!");
         },
         GameState::Home if delta >= 400.0 && delta < 420.0 => {
             println!("transition to {:?}!", *nextstate);
@@ -327,6 +307,9 @@ fn statetransition(
                 GameState::Loading => {
                     *nextstate = GameState::None;
                     mgr.cycle_map(&mut commands);
+                    for (e) in clear_query.iter() {
+                        commands.entity(e).despawn_recursive();
+                    }
                     next_state.set(GameState::Loading);
                 },
                 GameState::None  => {},
@@ -336,14 +319,9 @@ fn statetransition(
                     next_state.set(GameState::MainMenu);
                 }
             }
-            // next_state.set(GameState::Loading);
-            // mgr.cycle_map(&mut commands);
-            // info!("transition to loading!");
         },
         GameState::Loading if delta >= 800.0 => {
-            // mgr.cycle_map(&mut commands);
             next_state.set(GameState::InGame);
-            // info!("transition to game!");
         },
 
         GameState::InGame if delta >= 400.0 && delta < 420.0 => {
@@ -357,6 +335,9 @@ fn statetransition(
                 GameState::Loading => {
                     *nextstate = GameState::None;
                     mgr.cycle_map(&mut commands);
+                    for (e) in clear_query.iter() {
+                        commands.entity(e).despawn_recursive();
+                    }
                     next_state.set(GameState::Loading);
                 },
                 GameState::Home => {
@@ -371,9 +352,6 @@ fn statetransition(
                     next_state.set(GameState::MainMenu);
                 }
             }
-            // next_state.set(GameState::Loading);
-            // mgr.cycle_map(&mut commands);
-            // info!("transition to loading!");
         },
         _ => {}
     }
@@ -929,6 +907,41 @@ fn setup_soramenu(
                     ));
                 });
                 // 角色简介底
+                let image = match source1.id {
+                    1 => {
+                        [
+                            source.shiroko_skill1.clone(),
+                            source.shiroko_skill2.clone(),
+                            source.shiroko_skill3.clone(),
+                            source.shiroko_skill4.clone(),
+                        ]
+                    },
+                    2 => {
+                        [
+                            source.arisu_skill1.clone(),
+                            source.arisu_skill2.clone(),
+                            source.arisu_skill3.clone(),
+                            source.arisu_skill4.clone(),
+                        ]
+                    },
+                    3 => {
+                        [
+                            source.utaha_skill1.clone(),
+                            source.utaha_skill2.clone(),
+                            source.utaha_skill3.clone(),
+                            source.utaha_skill4.clone(),
+                        ]
+                    },
+                    _ => {
+                        println!("Invalid charcter id!");
+                        [
+                            source.shiroko_skill1.clone(),
+                            source.shiroko_skill2.clone(),
+                            source.shiroko_skill3.clone(),
+                            source.shiroko_skill4.clone(),
+                        ]
+                    }
+                };
                 parent.spawn(( 
                     ImageNode::new(source.tips.clone()),
                     Node {
@@ -942,7 +955,7 @@ fn setup_soramenu(
                 )).with_children( |parent| {
                     parent.spawn((
                         Name::new("1"),
-                        ImageNode::new(source.shiroko_skill1.clone()),
+                        ImageNode::new(image[0].clone()),
                         Node {
                             width: Val::Percent(13.3),
                             height: Val::Percent(20.0),
@@ -954,7 +967,7 @@ fn setup_soramenu(
                     ));
                     parent.spawn((
                         Name::new("2"),
-                        ImageNode::new(source.shiroko_skill2.clone()),
+                        ImageNode::new(image[1].clone()),
                         Node {
                             width: Val::Percent(13.3),
                             height: Val::Percent(20.0),
@@ -966,7 +979,7 @@ fn setup_soramenu(
                     ));
                     parent.spawn((
                         Name::new("3"),
-                        ImageNode::new(source.shiroko_skill3.clone()),
+                        ImageNode::new(image[2].clone()),
                         Node {
                             width: Val::Percent(13.3),
                             height: Val::Percent(20.0),
@@ -978,7 +991,7 @@ fn setup_soramenu(
                     ));
                     parent.spawn((
                         Name::new("4"),
-                        ImageNode::new(source.shiroko_skill4.clone()),
+                        ImageNode::new(image[3].clone()),
                         Node {
                             width: Val::Percent(13.3),
                             height: Val::Percent(20.0),

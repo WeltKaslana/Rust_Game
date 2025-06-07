@@ -1,4 +1,5 @@
 use bevy::math::vec3;
+use bevy::render::render_resource::encase::private::Length;
 use bevy::{
     prelude::*, 
     time::Stopwatch,
@@ -12,7 +13,9 @@ use crate::{
     gamestate::*,
     enemy::{
         EnemyBullet,
-        Enemy,},
+        Enemy,
+        EnemyDeathEvent,
+    },
     gun::{
         Gun,
         GunState,
@@ -37,13 +40,30 @@ pub struct Shield;
 pub struct Drone;
 
 #[derive(Component)]
+pub struct DroneBullet;
+
+#[derive(Component)]
+pub struct MK1;
+
+#[derive(Component)]
+pub struct MK2;
+
+#[derive(Component)]
+pub struct MK2Loc(pub Vec3);
+
+#[derive(Component)]
+pub struct MK2Born;
+
+#[derive(Component)]
+pub struct MK2LockOn(pub Vec2);
+
+#[derive(Component)]
 pub struct Grenade;
 
 #[derive(Component)]
 pub struct GrenadeHit;
 
-#[derive(Component)]
-pub struct DroneBullet;
+
 
 #[derive(Component)]
 pub struct State(pub i32);
@@ -165,6 +185,7 @@ impl Plugin for PlayerPlugin {
                         handle_player_death,
                         handle_player_move3,
                         handle_player_skill2,
+                        handle_utaha_attack_damage,
                         handle_player_skill3,
                         handle_grenade_despawn,
                         handle_shield_despawn,
@@ -588,6 +609,7 @@ fn handle_player_skills1(
 }
 fn handle_player_skill2(
     time: Res<Time>,
+    mut commands: Commands,
     mut player_query: Query<(
         &mut Sprite, 
         &mut PlayerState,
@@ -596,7 +618,9 @@ fn handle_player_skill2(
         &mut Skill2Timer,
     ), (With<Character>, Without<Gun>)>,
     mut gun_query: Query<&mut Visibility, (With<Gun>, Without<Character>)>,
+    mk1_query: Query<Entity, With<MK1>>,
     mut events: EventWriter<PlayerSkill2Event>,
+    mut little_drone_events: EventReader<EnemyDeathEvent>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     source: Res<GlobalCharacterTextureAtlas>,
 ) {
@@ -605,7 +629,32 @@ fn handle_player_skill2(
     }
     
     for (mut player, mut player_state, mut V, mut controller, mut timer) in player_query.iter_mut() {
-        
+        for EnemyDeathEvent(dloc) in little_drone_events.read() {
+            match *player_state {
+                PlayerState::Dodge if source.id ==3 => {
+                    if mk1_query.iter().count() < 3 {
+                        commands.spawn((
+                            Sprite {
+                                image: source.image_MK1.clone(),
+                                texture_atlas: Some(TextureAtlas {
+                                    layout: source.layout_MK1.clone(),
+                                    index: 0,
+                                }),
+                                ..Default::default()
+                            },
+                            Transform::from_scale(Vec3::splat(2.5))
+                                .with_translation(Vec3::new(dloc.x, dloc.y, 40.0)),
+                            MK1,
+                            Player, 
+                            AnimationConfig::new(10),
+                            SpawnInstant(Instant::now()),
+                        ));
+                    }
+                },
+                _ => {}
+            }
+        }
+
         timer.0.tick(time.delta());
         // println!("timer={}", timer.0.elapsed_secs().ceil() as i8);
         if !keyboard_input.just_pressed(KeyCode::ShiftLeft) {
@@ -655,18 +704,12 @@ fn handle_player_skill2(
                 events.send(PlayerSkill2Event);
                 if let Some(image) = source.image_skill.clone() {
                     player.image = image;
-                } else {
-                    //Utaha skill
-
                 }
                 if let Some(layout) = source.lay_out_skill.clone() {
                     player.texture_atlas = Some(TextureAtlas {
                         layout: layout,
                         index: 0,
                     });
-                } else {
-                    //Utaha skill
-
                 }
                 if source.id == 2 {
                     // arisu的光之剑需要隐藏
@@ -681,6 +724,59 @@ fn handle_player_skill2(
         }
     }
 }
+
+fn handle_utaha_attack_damage (
+    mut commands: Commands,
+    player_query: Query<(&Transform, &PlayerState), (With<Character>, Without<Enemy>)>,
+    weapen_query: Query<(&Transform, &GunState), (With<Gun>, Without<Enemy>)>,
+    enemy_bullet_query: Query<(Entity, &Transform), (With<EnemyBullet>, Without<Character>)>,
+    mut enemy_query: Query<(&mut Health, &Transform), (With<Enemy>, Without<EnemyBullet>)>,
+    source: Res<GlobalCharacterTextureAtlas>,
+) {
+
+    let mut flag = false;
+    let mut trans = Vec2::ZERO;
+    let mut damage = 1.0;
+    if source.id == 3 {
+        if !weapen_query.is_empty() { 
+            let (wtrans, state) = weapen_query.single();
+            match *state {
+                GunState::Fire => {
+                    trans = wtrans.translation.truncate();
+                    flag = true;
+                },
+                _ => {}
+            }
+        }
+
+        if !player_query.is_empty() {
+            let (ptrans, state) = player_query.single();
+            match *state {
+                PlayerState::Dodge => {
+                    trans = ptrans.translation.truncate().clone();
+                    flag = true;
+                    damage = 3.0;
+                },
+                _ => {}
+            }
+        }
+    }
+    if flag {
+        // 消除敌方子弹
+        for (bullet, btrans) in enemy_bullet_query.iter() {
+            if btrans.translation.truncate().distance(trans) < 70.0 {
+                commands.entity(bullet).despawn();
+            }
+        }
+        // 对敌方造成伤害
+        for (mut health, etrans) in enemy_query.iter_mut() {
+            if (etrans.translation.x - trans.x).abs() < 90.0 && (etrans.translation.y - trans.y).abs() < 130.0 {
+                health.0 -= damage * BULLET_DAMAGE;
+            }
+        }
+    }
+}
+
 fn handle_player_skill3 (
     time: Res<Time>,
     mut commands: Commands,
@@ -844,6 +940,7 @@ pub fn handle_player_skill4 (
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut drone_query: Query<(&mut Sprite, & State), (With<Drone>, Without<DroneBullet>, Without<Enemy>, Without<Character>)>,
     mut drone_bullet_query: Query<(&Transform, &mut BulletDirection), (With<DroneBullet>, Without<Drone>, Without<Enemy>, Without<Character>)>,
+    mk2_query: Query<(Entity, &SpawnInstant, &Transform), With<MK2>>,
     enemy_query: Query<&Transform, (With<Enemy>, Without<DroneBullet>, Without<Drone>, Without<Character>)>,
     mut events: EventWriter<PlayerSkill4Event>,
     source: Res<GlobalCharacterTextureAtlas>,
@@ -913,6 +1010,102 @@ pub fn handle_player_skill4 (
         3 => {
             let (player, player_transform, mut timer) = transform_query.single_mut();
             timer.0.tick(time.delta());
+            if !keyboard_input.just_pressed(KeyCode::KeyQ) && !keyboard_input.just_pressed(KeyCode::KeyR)  { 
+                return;
+            }
+            let mut num = 0;
+            let mut eldest_mk2: Option<Entity> = None;
+            let mut life = 0.0;
+            let mut mktrans = Vec3::new(0.0, 0.0, 0.0);
+
+            if keyboard_input.just_pressed(KeyCode::KeyR) {
+                for (mk2, instant, mk2trans) in mk2_query.iter() {
+                    num += 1;
+                    let temp = instant.0.elapsed().as_secs_f32();
+                    if temp > life {
+                        life = temp;
+                        eldest_mk2 = Some(mk2); 
+                        mktrans = mk2trans.translation.clone();
+                    }
+                }
+                if let Some(mk2) = eldest_mk2 {
+                    commands.entity(mk2).despawn_recursive();
+                    //产生炮台消失的特效
+                    commands.spawn((
+                        Sprite {
+                            image: source.image_grenade_hit.clone(),
+                            texture_atlas: Some(TextureAtlas {
+                                layout: source.layout_grenade_hit.clone(),
+                                index: 0,
+                            }),
+                            ..default()
+                        },
+                        Transform {
+                            translation: mktrans.clone(),
+                            scale: Vec3::splat(2.5),
+                            ..default()
+                        },
+                        AnimationConfig::new(15),
+                        GrenadeHit,
+                    ));
+                }
+                return;
+            }
+            if timer.0.elapsed_secs() < SKILL4_CD {
+                //技能冷却中
+                info!("skill4 is cooling down!");
+                return;
+            }
+            timer.0.reset();
+            // 删除最早的一个炮台
+            for (mk2, instant, mk2trans) in mk2_query.iter() {
+                num += 1;
+                let temp = instant.0.elapsed().as_secs_f32();
+                if temp > life {
+                    life = temp;
+                    eldest_mk2 = Some(mk2); 
+                    mktrans = mk2trans.translation.clone();
+                }
+            }
+            if num >= MK2_NUM {
+                if let Some(mk2) = eldest_mk2 {
+                    commands.entity(mk2).despawn_recursive();
+                    //产生炮台消失的特效
+                    commands.spawn((
+                        Sprite {
+                            image: source.image_grenade_hit.clone(),
+                            texture_atlas: Some(TextureAtlas {
+                                layout: source.layout_grenade_hit.clone(),
+                                index: 0,
+                            }),
+                            ..default()
+                        },
+                        Transform {
+                            translation: mktrans.clone(),
+                            scale: Vec3::splat(2.5),
+                            ..default()
+                        },
+                        AnimationConfig::new(15),
+                        GrenadeHit,
+                    ));
+                }
+            }
+            commands.spawn((
+                Sprite {
+                    image: source.image_MK2_born.clone(),
+                    texture_atlas: Some(TextureAtlas {
+                        layout: source.layout_MK2_born.clone(),
+                        index: 0,
+                    }),
+                    flip_x: player.flip_x,
+                    ..Default::default()
+                },
+                Transform::from_scale(Vec3::splat(2.5))
+                    .with_translation(Vec3::new(0.0,280.0,-5.0) + player_transform.translation.clone()),
+                Player,
+                AnimationConfig::new(10),
+                MK2Born,
+            ));
         },
         _ => {}
     }

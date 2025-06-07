@@ -734,7 +734,8 @@ fn handle_timer_ui_delete(
         return;
     }
     if timer_query.is_empty() {
-        let entity = ui_query.single();
-        commands.entity(entity).despawn();
+        for entity in ui_query.iter(){
+            commands.entity(entity).despawn();
+        }
     }
 }

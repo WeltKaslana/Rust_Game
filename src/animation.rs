@@ -3,28 +3,30 @@ use bevy::{
     prelude::*,
 };
 use bevy::utils::Instant;
+use bevy_rapier2d::na::Translation;
 use bevy_rapier2d::prelude::*;
-use crate::GlobalRoomTextureAtlas;
+use crate::{GlobalRoomTextureAtlas, MK2_SURVIVE_TIME};
 use crate::{
     boss::{
         set_boss, Boss, BossComponent, BossDeathEffect, BossState, Direction, Skillflag
     }, 
     character::{
-        AnimationConfig, Character, Drone, DroneBullet, PlayerState, State, GrenadeHit, handle_player_skill4,
+        AnimationConfig, Character, Player, Drone, DroneBullet, PlayerState, State, GrenadeHit, MK1, MK2, MK2LockOn, MK2Born, MK2Loc,
     }, 
     enemy::{
         set_enemy, BulletDirection, Enemy, EnemyBullet, EnemyDeathEffect, EnemyState, EnemyType, Fireflag, PatrolState
     }, 
     gamestate::*, 
-    gun::{self, Bullet, BulletHit, Cursor, Gun, GunFire, SpawnInstant, GunState, BulletDamage, }, 
+    gun::{self, Bullet, BulletHit, Cursor, Gun, GunFire, SpawnInstant, GunState, BulletDamage, GunTimer}, 
     home::{Fridge, FridgeState, Sora, SoraState}, 
     resources::{
         GlobalBossTextureAtlas, GlobalCharacterTextureAtlas, GlobalEnemyTextureAtlas, GlobalHomeTextureAtlas
     }, 
     room::{EnemyBorn, Door, Chest},
 };
-use bevy::math::{vec2, vec3};
-
+use bevy::math::{vec2, vec3, VectorSpace};
+use std::f32::consts::PI;
+use bevy::time::{self, Stopwatch};
 pub struct AnimationPlugin;
 
 
@@ -46,6 +48,8 @@ impl Plugin for AnimationPlugin {
                 boss_filpx,
                 enemyboss_death_effect,
                 animate_droneskill,
+                animate_mk2,
+                mk2_flip_rotate,
                 animate_door_and_chest,
             ).run_if(in_state(InGameState::Running)),)
             .add_systems(Update, 
@@ -53,6 +57,8 @@ impl Plugin for AnimationPlugin {
                     animate_player,
                     animate_player_gun_and_bullet,
                     animate_droneskill,
+                    animate_mk2,
+                    mk2_flip_rotate,
                     flip_player_sprite_x,
                     flip_gun_sprite_y,
                     animate_gunfire,
@@ -196,74 +202,107 @@ fn animate_player_gun_and_bullet (
     ), (With<Bullet>, Without<Gun>)>,
     source: Res<GlobalCharacterTextureAtlas>,
 ) {
-    if source.id == 2 {
-        for (mut config,damage , mut bullet) in bullet_query.iter_mut() {
-                // arisu有个大的炮要单独设置
-                config.frame_timer.tick(time.delta());
-                if config.frame_timer.just_finished(){
-                    let mut flame = 0;
-                    if damage.0 > 20.0 {
-                        // 光之剑
-                        flame = 8;
-                    } else {
-                        flame = 4;
-                    }
-                    if let Some(atlas) = &mut bullet.texture_atlas {
-                        config.frame_timer = AnimationConfig::timer_from_fps(config.fps2p);
-                        atlas.index = (atlas.index+1) % flame;
-                    }
-                }
-        }
-        for (mut config, mut gun, mut state) in gun_query.iter_mut() {
-            match *state {
-                GunState::Fire => {
+    if gun_query.is_empty() {
+        return;
+    }
+    match source.id {
+        2 => {
+            for (mut config,damage , mut bullet) in bullet_query.iter_mut() {
+                    // arisu有个大的炮要单独设置
                     config.frame_timer.tick(time.delta());
                     if config.frame_timer.just_finished(){
-                        // info!("ok!");
-                        if let Some(atlas) = &mut gun.texture_atlas {
+                        let mut flame = 0;
+                        if damage.0 > 20.0 {
+                            // 光之剑
+                            flame = 8;
+                        } else {
+                            flame = 4;
+                        }
+                        if let Some(atlas) = &mut bullet.texture_atlas {
                             config.frame_timer = AnimationConfig::timer_from_fps(config.fps2p);
-                            atlas.index += 1;
-                            if atlas.index == 8 {
-                                gun.image = source.image_gun.clone();
-                                gun.texture_atlas = Some(TextureAtlas {
-                                    layout: source.lay_out_gun.clone(),
-                                    index: 0,
-                                });
-                                *state = GunState::Normal;
-                                // println!("fire over");
-                            }
+                            atlas.index = (atlas.index+1) % flame;
                         }
                     }
-                },
-                GunState::SP => {
-                    // arisu大招
-                    config.frame_timer.tick(time.delta());
-                    if config.frame_timer.just_finished(){
-                        // info!("ok!");
-                        if let Some(atlas) = &mut gun.texture_atlas {
-                            config.frame_timer = AnimationConfig::timer_from_fps(config.fps2p);
-                            atlas.index = match atlas.index {
-                                0..=11 => atlas.index + 1,
-                                12 => 9,
-                                18..=24 =>  atlas.index + 1,
-                                _ => 0
-                            };
-                            if atlas.index ==25 {
-                                // 退出大招模式
-                                gun.image = source.image_gun.clone();
-                                gun.texture_atlas = Some(TextureAtlas {
-                                    layout: source.lay_out_gun.clone(),
-                                    index: 0,
-                                });
-                                *state = GunState::Normal;
-                            }
-                        }
-                    }
-                }
-                _ => {},
             }
+            for (mut config, mut gun, mut state) in gun_query.iter_mut() {
+                match *state {
+                    GunState::Fire => {
+                        config.frame_timer.tick(time.delta());
+                        if config.frame_timer.just_finished(){
+                            // info!("ok!");
+                            if let Some(atlas) = &mut gun.texture_atlas {
+                                config.frame_timer = AnimationConfig::timer_from_fps(config.fps2p);
+                                atlas.index += 1;
+                                if atlas.index == 8 {
+                                    gun.image = source.image_gun.clone();
+                                    gun.texture_atlas = Some(TextureAtlas {
+                                        layout: source.lay_out_gun.clone(),
+                                        index: 0,
+                                    });
+                                    *state = GunState::Normal;
+                                    // println!("fire over");
+                                }
+                            }
+                        }
+                    },
+                    GunState::SP => {
+                        // arisu大招
+                        config.frame_timer.tick(time.delta());
+                        if config.frame_timer.just_finished(){
+                            // info!("ok!");
+                            if let Some(atlas) = &mut gun.texture_atlas {
+                                config.frame_timer = AnimationConfig::timer_from_fps(config.fps2p);
+                                atlas.index = match atlas.index {
+                                    0..=11 => atlas.index + 1,
+                                    12 => 9,
+                                    18..=24 =>  atlas.index + 1,
+                                    _ => 0
+                                };
+                                if atlas.index ==25 {
+                                    // 退出大招模式
+                                    gun.image = source.image_gun.clone();
+                                    gun.texture_atlas = Some(TextureAtlas {
+                                        layout: source.lay_out_gun.clone(),
+                                        index: 0,
+                                    });
+                                    *state = GunState::Normal;
+                                }
+                            }
+                        }
+                    }
+                    _ => {},
+                }
 
-        }
+            }
+        },
+        3 => {
+            for (mut config, mut gun, mut state) in gun_query.iter_mut() {
+                match *state {
+                    GunState::Fire => {
+                        config.frame_timer.tick(time.delta());
+                        if config.frame_timer.just_finished(){
+                            // info!("ok!");
+                            if let Some(atlas) = &mut gun.texture_atlas {
+                                config.frame_timer = AnimationConfig::timer_from_fps(config.fps2p);
+                                atlas.index += 1;
+                                if atlas.index == 7 {
+                                    gun.image = source.image_gun.clone();
+                                    gun.texture_atlas = Some(TextureAtlas {
+                                        layout: source.lay_out_gun.clone(),
+                                        index: 0,
+                                    });
+                                    *state = GunState::Normal;
+                                    // println!("fire over");
+                                }
+                            }
+                        }
+                    },
+                    _ => {},
+                }
+
+            }
+        },
+        _ => {}
     }
 }
 fn animate_enemy_born(
@@ -828,8 +867,6 @@ fn animate_fridge(
 fn animate_droneskill (
     time: Res<Time>,
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
     mut drone_query: Query<(
         Entity, 
         &mut AnimationConfig, 
@@ -841,6 +878,10 @@ fn animate_droneskill (
         &mut Transform,
         &mut AnimationConfig,
         & gun::BulletDirection), (Without<Drone>, With<DroneBullet>)>,
+    // mut mk1_query: Query<(
+    //     &mut AnimationConfig, 
+    //     &mut Sprite,
+    // )>,
     source: Res<GlobalCharacterTextureAtlas>,
 ) {
     if !drone_query.is_empty() {
@@ -865,11 +906,6 @@ fn animate_droneskill (
                     }
                     commands.spawn((
                         Sprite {
-                            // image: asset_server.load("Player_Bullet_Missile.png"),
-                            // texture_atlas: Some(TextureAtlas {
-                            //     layout: texture_atlas_layouts.add(TextureAtlasLayout::from_grid(UVec2::splat(32),5,1,None,None)),
-                            //     index: 0,
-                            // }),
                             image: source.image_drone_missle.clone(),
                             texture_atlas: Some(TextureAtlas {
                                 layout: source.layout_drone_missle.clone(),
@@ -895,11 +931,6 @@ fn animate_droneskill (
                     ));
                     commands.spawn((
                         Sprite {
-                            // image: asset_server.load("Player_Bullet_Missile.png"),
-                            // texture_atlas: Some(TextureAtlas {
-                            //     layout: texture_atlas_layouts.add(TextureAtlasLayout::from_grid(UVec2::splat(32),5,1,None,None)),
-                            //     index: 0,
-                            // }),
                             image: source.image_drone_missle.clone(),
                             texture_atlas: Some(TextureAtlas {
                                 layout: source.layout_drone_missle.clone(),
@@ -942,6 +973,140 @@ fn animate_droneskill (
             let dy = dir.0.y;
             let angle = dy.atan2(dx);
             transform.rotation = Quat::from_rotation_z(angle);
+        }
+    }
+}
+
+fn animate_mk2 (
+    mut commands: Commands,
+    time: Res<Time>,
+    mut mk2_query: Query<(
+        Entity,
+        &mut Sprite,
+        &mut AnimationConfig,
+        &Transform,
+    ),(With<MK2Born>, )>,
+    source: Res<GlobalCharacterTextureAtlas>,
+) {
+    if !mk2_query.is_empty() {
+        for (m, mut sprite, mut config, trans) in mk2_query.iter_mut() {
+
+            config.frame_timer.tick(time.delta());
+            // let flip_x = sprite.flip_x;
+            if config.frame_timer.just_finished(){
+                if let Some(atlas) = &mut sprite.texture_atlas {
+                    config.frame_timer = AnimationConfig::timer_from_fps(config.fps2p);
+                    atlas.index = atlas.index + 1;
+                    if atlas.index == 5 {
+                        commands.spawn((
+                            Sprite {
+                                image: source.image_MK2_body.clone(),
+                                // flip_x: flip_x,
+                                ..Default::default()
+                            },
+                            Transform::from_scale(Vec3::splat(2.5))
+                                .with_translation(trans.translation.clone() - Vec3::new(0.0, 295.0, 2.0)),
+                            MK2,
+                            Player,
+                            SpawnInstant(Instant::now()),
+                        )).with_child((
+                            Sprite {
+                                image: source.image_MK2_head.clone(),
+                                // flip_x: flip_x,
+                                ..Default::default()
+                            },
+                            Transform::from_translation(Vec3::new(0.0, 15.0, 1.0)), 
+                            MK2Loc(trans.translation.clone() - Vec3::new(0.0, 295.0, 2.0)),
+                            MK2LockOn(Vec2::new(0.0, 0.0)),
+                            GunTimer(Stopwatch::default()),
+                        ));
+                    }
+                    if atlas.index == 8 {
+                        commands.entity(m).despawn();
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn mk2_flip_rotate(
+    time: Res<Time>,
+    mut commands: Commands,
+    player_query: Query<&Transform, (With<Character>, Without<MK2LockOn>)>,
+    enemy_query: Query<&Transform, (With<Enemy>, Without<MK2LockOn>)>,
+    mut mk2_body_query: Query<(
+        Entity, 
+        &mut Sprite, 
+        &SpawnInstant), (With<MK2>, With<Player>, Without<MK2LockOn>)>,
+    mut mk2_head_query: Query<(
+        &MK2Loc,
+        &Parent,
+        &mut Transform,
+        &mut Sprite, 
+        &mut MK2LockOn,), (With<MK2LockOn>)>,
+    source: Res<GlobalCharacterTextureAtlas>,
+) {
+    let mut loc:Vec2 = Vec2::ZERO;
+
+    for trans in player_query.iter() {
+        loc = trans.translation.truncate() + Vec2::new(0.0, 15.0);
+        break;
+    }
+
+
+    // 还包括了炮台的超时自毁
+    for (hhloc, body, mut htrans, mut head, mut lockon) in mk2_head_query.iter_mut() {
+        let hloc = hhloc.0.truncate();
+        // 找最近的一个敌人打
+        let mut dist = 9999.0;
+        let mut flag = false;
+        for trans in enemy_query.iter() {
+            let temp1 = trans.translation.truncate();
+            let temp2 = temp1.distance(hloc);
+            if temp2 < dist {
+                dist = temp2;
+                loc = temp1;
+            }
+            flag = true;
+        }
+        if flag {
+            lockon.0 = loc.clone();
+        } else {
+            lockon.0 = Vec2::new(0.0, 0.0);
+        }
+        let angle = (hloc.y - loc.y).atan2(hloc.x - loc.x) + PI;
+        htrans.rotation = Quat::from_rotation_z(angle);
+        let mut flip = false;
+        if loc.x > hloc.x {
+            head.flip_y = false;
+        } else {
+            head.flip_y = true;
+            flip = true;
+        }
+        if let Ok((e, mut mk2body, instant )) = mk2_body_query.get_mut(**body) {
+            mk2body.flip_x = flip;
+            if instant.0.elapsed().as_secs_f32() > MK2_SURVIVE_TIME {
+            commands.entity(e).despawn_recursive();
+                //产生炮台消失的特效
+                commands.spawn((
+                    Sprite {
+                        image: source.image_grenade_hit.clone(),
+                        texture_atlas: Some(TextureAtlas {
+                            layout: source.layout_grenade_hit.clone(),
+                            index: 0,
+                        }),
+                        ..default()
+                    },
+                    Transform {
+                        translation: hhloc.0.clone(),
+                        scale: Vec3::splat(2.5),
+                        ..default()
+                    },
+                    AnimationConfig::new(15),
+                    GrenadeHit,
+                ));
+            }
         }
     }
 }

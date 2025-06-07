@@ -25,6 +25,7 @@ pub const PLAYER_JUMP_SPEED: f32 = 4.0;
 pub const PLAYER_GRAVITY: f32 = 0.2;
 pub const PLAYER_JUMP_COUNTS: usize = 3;
 pub const GRENADE_BOOM_RANGE:f32 = 150.0;
+pub const MK2_NUM: usize = 2;
 pub const SKILL2_CD: f32 = 6.0;
 pub const SKILL3_CD: f32 = 3.0;
 pub const SKILL4_CD: f32 = 4.0;
@@ -53,6 +54,7 @@ pub const BULLET_SPAWN_INTERVAL: f32 = 0.3 / 3.0;
 pub const BULLET_TIME_SECS: f32 = 3.0;
 pub const BULLET_SPEED: f32 = 8.0 * 100.0 / fps as f32;
 pub const BULLET_DAMAGE: f32 = 15.0 * 2.0;
+pub const MK2_SURVIVE_TIME: f32 = 35.0;
 
 pub const NUM_BULLETS_PER_SHOT: usize = 10;
 
