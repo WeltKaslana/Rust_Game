@@ -793,6 +793,7 @@ fn handle_base_timer(
     mut base_query: Query<(&mut Progress, &mut Enemybornduration), With<Progress>>,
     mut enemybornpoint_query: Query<&mut Enemyterm, With<Enemybornflag>>,
     enemy_query: Query<(Entity, &Transform), With<Enemy>>,
+    born_query: Query<Entity, With<EnemyBorn>>,
     time: Res<Time>,
     mut commands: Commands,
     source: Res<GlobalEnemyTextureAtlas>
@@ -807,6 +808,9 @@ fn handle_base_timer(
         dtimer.timer.reset();
         println!("进度:{}", progress.0);
         if progress.0 >= Survial_Time {
+            for e in born_query.iter() {
+                commands.entity(e).despawn();
+            }
             for (entity, loc) in enemy_query.iter() {
                 commands.entity(entity).despawn();
                 commands.spawn( (

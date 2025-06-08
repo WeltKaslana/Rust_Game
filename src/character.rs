@@ -9,6 +9,7 @@ use bevy_rapier2d::na::distance_squared;
 use bevy_rapier2d::prelude::*;
 use bevy::utils::Instant;
 
+use std::default;
 use std::{time::Duration};
 use crate::boss::BossComponent;
 use crate::gui::Transition;
@@ -110,8 +111,29 @@ pub struct Buff(
     pub i8, // 4.bullet_damage
     pub i8, // 5.grenade_range
     pub i8, // 6.skill_cooldown
+    pub i8, // 7.resistence_up
     // to design 
 );
+
+impl Default for Buff {
+    fn default() -> Self {
+        Buff(
+            1, 
+            1, 
+            1, 
+            1, 
+            1, 
+            1, 
+            1, 
+            1)
+    }
+}
+impl Buff {
+    pub fn sum(&self) -> i8 {
+        self.0 + self.1 + self.2 + self.3 + self.4 + self.5 + self.6 + self.7
+    }
+}
+
 #[derive(Event)]
 pub struct PlayerEnemyCollisionEvent;
 
@@ -238,7 +260,7 @@ fn setup_player(
         //音效播放间隔计时器
         PlayerTimer(Stopwatch::default()),
         // 状态栏
-        Buff(1, 1, 1, 1, 1, 1, 1),
+        Buff::default(),
 
         Collider::cuboid(9.0, 16.5),
 
@@ -745,7 +767,8 @@ fn handle_utaha_attack_damage (
     player_query: Query<(&Transform, &PlayerState), (With<Character>, Without<Enemy>)>,
     weapen_query: Query<(&Transform, &GunState), (With<Gun>, Without<Enemy>)>,
     enemy_bullet_query: Query<(Entity, &Transform), (With<EnemyBullet>, Without<Character>)>,
-    mut enemy_query: Query<(&mut Health, &Transform), (With<Enemy>, Without<EnemyBullet>)>,
+    mut enemy_query: Query<(&mut Health, &Transform), (With<Enemy>, Without<EnemyBullet>, Without<Boss>)>,
+    mut boss_query: Query<(&mut Health, &Transform), (With<Boss>, Without<EnemyBullet>, Without<Enemy>)>,
     source: Res<GlobalCharacterTextureAtlas>,
 ) {
 
@@ -786,6 +809,12 @@ fn handle_utaha_attack_damage (
         // 对敌方造成伤害
         for (mut health, etrans) in enemy_query.iter_mut() {
             if (etrans.translation.x - trans.x).abs() < 90.0 && (etrans.translation.y - trans.y).abs() < 130.0 {
+                health.0 -= damage * BULLET_DAMAGE;
+            }
+        }
+        // 对boss造成伤害
+        for (mut health, btrans) in boss_query.iter_mut() {
+            if (btrans.translation.x - trans.x).abs() < 90.0 && (btrans.translation.y - trans.y).abs() < 130.0 {
                 health.0 -= damage * BULLET_DAMAGE;
             }
         }

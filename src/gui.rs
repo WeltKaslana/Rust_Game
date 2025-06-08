@@ -1,21 +1,12 @@
-use bevy::{asset, ecs::query, prelude::*, render::camera, utils::info};
+use bevy::{asset, ecs::query, prelude::*, render::camera, text::cosmic_text::ttf_parser::Style, utils::info};
 use encoding_rs::{GBK, UTF_8};
 use rand::Rng;
 use std::collections::HashSet;
 
 use crate::{
     character::{
-        Character, 
-        Player,
-        Buff,
-        ReloadPlayerEvent,
-    }, 
-    gamestate::*, 
-    gun::{Cursor, Gun}, 
-    home::Home, 
-    room::{AssetsManager, Map, Chest, ChestType}, 
-    ui::UI, 
-    resources::*,
+        Buff, Character, Health, Player, ReloadPlayerEvent
+    }, gamestate::*, gun::{Cursor, Gun}, home::Home, resources::*, room::{AssetsManager, Chest, ChestType, Map}, ui::UI, configs::*,
 };
 
 pub struct GuiPlugin;
@@ -838,6 +829,7 @@ fn setup_soramenu(
     source1: Res<GlobalCharacterTextureAtlas>,
 ) {
     let font: Handle<Font> = asset_server.load("Fonts/FIXEDSYS-EXCELSIOR-301.ttf");
+    let font2: Handle<Font> = asset_server.load("fonts/pixel_font.ttf");
     commands.spawn((
         //底
         ImageNode::new(source.menu.clone()),
@@ -978,6 +970,21 @@ fn setup_soramenu(
                         ]
                     }
                 };
+                let skill_text = match source1.id {
+                    1 => {
+                        source.shiroko_skill_text.clone()
+                    },
+                    2 => {
+                        source.arisu_skill_text.clone()
+                    },
+                    3  => { 
+                        source.utaha_skill_text.clone()
+                    },
+                    _ => {
+                        println!("Invalid charcter id!");
+                        source.shiroko_skill_text.clone()
+                    }
+                };
                 parent.spawn(( 
                     ImageNode::new(source.tips.clone()),
                     Node {
@@ -1000,6 +1007,20 @@ fn setup_soramenu(
                             ..Default::default()
                         },
                         CharacterSelectButton,
+                    )).with_child((
+                        Text::new(skill_text[0].to_string()),
+                        TextFont {
+                                font: font2.clone(),
+                                font_size: 15.0,
+                                ..default()
+                        },  
+                        TextColor(Color::rgb(0.0, 0.0, 0.0)),
+                        TextLayout::new_with_no_wrap(), 
+                        Node {
+                            top: Val::Percent(7.6),
+                            left: Val::Percent(108.1),
+                            ..default()
+                        },
                     ));
                     parent.spawn((
                         Name::new("2"),
@@ -1012,6 +1033,20 @@ fn setup_soramenu(
                             ..Default::default()
                         },
                         CharacterSelectButton,
+                    )).with_child((
+                        Text::new(skill_text[1].to_string()),
+                        TextFont {
+                                font: font2.clone(),
+                                font_size: 15.0,
+                                ..default()
+                        },  
+                        TextColor(Color::rgb(0.0, 0.0, 0.0)),
+                        TextLayout::new_with_no_wrap(), 
+                        Node {
+                            top: Val::Percent(7.6),
+                            left: Val::Percent(108.1),
+                            ..default()
+                        },
                     ));
                     parent.spawn((
                         Name::new("3"),
@@ -1024,6 +1059,20 @@ fn setup_soramenu(
                             ..Default::default()
                         },
                         CharacterSelectButton,
+                    )).with_child((
+                        Text::new(skill_text[2].to_string()),
+                        TextFont {
+                                font: font2.clone(),
+                                font_size: 15.0,
+                                ..default()
+                        },  
+                        TextColor(Color::rgb(0.0, 0.0, 0.0)), 
+                        TextLayout::new_with_no_wrap(),
+                        Node {
+                            top: Val::Percent(7.6),
+                            left: Val::Percent(108.1),
+                            ..default()
+                        },
                     ));
                     parent.spawn((
                         Name::new("4"),
@@ -1033,9 +1082,25 @@ fn setup_soramenu(
                             height: Val::Percent(20.0),
                             top: Val::Percent(74.3),
                             left: Val::Percent(-33.2),
+                            // max_width: Val::Percent(40.0),
                             ..Default::default()
                         },
                         CharacterSelectButton,
+                    )).with_child((
+                        Text::new(skill_text[3].to_string()),
+                        TextFont {
+                                font: font2.clone(),
+                                font_size: 15.0,
+                                ..default()
+                        },  
+                        TextColor(Color::rgb(0.0, 0.0, 0.0)),
+                        TextLayout::new_with_no_wrap(),
+                        Node {
+                            top: Val::Percent(7.6),
+                            left: Val::Percent(108.1),
+                            ..default()
+                        },
+                        // test,
                     ));
                 });
                 // 关闭
@@ -1403,14 +1468,16 @@ fn reload_player (
     *source = GlobalCharacterTextureAtlas::init(id, &asset_server, &mut texture_atlas_layouts);
     info!("Player Reloading!");
 }
+
 fn reload_button_change (
     mut query: Query<(
             &mut ImageNode,
             &Name,),
         (With<Button>, With<CharacterSelectButton>,),
     >,
-    mut query2: Query<(&mut ImageNode, &Name), (With<CharacterSelectButton>, Without<Button>)>,
-    mut source: Res<GlobalMenuTextureAtlas>,
+    mut query2: Query<(&mut ImageNode, &Name, &Children,), (With<CharacterSelectButton>, Without<Button>)>,
+    mut text_query: Query<&mut Text>,
+    source: Res<GlobalMenuTextureAtlas>,
     mut events: EventReader<ReloadPlayerEvent>,
 ) {
     for event in events.read() {
@@ -1440,21 +1507,32 @@ fn reload_button_change (
                 _ => {}
             }
         }
-        for (mut image, name) in &mut query2 {
+        for (mut image, name, t) in &mut query2 {
+            // 获取技能文本实体
+            let mut stext: Option<Entity> = None;
+            for te in t.iter() {
+                stext = Some(*te);
+                break;
+            }
+            let mut skilltext = text_query.get_mut(stext.unwrap()).unwrap();
             match event.0 {
                 1 => {
                     match name.as_str() {
                         "1" => {
                             image.image = source.shiroko_skill1.clone();
+                            skilltext.0 = source.shiroko_skill_text[0].clone();
                         },
                         "2" => {
                             image.image = source.shiroko_skill2.clone();
+                            skilltext.0 = source.shiroko_skill_text[1].clone();
                         },
                         "3" => {
                             image.image = source.shiroko_skill3.clone();
+                            skilltext.0 = source.shiroko_skill_text[2].clone();
                         },
                         "4" => {
                             image.image = source.shiroko_skill4.clone();
+                            skilltext.0 = source.shiroko_skill_text[3].clone();
                         },
                         _ => {}
                     }
@@ -1463,15 +1541,19 @@ fn reload_button_change (
                     match name.as_str() {
                         "1" => {
                             image.image = source.arisu_skill1.clone();
+                            skilltext.0 = source.arisu_skill_text[0].clone();
                         },
                         "2" => {
                             image.image = source.arisu_skill2.clone();
+                            skilltext.0 = source.arisu_skill_text[1].clone();
                         },
                         "3" => {
                             image.image = source.arisu_skill3.clone();
+                            skilltext.0 = source.arisu_skill_text[2].clone();
                         },
                         "4" => {
                             image.image = source.arisu_skill4.clone();
+                            skilltext.0 = source.arisu_skill_text[3].clone();
                         },
                         _ => {}
                     }
@@ -1480,15 +1562,19 @@ fn reload_button_change (
                     match name.as_str() {
                         "1" => {
                             image.image = source.utaha_skill1.clone();
+                            skilltext.0 = source.utaha_skill_text[0].clone();
                         },
                         "2" => {
                             image.image = source.utaha_skill2.clone();
+                            skilltext.0 = source.utaha_skill_text[1].clone();
                         },
                         "3" => {
                             image.image = source.utaha_skill3.clone();
+                            skilltext.0 = source.utaha_skill_text[2].clone();
                         },
                         "4" => {
                             image.image = source.utaha_skill4.clone();
+                            skilltext.0 = source.utaha_skill_text[3].clone();
                         },
                         _ => {}
                     }
@@ -1710,7 +1796,8 @@ fn setup_choosingbuffmenu(
                     let numbers: Vec<i32> = unique_numbers.into_iter().collect();
 
                     parent.spawn((
-                        Name::new("buff1"),
+                        // Name::new("buff1"),
+                        Name::new(format!("{}", numbers[0])),
                         // ImageNode::new(asset_server.load("Icon_Buff_AmmoUp.png")),
                         ImageNode::new(source.buff_icon[numbers[0] as usize].clone()),
                         Node {
@@ -1725,7 +1812,8 @@ fn setup_choosingbuffmenu(
                         Button,
                     ));
                     parent.spawn((
-                        Name::new("buff2"),
+                        // Name::new("buff2"),
+                        Name::new(format!("{}", numbers[1])),
                         // ImageNode::new(asset_server.load("Icon_Buff_AttackUp.png")),
                         ImageNode::new(source.buff_icon[numbers[1] as usize].clone()),
                         Node {
@@ -1740,7 +1828,8 @@ fn setup_choosingbuffmenu(
                         Button,
                     ));
                     parent.spawn((
-                        Name::new("buff3"),
+                        // Name::new("buff3"),
+                        Name::new(format!("{}", numbers[2])),
                         // ImageNode::new(asset_server.load("Icon_Buff_AbnormalUp.png")),
                         ImageNode::new(source.buff_icon[numbers[2] as usize].clone()),
                         Node {
@@ -1766,7 +1855,8 @@ fn setup_choosingbuffmenu(
                     let numbers: Vec<i32> = unique_numbers.into_iter().collect();
 
                     parent.spawn((
-                        Name::new("buff1"),
+                        // Name::new("buff1"),
+                        Name::new(format!("{}", numbers[0])),
                         // ImageNode::new(asset_server.load("Icon_Buff_AmmoUp.png")),
                         ImageNode::new(source.mod_icon[numbers[0] as usize].clone()),
                         Node {
@@ -1781,7 +1871,8 @@ fn setup_choosingbuffmenu(
                         Button,
                     ));
                     parent.spawn((
-                        Name::new("buff2"),
+                        // Name::new("buff2"),
+                        Name::new(format!("{}", numbers[1])),
                         // ImageNode::new(asset_server.load("Icon_Buff_AttackUp.png")),
                         ImageNode::new(source.mod_icon[numbers[1] as usize].clone()),
                         Node {
@@ -1796,7 +1887,8 @@ fn setup_choosingbuffmenu(
                         Button,
                     ));
                     parent.spawn((
-                        Name::new("buff3"),
+                        // Name::new("buff3"),
+                        Name::new(format!("{}", numbers[2])),
                         // ImageNode::new(asset_server.load("Icon_Buff_AbnormalUp.png")),
                         ImageNode::new(source.mod_icon[numbers[2] as usize].clone()),
                         Node {
@@ -1822,7 +1914,8 @@ fn setup_choosingbuffmenu(
                     let numbers: Vec<i32> = unique_numbers.into_iter().collect();
 
                     parent.spawn((
-                        Name::new("buff1"),
+                        // Name::new("buff1"),
+                        Name::new(format!("{}", numbers[0])),
                         // ImageNode::new(asset_server.load("Icon_Buff_AmmoUp.png")),
                         ImageNode::new(source.buff_consumptions[numbers[0] as usize].clone()),
                         Node {
@@ -1837,7 +1930,8 @@ fn setup_choosingbuffmenu(
                         Button,
                     ));
                     parent.spawn((
-                        Name::new("buff2"),
+                        // Name::new("buff2"),
+                        Name::new(format!("{}", numbers[1])),
                         // ImageNode::new(asset_server.load("Icon_Buff_AttackUp.png")),
                         ImageNode::new(source.buff_consumptions[numbers[1] as usize].clone()),
                         Node {
@@ -1852,7 +1946,8 @@ fn setup_choosingbuffmenu(
                         Button,
                     ));
                     parent.spawn((
-                        Name::new("buff3"),
+                        // Name::new("buff3"),
+                        Name::new(format!("{}", numbers[2])),
                         // ImageNode::new(asset_server.load("Icon_Buff_AbnormalUp.png")),
                         ImageNode::new(source.buff_consumptions[numbers[2] as usize].clone()),
                         Node {
@@ -1882,10 +1977,11 @@ fn handle_choosingbuffmenu (
             &Name,),
         (Changed<Interaction>, With<Button>),
     >,
-    mut buff_query: Query<&mut Buff, With<Character>>,
+    chest_query: Query<&ChestType, With<Chest>>,
+    mut buff_query: Query<(&mut Buff, &mut Health), With<Character>>,
     mut windows: Query<&mut Window>,
     mut query: Query<&mut Node, (With<ChoosingBuffMenu>, Without<Camera2d>)>,
-    source: Res<GlobalMenuTextureAtlas>,
+    // source: Res<GlobalMenuTextureAtlas>,
     mut next_state: ResMut<NextState<InGameState>>,
 ) {
     if camera_query.is_empty() || menu_query.is_empty() {
@@ -1921,29 +2017,114 @@ fn handle_choosingbuffmenu (
                                 if buff_query.is_empty() {
                                     return;
                                 }
-                                let mut buff = buff_query.single_mut();
+                                let (mut buff, mut health) = buff_query.single_mut();
 
-                                match name.as_str() {
-                                    "buff1" => {
-                                        if let Ok(mut window) = windows.get_single_mut() {
-                                            window.cursor_options.visible = false;
+                                let ctype = chest_query.single().0;
+
+                                if let Ok(mut window) = windows.get_single_mut() {
+                                    window.cursor_options.visible = false;
+                                }
+
+                                match ctype {
+                                    0 => {
+                                        match name.as_str() {
+                                            "0" => {
+                                                // 子弹分裂
+                                                // if let Ok(mut window) = windows.get_single_mut() {
+                                                //     window.cursor_options.visible = false;
+                                                // }
+                                                buff.0 += 2;
+                                            },
+                                            "1" => {
+                                                // 伤害增加
+                                                // if let Ok(mut window) = windows.get_single_mut() {
+                                                //     window.cursor_options.visible = false;
+                                                // }
+                                                buff.4 += 2;
+                                            },
+                                            "2" => {
+                                                // 射速提高
+                                                // if let Ok(mut window) = windows.get_single_mut() {
+                                                //     window.cursor_options.visible = false;
+                                                // }
+                                                buff.1 += 1;
+                                            },
+                                            "3" => {
+                                                // 技能冷却加快
+                                                // if let Ok(mut window) = windows.get_single_mut() {
+                                                //     window.cursor_options.visible = false;
+                                                // }
+                                                buff.6 += 1;
+                                            },
+                                            "4" => {
+                                                // 抗性增加
+                                                // if let Ok(mut window) = windows.get_single_mut() {
+                                                //     window.cursor_options.visible = false;
+                                                // }
+                                                buff.7 += 1;
+                                            },
+                                            _ => {}
                                         }
-                                        buff.0 += 2;// 子弹分裂
                                     },
-                                    "buff2" => {
-                                        if let Ok(mut window) = windows.get_single_mut() {
-                                            window.cursor_options.visible = false;
+                                    1 => {
+                                        match name.as_str() {
+                                            "0" => {
+                                                // if let Ok(mut window) = windows.get_single_mut() {
+                                                //     window.cursor_options.visible = false;
+                                                // }
+                                                buff.0+=2;
+                                            },
+                                            "1" => {
+                                                // if let Ok(mut window) = windows.get_single_mut() {
+                                                //     window.cursor_options.visible = false;
+                                                // }
+                                                buff.4 += 2;
+                                            },
+                                            "2" => {
+                                                // if let Ok(mut window) = windows.get_single_mut() {
+                                                //     window.cursor_options.visible = false;
+                                                // }
+                                                buff.1 += 1;
+                                            },
+                                            _ => {}
                                         }
-                                        buff.4 += 2;
                                     },
-                                    "buff3" => {
-                                        if let Ok(mut window) = windows.get_single_mut() {
-                                            window.cursor_options.visible = false;
+                                    2 => {
+                                        match name.as_str() {
+                                            "0" => {
+                                                // 回生命
+                                                // if let Ok(mut window) = windows.get_single_mut() {
+                                                //     window.cursor_options.visible = false;
+                                                // }
+                                                health.0 += PLAYER_HEALTH * 0.15;
+                                                if health.0 > PLAYER_HEALTH {
+                                                    health.0 = PLAYER_HEALTH;
+                                                }
+                                            },
+                                            "1" => {
+                                                // if let Ok(mut window) = windows.get_single_mut() {
+                                                //     window.cursor_options.visible = false;
+                                                // }
+                                                health.0 += PLAYER_HEALTH * 0.15;
+                                                if health.0 > PLAYER_HEALTH {
+                                                    health.0 = PLAYER_HEALTH;
+                                                }
+                                            },
+                                            "2" => {
+                                                // if let Ok(mut window) = windows.get_single_mut() {
+                                                //     window.cursor_options.visible = false;
+                                                // }
+                                                health.0 += PLAYER_HEALTH * 0.15;
+                                                if health.0 > PLAYER_HEALTH {
+                                                    health.0 = PLAYER_HEALTH;
+                                                }
+                                            },
+                                            _ => {}
                                         }
-                                        buff.1 += 1;
                                     },
                                     _ => {}
                                 }
+
                                 next_state.set(InGameState::Running);
                             },
                             Interaction::Hovered => {
@@ -1974,9 +2155,19 @@ fn cleanup_choosingbuffmenu (
 fn setup_gameovermenu (
     mut commands: Commands,
     asset_server: Res<AssetServer>,
+    buff_query: Query<&Buff, With<Character>>,
     source: Res<GlobalMenuTextureAtlas>,
+    source1: Res<ScoreResource>,
 ) {
    let font: Handle<Font> = asset_server.load("Fonts/FIXEDSYS-EXCELSIOR-301.ttf");
+   let font2 : Handle<Font> = asset_server.load("Fonts/pixel_font.ttf");
+   if buff_query.is_empty() {
+       return;
+   }
+   let mut level = -8;
+   for buff in buff_query.iter() {
+    level += buff.sum();
+   }
     commands.spawn((
         //底
         ImageNode::new(source.menu.clone()),
@@ -2046,6 +2237,82 @@ fn setup_gameovermenu (
                         ..Default::default()
                     },
                 ));
+                parent.spawn((
+                    Text::new(format!("小机器人击杀数:{}", source1.enemy_score)),
+                    TextFont {
+                        font: font2.clone(),
+                        font_size: 25.0,
+                        ..default()
+                    },
+                    TextColor(Color::rgb(0.0, 0.0, 0.0)),
+                    Node {
+                        top: Val::Percent(39.2),
+                        left: Val::Percent(6.6),
+                        ..Default::default()
+                    },
+                    test,
+                ));
+                parent.spawn((
+                    Text::new(format!("Boss击杀数:{}", source1.boss_score)),
+                    TextFont {
+                        font: font2.clone(),
+                        font_size: 25.0,
+                        ..default()
+                    },
+                    TextColor(Color::rgb(0.0, 0.0, 0.0)),
+                    Node {
+                        top: Val::Percent(19.2),
+                        left: Val::Percent(6.6),
+                        ..Default::default()
+                    },
+                    test,
+                ));
+                parent.spawn((
+                    Text::new(format!("存活时间:  {}:{}", source1.time_min, source1.time_sec)),
+                    TextFont {
+                        font: font2.clone(),
+                        font_size: 25.0,
+                        ..default()
+                    },
+                    TextColor(Color::rgb(0.0, 0.0, 0.0)),
+                    Node {
+                        top: Val::Percent(-0.8),
+                        left: Val::Percent(6.6),
+                        ..Default::default()
+                    },
+                    test,
+                ));
+                parent.spawn((
+                    Text::new(format!("通过关卡:{}", source1.map_index)),
+                    TextFont {
+                        font: font2.clone(),
+                        font_size: 25.0,
+                        ..default()
+                    },
+                    TextColor(Color::rgb(0.0, 0.0, 0.0)),
+                    Node {
+                        top: Val::Percent(-20.8),
+                        left: Val::Percent(6.6),
+                        ..Default::default()
+                    },
+                    test,
+                ));
+                parent.spawn((
+                    Text::new(format!("角色等级:{}", level)),
+                    TextFont {
+                        font: font2.clone(),
+                        font_size: 25.0,
+                        ..default()
+                    },
+                    TextColor(Color::rgb(0.0, 0.0, 0.0)),
+                    Node {
+                        top: Val::Percent(-40.8),
+                        left: Val::Percent(6.6),
+                        ..Default::default()
+                    },
+                    test,
+                ));
+
                 // 按钮
                 parent.spawn(( 
                     Name::new("back to home"),

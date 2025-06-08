@@ -384,6 +384,7 @@ pub struct GlobalMenuTextureAtlas {
     // 消耗品图标
     pub buff_consumptions: [Handle<Image>; 3],
     pub buff_consumptions_text: [String; 3],
+
 }
 
 impl GlobalMenuTextureAtlas {
@@ -484,10 +485,10 @@ impl GlobalMenuTextureAtlas {
             shiroko_skill3_cool: asset_server.load(path_shiroko_skill3_cool),
             shiroko_skill4_cool: asset_server.load(path_shiroko_skill4_cool),
             shiroko_skill_text: [
-                "1:blabla".to_string(),
-                "2:blabla".to_string(),
-                "3:blabla".to_string(),
-                "4:blabla".to_string(),
+                "shiroko1:blabla".to_string(),
+                "shiroko2:blabla".to_string(),
+                "shiroko3:blabla".to_string(),
+                "shiroko4:blabla".to_string(),
             ],
 
             arisu: asset_server.load(path_arisu),
@@ -501,10 +502,10 @@ impl GlobalMenuTextureAtlas {
             arisu_skill3_cool: asset_server.load(path_arisu_skill3_cool),
             arisu_skill4_cool: asset_server.load(path_arisu_skill4_cool),
             arisu_skill_text: [
-                "1:blabla".to_string(),
-                "2:blabla".to_string(),
-                "3:blabla".to_string(),
-                "4:blabla".to_string(),
+                "光之剑:\n发射光弹对敌人造成一定伤害".to_string(),
+                "振刀desu:\n进行防御,防御成功时对周围造成伤害".to_string(),
+                "发芽德宏:\n投掷一枚手雷".to_string(),
+                "崩坏的世界:\n光之剑蓄力,蓄力时间越长伤害越高,发射的光炮会贯穿所有\n敌人并造成大量伤害".to_string(),
             ],
 
             utaha: asset_server.load(path_utaha),
@@ -518,10 +519,10 @@ impl GlobalMenuTextureAtlas {
             utaha_skill3_cool: asset_server.load(path_utaha_skill3_cool),
             utaha_skill4_cool: asset_server.load(path_utaha_skill4_cool),
             utaha_skill_text: [
-                "1:blabla".to_string(),
-                "2:blabla".to_string(),
-                "3:blabla".to_string(),
-                "4:blabla".to_string(),
+                "utaha1:blabla".to_string(),
+                "utaha2:blabla".to_string(),
+                "utaha3:blabla".to_string(),
+                "utaha4:blabla".to_string(),
             ],
 
             buff_icon: buff_icon,

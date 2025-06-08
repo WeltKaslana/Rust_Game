@@ -1043,6 +1043,7 @@ fn mk2_flip_rotate(
     mut commands: Commands,
     player_query: Query<&Transform, (With<Character>, Without<MK2LockOn>)>,
     enemy_query: Query<&Transform, (With<Enemy>, Without<MK2LockOn>)>,
+    boss_query: Query<&Transform, (With<Boss>, Without<BossComponent>, Without<MK2LockOn>)>,
     mut mk2_body_query: Query<(
         Entity, 
         &mut Sprite, 
@@ -1078,6 +1079,17 @@ fn mk2_flip_rotate(
             }
             flag = true;
         }
+        dist = 9999.0;
+        for trans in boss_query.iter() {
+            let temp1 = trans.translation.truncate();
+            let temp2 = temp1.distance(hloc);
+            if temp2 < dist {
+                dist = temp2;
+                loc = temp1;
+            }
+            flag = true;
+        }
+
         if flag {
             lockon.0 = loc.clone();
         } else {

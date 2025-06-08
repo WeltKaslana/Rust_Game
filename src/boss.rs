@@ -4,7 +4,7 @@ use bevy::state::commands;
 use bevy::transform;
 use bevy::{dev_tools::states::*, prelude::*, time::Stopwatch};
 use crate::{gamestate::*,
-    configs::*,character::{*, Health}, gun::Bullet, enemy::*, room::Map,};
+    configs::*,character::{*, Health}, gun::Bullet, enemy::*, room::{Map, EnemyBorn},};
 use crate::*;
 use rand::Rng;
 use character::AnimationConfig;
@@ -68,19 +68,6 @@ pub struct BossDeathEvent;
 impl Plugin for BossPlugin {
     fn build(&self, app: &mut App) {
         app
-            // .add_systems(OnEnter(GameState::InGame), setup_boss)
-            // .add_systems(
-            //     Update,
-            //         (
-            //             handle_boss_animation,
-            //             handle_boss_skill,
-            //             handle_bossbullet_setup,
-            //             handle_bossgun_rotation,
-            //             handle_boss_hurt,
-            //             handle_boss_death,
-            //             handle_boss_charge_hurt,
-            //     ).run_if(in_state(GameState::InGame))
-            // )
             .add_event::<BossSetupEvent>()
             .add_event::<BossDeathEvent>()
             .add_systems(
@@ -1001,6 +988,7 @@ fn handle_boss_death(
     source1: Res<GlobalEnemyTextureAtlas>,
     mut events: EventWriter<BossDeathEvent>,
     enemy_query: Query<(Entity, &Transform), With<Enemy>>,
+    born_query: Query<Entity, With<EnemyBorn>>,
     mut enemybornpoint_query: Query<&mut Enemyterm, With<Enemybornflag>>,
 ) {
     if boss_query.is_empty() {
@@ -1029,6 +1017,10 @@ fn handle_boss_death(
         )
         );
 
+        for e in born_query.iter() {
+            commands.entity(e).despawn();
+        }
+        
         for (entity, loc) in enemy_query.iter() {
             commands.entity(entity).despawn();
             commands.spawn( (

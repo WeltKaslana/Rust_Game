@@ -611,7 +611,7 @@ fn handle_boss_ui_update(
 
     let mut delta = bar.scale.x;
     let barwidth = 582.0; //582为血条宽度
-    bar.scale.x = health.0 / BOSS_HEALTH * xishu * 1.0;//0.5是最开始血条的缩放比例
+    bar.scale.x = health.0 / (BOSS_HEALTH * xishu) * 1.0;//0.5是最开始血条的缩放比例
     //血条要位移，因为缩放是两边向中间缩放
     delta -= bar.scale.x;
 
