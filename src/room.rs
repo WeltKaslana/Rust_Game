@@ -8,7 +8,14 @@ use bevy_rapier2d::{prelude::*};
 use rand::Rng;
 
 use crate::{
-    boss::{self, Boss, BossComponent, BossSetupEvent}, character::{AnimationConfig, Character, Health}, enemy::{BaseSetupEvent, Enemy, EnemybornPoint, Enemybornduration, Enemybornflag, Enemyterm}, gamestate::{GameState, InGameState}, gui::Transition, gun::Bullet, resources::*
+    boss::{self, Boss, BossComponent, BossSetupEvent, BossDeathEvent}, 
+    character::{AnimationConfig, Character, Health}, 
+    enemy::{BaseSetupEvent, Enemy, EnemybornPoint, Enemybornduration, Enemybornflag, Enemyterm, EnemyDeathEvent, EnemyDeathEffect}, 
+    gamestate::{GameState, InGameState}, 
+    gui::Transition, 
+    gun::Bullet, 
+    resources::*,
+    configs::*,
 };
 pub struct RoomPlugin;
 
@@ -24,6 +31,9 @@ pub struct Progress(pub f32);
 #[derive(Component)]
 pub struct Chest(pub i32);
 // 0:effect 1:big can't open 2: small can't open 3: big ready to open 4: small ready to open 5: big opening 6: small opening 
+
+#[derive(Component)]
+pub struct ChestType(pub u8);
 
 #[derive(Component)]
 pub struct Door(pub i32);
@@ -162,10 +172,11 @@ impl Plugin for RoomPlugin {
             ))
             .add_systems(Update, (
                 check_ifcomplete,
-                handle_base_timer,
             ).run_if(in_state(GameState::InGame)))
             .add_systems(Update, (
                 handle_base_timer,
+                handle_timer,
+                handle_score,
             ).run_if(in_state(InGameState::Running)))
             ;
     }
@@ -185,7 +196,7 @@ fn load_room1(
     // 普通房数量
     let room_size = 8;
     // 普通房长度
-    let len = 1;
+    let len = ROOMS - 1;
     for _ in 1..=len {
         let path = format!("普通房{}.tmx", rand::rng().random_range(1..room_size + 1));
         mgr.add_map(MapInfos::new(
@@ -252,7 +263,7 @@ fn load_room2(
     // 普通房数量
     let room_size = 8;
     // 普通房长度
-    let len = 1;
+    let len = ROOMS - 1;
     for _ in 1..=len {
         let path = format!("普通房{}.tmx", rand::rng().random_range(1..room_size + 1));
         mgr.add_map(MapInfos::new(
@@ -341,6 +352,7 @@ fn evt_object_created(
     mut events: EventWriter<BossSetupEvent>,
     mut events2: EventWriter<BaseSetupEvent>,
     
+    score: Res<ScoreResource>,
 ) {
     let mut size = Vec2::ZERO;
     let index = if source.map_index > 0 {source.map_index - 1} else {source.map_assets.len() - 1};
@@ -509,10 +521,15 @@ fn evt_object_created(
         }
         if name.as_str() == "Object(chest)" {
             let mut rng = rand::rng();
-            let i = rng.random_range(0..9);
+            let mut i = rng.random_range(0..99);
+
+            let map_index = score.map_index as i32 + 1;
+            
+            let map = map_index - map_index / ROOMS;
+            if map == ROOMS - 1 {i = 0;}
 
             match i {
-                0..=1 => {
+                0..=5 => {
                     commands.spawn((
                         Sprite {
                             image: source3.image_chest_big2.clone(),
@@ -529,6 +546,7 @@ fn evt_object_created(
                         AnimationConfig::new(15),
                         Map,
                         Chest(1),
+                        ChestType(0),
                     )).with_child((
                         Sprite {
                             image: source3.image_chest_big2_effect1.clone(),
@@ -555,7 +573,7 @@ fn evt_object_created(
                         Chest(0),
                     ));
                 },
-                2..5 => {
+                6..=30 => {
                     commands.spawn((
                         Sprite {
                             image: source3.image_chest_big1.clone(),
@@ -572,9 +590,10 @@ fn evt_object_created(
                         AnimationConfig::new(15),
                         Map,
                         Chest(1),
+                        ChestType(1),
                     ));
                 },
-                5..=9 => {
+                31..=99 => {
                     commands.spawn((
                         Sprite {
                             image: source3.image_chest_small.clone(),
@@ -591,6 +610,7 @@ fn evt_object_created(
                         AnimationConfig::new(15),
                         Map,
                         Chest(2),
+                        ChestType(2),
                     ));
                 },
                 _ => {},
@@ -639,6 +659,7 @@ fn check_ifcomplete(
     mut bornplace_query: Query<(&Transform, &mut Enemybornflag, &mut Enemybornduration, &mut Enemyterm), With<EnemybornPoint>>,
     source: Res<GlobalEnemyTextureAtlas>,
     time: Res<Time>,
+    mut score: ResMut<ScoreResource>,
 ) {
 
     let mut flag = true;
@@ -718,11 +739,17 @@ fn check_ifcomplete(
             if chest.0 == 2 { chest.0 = 4; }
         }
 
+        
+
         let distance = player_transform.translation.distance(door_transform.translation);
 
         if distance <= 125.0 &&  door.0 == 3 {
+
             if keyboard_input.just_pressed(KeyCode::KeyE) && transition_query.is_empty() {
                 println! ("你过关!");
+
+                score.map_index += 1;//difficulty
+
                 for (trans, mut nextstate) in camera_query.iter_mut() {
                     commands.spawn((
                         Sprite {
@@ -765,7 +792,10 @@ fn del_door_chest_base(
 fn handle_base_timer(
     mut base_query: Query<(&mut Progress, &mut Enemybornduration), With<Progress>>,
     mut enemybornpoint_query: Query<&mut Enemyterm, With<Enemybornflag>>,
+    enemy_query: Query<(Entity, &Transform), With<Enemy>>,
     time: Res<Time>,
+    mut commands: Commands,
+    source: Res<GlobalEnemyTextureAtlas>
 ) {
     if base_query.is_empty() {
         return ;
@@ -776,10 +806,57 @@ fn handle_base_timer(
         progress.0 += 1.0;
         dtimer.timer.reset();
         println!("进度:{}", progress.0);
-        if progress.0 >= 10.0 {
+        if progress.0 >= Survial_Time {
+            for (entity, loc) in enemy_query.iter() {
+                commands.entity(entity).despawn();
+                commands.spawn( (
+                    Sprite {
+                        image: source.image_death.clone(),
+                        texture_atlas: Some(TextureAtlas {
+                            layout: source.layout_death.clone(),
+                            index: 0,
+                        }),
+                        ..Default::default()
+                    },
+                    Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(loc.translation.x, loc.translation.y, -50.0)),
+                    AnimationConfig::new(10),
+                    EnemyDeathEffect,
+                    Map,
+                )
+                );
+            }
             for mut enemyterm in enemybornpoint_query.iter_mut() {
                 enemyterm.0 = 0;
             }
         }
     }
 }   
+
+fn handle_timer(
+    time: Res<Time>,
+    mut score:  ResMut<ScoreResource>,
+) {
+    score.timer.tick(time.delta());
+    if score.timer.elapsed() >= Duration::from_secs(1) {
+        score.time_sec += 1;
+        score.timer.reset();
+        if score.time_sec >= 60 {
+            score.time_min += 1;
+            score.time_sec = 0;
+        }
+        println!("{}:{},map:{}",score.time_min,score.time_sec,score.map_index);
+    }
+}
+
+fn handle_score(
+    mut score:  ResMut<ScoreResource>,
+    mut enemy_death_event: EventReader<EnemyDeathEvent>,
+    mut boss_death_event: EventReader<BossDeathEvent>,
+) {
+    for _ in enemy_death_event.read() {
+        score.enemy_score += 1;
+    }
+    for _ in boss_death_event.read() {
+        score.boss_score += 1;
+    }
+}

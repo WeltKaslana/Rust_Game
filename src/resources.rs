@@ -2,6 +2,7 @@ use std::path;
 
 use bevy::render::texture::TRANSPARENT_IMAGE_HANDLE;
 use bevy::text;
+use bevy::time::Stopwatch;
 use bevy::{dev_tools::states::*, prelude::*};
 use bevy::window::PrimaryWindow;
 
@@ -488,6 +489,7 @@ impl Plugin for ResourcesPlugin {
             .add_systems(OnEnter(GameState::Home),(
                 load_assets_enemy,
                 load_assets_room,
+                init_score,
             ))
             // .add_systems(Update, log_transitions::<GameState>)
             ;
@@ -896,4 +898,35 @@ impl GlobalRoomTextureAtlas {
             image_chest_big2_effect2: asset_server.load(imagechestbig2effect2),
         }
     }
+}
+
+#[derive(Resource,Default)]
+pub struct ScoreResource { 
+    pub enemy_score: u8,
+    pub boss_score: u8,
+    pub map_index: u8,
+    pub time_min:  u8,
+    pub time_sec:  u8,
+    pub timer: Stopwatch,
+}
+
+impl ScoreResource {
+    pub fn init() -> Self { 
+        ScoreResource {
+            enemy_score: 0,
+            boss_score: 0,
+            map_index: 0,
+            time_min: 0,
+            time_sec: 0,
+            timer: Stopwatch::new(),
+        }
+    }
+}
+
+fn init_score(
+    mut commands: Commands,
+) {
+    let score = ScoreResource::init();
+    commands.insert_resource(score);
+    println!("init score");
 }

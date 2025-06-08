@@ -1,16 +1,17 @@
 use bevy::{
-    color::palettes::css::{BLUE, GREEN, RED}, dev_tools::states::*, prelude::*, scene::ron::de, text::cosmic_text::ttf_parser::name};
+    color::palettes::css::{BLUE, GREEN, RED}, dev_tools::states::*, input::gamepad::GamepadButtonStateChangedEvent, prelude::*, scene::ron::de, text::cosmic_text::ttf_parser::name};
 use bevy_rapier2d::na::ComplexField;
 
 use crate::{
-    boss::{Boss, BossDeathEvent, BossSetupEvent}, 
-    character::{
+    boss::{Boss, BossDeathEvent, BossSetupEvent}, character::{
         Character, Health, Player, PlayerHurtEvent, ReloadPlayerEvent, Skill2Timer, Skill3Timer, Skill4Timer
-    }, 
+    }, configs::*, 
     enemy::BaseSetupEvent, 
-    gamestate::GameState, room::{Map, Progress}, 
-    GlobalCharacterTextureAtlas, GlobalMenuTextureAtlas,
-    configs::*,
+    gamestate::{GameState, InGameState},
+    room::{Map, Progress}, 
+    GlobalCharacterTextureAtlas, 
+    GlobalMenuTextureAtlas, 
+    ScoreResource
 };
 
 pub struct UIPlugin;
@@ -53,13 +54,15 @@ impl Plugin for UIPlugin {
             // update_ui,
             handle_state_bar,
             handle_player_skill,
-            handle_boss_ui_setup,
+        ))
+        .add_systems(Update, (
             handle_boss_ui_update,
             handle_boss_ui_delete,
-            handle_timer_ui_setup,
             handle_timer_ui_update,
             handle_timer_ui_delete,
-        ))
+            handle_boss_ui_setup,
+            handle_timer_ui_setup,
+        ).run_if(in_state(InGameState::Running)))
         ;
     }
 }
@@ -585,6 +588,7 @@ fn handle_boss_ui_update(
     mut bar_query: Query<&mut Transform, (With<Bossbar>, Without<Boss>, Without<Bossbufferbar>, Without<Camera2d>)>,
     mut buffer_query: Query<&mut Transform, (With<Bossbufferbar>, Without<Camera2d>, Without<Bossbar>, Without<Boss>)>,
     mut ui_query: Query<&mut Transform, (With<BossUI>, Without<Camera2d>, Without<Boss>, Without<Bossbar>, Without<Bossbufferbar>)>,
+    score: Res<ScoreResource>,
 ) {
     if camera_query.is_empty() ||  health_query.is_empty() || ui_query.is_empty() || buffer_query.is_empty() || bar_query.is_empty() {
         return ;
@@ -602,9 +606,12 @@ fn handle_boss_ui_update(
     let mut trans = ui_query.single_mut();
     trans.translation = Vec3::new(loc.x, loc.y, trans.translation.z) + BOSSUI_OFFSET;
 
+    let mut xishu = score.boss_score as f32;
+    xishu = 1.0 + xishu / 100.0 * 0.5;
+
     let mut delta = bar.scale.x;
     let barwidth = 582.0; //582为血条宽度
-    bar.scale.x = health.0 / BOSS_HEALTH * 1.0;//0.5是最开始血条的缩放比例
+    bar.scale.x = health.0 / BOSS_HEALTH * xishu * 1.0;//0.5是最开始血条的缩放比例
     //血条要位移，因为缩放是两边向中间缩放
     delta -= bar.scale.x;
 
@@ -715,7 +722,7 @@ fn handle_timer_ui_update(
     
     let mut delta = bar.scale.x;
     let barwidth = 582.0;
-    bar.scale.x = progress.0 / 90.0;
+    bar.scale.x = progress.0 / Survial_Time;
     delta -= bar.scale.x;
 
     unsafe {

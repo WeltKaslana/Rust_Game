@@ -134,10 +134,15 @@ pub fn set_enemy(
     loc : Vec2,
     commands: &mut Commands,
     source: &Res<GlobalEnemyTextureAtlas>,
+    mut score: &ResMut<ScoreResource>,
 ) {
     let mut rng = rand::rng();
     let random_index = rng.random_range(0..4);
     let mut x =random_index;
+
+    let mut xishu:f32 =score.map_index as f32;
+    xishu = 1.0 + xishu/100.0 * 5.0;
+
     match id {
         0 => { },//随机产生敌人
         1 => {x = 0;},//产生Sweeper
@@ -178,7 +183,7 @@ pub fn set_enemy(
                 Enemy,
                 EnemyType::Sweeper,
                 Fireflag::Fire,
-                Health(ENEMY_HEALTH),
+                Health(ENEMY_HEALTH * xishu),
                 //Velocity(ENEMY_SPEED),
                 AnimationConfig::new(15),
                 PatrolState {
@@ -223,7 +228,7 @@ pub fn set_enemy(
                 Enemy,
                 EnemyType::DroneMissile,
                 Fireflag::Fire,
-                Health(ENEMY_HEALTH),
+                Health(ENEMY_HEALTH * xishu),
                 //Velocity(ENEMY_SPEED),
                 AnimationConfig::new(10),
                 PatrolState {
@@ -268,7 +273,7 @@ pub fn set_enemy(
                 Enemy,
                 EnemyType::DroneVulcan,
                 Fireflag::Fire,
-                Health(ENEMY_HEALTH),
+                Health(ENEMY_HEALTH * xishu),
                 //Velocity(ENEMY_SPEED),
                 AnimationConfig::new(10),
                 PatrolState {
@@ -313,7 +318,7 @@ pub fn set_enemy(
                 Enemy,
                 EnemyType::UnknownGuardianTypeF,
                 Fireflag::Fire,
-                Health(ENEMY_HEALTH),
+                Health(ENEMY_HEALTH * xishu),
                 //Velocity(ENEMY_SPEED),
                 AnimationConfig::new(10),
                 PatrolState {
@@ -1265,7 +1270,7 @@ fn handle_sweeper_hit(
                                                     PlayerState::Dodge => { },
                                                     _=> { 
                                                         *flag = Fireflag::Done;
-                                                        health.0 -=ENEMY_DAMAGE;
+                                                        health.0 -= ENEMY_DAMAGE;
                                                         events.send(PlayerHurtEvent);
                                                     },
                                                 }

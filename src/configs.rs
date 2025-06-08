@@ -16,6 +16,9 @@ pub const WORLD_W: f32 = 3000.0;
 pub const WORLD_H: f32 = 2500.0;
 pub const fps: u8 = 60;
 
+pub const Survial_Time: f32 = 10.0;
+pub const ROOMS: i32 = 2;
+
 // Player
 pub const PLAYER_SPEED: f32 = 2.0 * 240.0 / fps as f32;
 pub const PLAYER_HEALTH: f32 = 100.0;

@@ -99,18 +99,22 @@ impl Plugin for BossPlugin {
     }
 }
 
-fn setup_boss (
-    source: Res<GlobalBossTextureAtlas>,
-    mut commands: Commands,
-) {
-    set_boss(Vec2::new(-130.0, 140.0), &mut commands, &source);
-}
+// fn setup_boss (
+//     source: Res<GlobalBossTextureAtlas>,
+//     mut commands: Commands,
+// ) {
+//     set_boss(Vec2::new(-130.0, 140.0), &mut commands, &source);
+// }
 
 pub fn set_boss(
     loc: Vec2,
     commands: &mut Commands,
     source: &Res<GlobalBossTextureAtlas>,
+    score: &ResMut<ScoreResource>,
 ) { 
+
+    let mut xishu = score.boss_score as f32;
+    xishu = 1.0 + xishu / 100.0 * 50.0;
 
     let mut boss = 
     commands.spawn( (
@@ -125,7 +129,7 @@ pub fn set_boss(
         Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(loc.x, loc.y, -50.0)),
         BossState::Idea,
         Boss::Body,
-        Health(BOSS_HEALTH),
+        Health(BOSS_HEALTH * xishu),
         Skillflag(0),
         Direction{
             x: 0.0,
@@ -346,16 +350,21 @@ fn handle_boss_skill(
         &mut BossState,
         & Boss
     ), (With<Boss>, With<BossComponent>, Without<Character>)>,
+    score: Res<ScoreResource>,
 ) {
     if boss_query.is_empty() || play_query.is_empty() || bosscomponent_query.is_empty() {
         return;
     }
+
+    let mut xishu = score.boss_score as f32;
+    xishu = 1.0 + xishu / 100.0 * 50.0;
+
     let (mut boss, bossloc,mut bossstate, health, mut timer, mut direction, mut flag, mut controller) = boss_query.single_mut();
     let playerloc = play_query.single_mut();
     let dx = playerloc.translation.x - bossloc.translation.x;
     let dy = playerloc.translation.y - bossloc.translation.y;
     let mut rng = rand::rng();
-    if health.0 > BOSS_HEALTH/2.0 {
+    if health.0 > BOSS_HEALTH * xishu /2.0 {
         match *bossstate {
             BossState::Idea => {
                 timer.timer1.tick(time.delta());
@@ -989,7 +998,10 @@ fn handle_boss_death(
     mut boss_query: Query<(Entity, & Transform, & Health), (With<Boss>, Without<BossComponent>)>,
     mut bosscomponent_query: Query<Entity, (With<Boss>, With<BossComponent>)>,
     source: Res<GlobalBossTextureAtlas>,
+    source1: Res<GlobalEnemyTextureAtlas>,
     mut events: EventWriter<BossDeathEvent>,
+    enemy_query: Query<(Entity, &Transform), With<Enemy>>,
+    mut enemybornpoint_query: Query<&mut Enemyterm, With<Enemybornflag>>,
 ) {
     if boss_query.is_empty() {
         return;
@@ -1016,6 +1028,28 @@ fn handle_boss_death(
             Map,
         )
         );
+
+        for (entity, loc) in enemy_query.iter() {
+            commands.entity(entity).despawn();
+            commands.spawn( (
+                Sprite {
+                    image: source1.image_death.clone(),
+                    texture_atlas: Some(TextureAtlas {
+                        layout: source1.layout_death.clone(),
+                        index: 0,
+                    }),
+                    ..Default::default()
+                },
+                Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(loc.translation.x, loc.translation.y, -50.0)),
+                AnimationConfig::new(10),
+                EnemyDeathEffect,
+                Map,
+            )
+            );
+        }
+        for mut enemyterm in enemybornpoint_query.iter_mut() {
+            enemyterm.0 = 0;
+        }
     }
 }
 

@@ -6,7 +6,7 @@ use bevy::{
 use bevy::utils::Instant;
 use bevy_rapier2d::na::Translation;
 use bevy_rapier2d::prelude::*;
-use crate::{GlobalRoomTextureAtlas, MK2_SURVIVE_TIME};
+use crate::{GlobalRoomTextureAtlas, ScoreResource, MK2_SURVIVE_TIME};
 use crate::{
     boss::{
         set_boss, Boss, BossComponent, BossDeathEffect, BossState, Direction, Skillflag
@@ -315,6 +315,7 @@ fn animate_enemy_born(
     mut b_query: Query<(&mut Transform, &mut AnimationConfig, &mut Sprite, Entity), (With<EnemyBorn>, With<BossComponent>, Without<Enemy>)>,
     source1: Res<GlobalEnemyTextureAtlas>,
     source2: Res<GlobalBossTextureAtlas>,
+    score: ResMut<ScoreResource>
 ) {
     //小怪
     for (mut trans, mut config, mut enemy, e) in e_query.iter_mut() {
@@ -333,7 +334,9 @@ fn animate_enemy_born(
                             trans.translation.x, 
                             trans.translation.y), 
                         &mut commands, 
-                        &source1);
+                        &source1,
+                        &score
+                    );
                 }
             }
         }
@@ -353,7 +356,9 @@ fn animate_enemy_born(
                             trans.translation.x, 
                             trans.translation.y), 
                         &mut commands, 
-                        &source2);
+                        &source2,
+                        &score,
+                    );
                     println!("boss born!");
                 }
             }
