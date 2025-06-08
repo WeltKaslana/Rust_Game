@@ -349,6 +349,7 @@ pub struct GlobalMenuTextureAtlas {
     pub shiroko_skill2_cool: Handle<Image>,
     pub shiroko_skill3_cool: Handle<Image>,
     pub shiroko_skill4_cool: Handle<Image>,
+    pub shiroko_skill_text: [String; 4],
 
     pub arisu: Handle<Image>,
     pub arisu_hover: Handle<Image>,
@@ -360,6 +361,7 @@ pub struct GlobalMenuTextureAtlas {
     pub arisu_skill2_cool: Handle<Image>,
     pub arisu_skill3_cool: Handle<Image>,
     pub arisu_skill4_cool: Handle<Image>,
+    pub arisu_skill_text: [String; 4],
 
     pub utaha: Handle<Image>,
     pub utaha_hover: Handle<Image>,
@@ -371,6 +373,17 @@ pub struct GlobalMenuTextureAtlas {
     pub utaha_skill2_cool: Handle<Image>,
     pub utaha_skill3_cool: Handle<Image>,
     pub utaha_skill4_cool: Handle<Image>,
+    pub utaha_skill_text: [String; 4],
+
+    // buff图标
+    pub buff_icon: [Handle<Image>; 5],
+    pub buff_text: [String; 5],
+    // mod图标
+    pub mod_icon: [Handle<Image>; 3],
+    pub mod_text: [String; 3],
+    // 消耗品图标
+    pub buff_consumptions: [Handle<Image>; 3],
+    pub buff_consumptions_text: [String; 3],
 }
 
 impl GlobalMenuTextureAtlas {
@@ -424,6 +437,27 @@ impl GlobalMenuTextureAtlas {
         let path_utaha_skill3_cool = String::from("Skill_Utaha_3_cool.png");
         let path_utaha_skill4_cool = String::from("Skill_Utaha_4_cool.png"); 
 
+        // buff图标
+        let buff_icon = [
+            asset_server.load("Icon_Buff_AmmoUp.png"),
+            asset_server.load("Icon_Buff_AttackUp.png"),
+            asset_server.load("Icon_Buff_AbnormalUp.png"),
+            asset_server.load("Icon_Buff_MoveSpeedUp.png"),
+            asset_server.load("Icon_SpecialBuff_Invincible.png"),
+        ];
+
+        let mod_icon = [
+            asset_server.load("Icon_Item_佩洛洛健腹轮.png"),
+            asset_server.load("Icon_Item_金巴亚黄金飞机碎片.png"),
+            asset_server.load("Icon_Item_忍佩洛玩偶.png"),
+        ];
+
+        let buff_consumptions = [
+            asset_server.load("Icon_Item_正宗千层芭菲.png"),
+            asset_server.load("Icon_Item_炭烤鸡肉串.png"),
+            asset_server.load("Icon_Item_运动饮料.png"),
+        ];
+
         Self {
             close: asset_server.load(path_close),
             menu: asset_server.load(path_menu),
@@ -449,6 +483,12 @@ impl GlobalMenuTextureAtlas {
             shiroko_skill2_cool: asset_server.load(path_shiroko_skill2_cool),
             shiroko_skill3_cool: asset_server.load(path_shiroko_skill3_cool),
             shiroko_skill4_cool: asset_server.load(path_shiroko_skill4_cool),
+            shiroko_skill_text: [
+                "1:blabla".to_string(),
+                "2:blabla".to_string(),
+                "3:blabla".to_string(),
+                "4:blabla".to_string(),
+            ],
 
             arisu: asset_server.load(path_arisu),
             arisu_hover: asset_server.load(path_arisu_hover),
@@ -460,6 +500,12 @@ impl GlobalMenuTextureAtlas {
             arisu_skill2_cool: asset_server.load(path_arisu_skill2_cool),
             arisu_skill3_cool: asset_server.load(path_arisu_skill3_cool),
             arisu_skill4_cool: asset_server.load(path_arisu_skill4_cool),
+            arisu_skill_text: [
+                "1:blabla".to_string(),
+                "2:blabla".to_string(),
+                "3:blabla".to_string(),
+                "4:blabla".to_string(),
+            ],
 
             utaha: asset_server.load(path_utaha),
             utaha_hover: asset_server.load(path_utaha_hover),
@@ -471,6 +517,33 @@ impl GlobalMenuTextureAtlas {
             utaha_skill2_cool: asset_server.load(path_utaha_skill2_cool),
             utaha_skill3_cool: asset_server.load(path_utaha_skill3_cool),
             utaha_skill4_cool: asset_server.load(path_utaha_skill4_cool),
+            utaha_skill_text: [
+                "1:blabla".to_string(),
+                "2:blabla".to_string(),
+                "3:blabla".to_string(),
+                "4:blabla".to_string(),
+            ],
+
+            buff_icon: buff_icon,
+            buff_text: [
+                "1:blabla".to_string(),
+                "2:blabla".to_string(),
+                "3:blabla".to_string(),
+                "4:blabla".to_string(),
+                "5:blabla".to_string(),
+            ],
+            mod_icon: mod_icon,
+            mod_text: [
+                "1:blabla".to_string(),
+                "2:blabla".to_string(),
+                "3:blabla".to_string(),
+            ],
+            buff_consumptions: buff_consumptions,
+            buff_consumptions_text: [
+                "1:blabla".to_string(),
+                "2:blabla".to_string(),
+                "3:blabla".to_string(),
+            ],
         }
     }
 }

@@ -1,5 +1,7 @@
 use bevy::{asset, ecs::query, prelude::*, render::camera, utils::info};
 use encoding_rs::{GBK, UTF_8};
+use rand::Rng;
+use std::collections::HashSet;
 
 use crate::{
     character::{
@@ -11,7 +13,7 @@ use crate::{
     gamestate::*, 
     gun::{Cursor, Gun}, 
     home::Home, 
-    room::{AssetsManager, Map}, 
+    room::{AssetsManager, Map, Chest, ChestType}, 
     ui::UI, 
     resources::*,
 };
@@ -99,7 +101,6 @@ impl Plugin for GuiPlugin {
         .add_systems(Update, print_node_loc)
         //
 
-        // .add_systems(Update, log_transitions::<GameState>)
         ;
     }
 }
@@ -568,10 +569,38 @@ fn setup_stopmenu(
                     ..default()
                 },
                 Button,
-                test,
             ))
             .with_child((
                 Text::new("返回大厅"),
+                TextFont {
+                        font: font.clone(),
+                        font_size: 30.0,
+                        ..default()
+                },  
+                TextColor(Color::rgb(0.0, 0.0, 0.0)), 
+                Node {
+                    align_items: AlignItems::Center,
+                    left: Val::Percent(15.0),
+                    ..default()
+                },   
+            ));
+            parent.spawn((
+                Name::new("exit"),
+                ImageNode::new(source.button.clone()),
+                Node {
+                    width: Val::Percent(60.0),
+                    height: Val::Percent(10.0),
+                    top: Val::Percent(79.0),
+                    left: Val::Percent(20.0),
+                    align_items: AlignItems::Center,
+                    position_type: PositionType::Absolute,
+                    ..default()
+                },
+                Button,
+                test,
+            ))
+            .with_child((
+                Text::new("退出游戏"),
                 TextFont {
                         font: font.clone(),
                         font_size: 30.0,
@@ -602,6 +631,7 @@ fn handle_stopmenu1 (
     mut query: Query<&mut Node, (With<PauseMenu>, Without<Camera2d>)>,
     source: Res<GlobalMenuTextureAtlas>,
     mut next_state: ResMut<NextState<HomeState>>,
+    mut app_exit_events: EventWriter<AppExit>,
     // mut next_state2: ResMut<NextState<GameState>>,
 ) {
     if camera_query.is_empty() || menu_query.is_empty() {
@@ -659,6 +689,9 @@ fn handle_stopmenu1 (
                                         ));  
                                         // next_state2.set(GameState::MainMenu);
                                     },
+                                    "exit" => {
+                                        app_exit_events.send(AppExit::Success);
+                                    },
                                     _ => {}
                                 }
                             },
@@ -692,7 +725,7 @@ fn handle_stopmenu2 (
     mut windows: Query<&mut Window>,
     mut query: Query<&mut Node, (With<PauseMenu>, Without<Camera2d>)>,
     source: Res<GlobalMenuTextureAtlas>,
-    // mut mgr: ResMut<AssetsManager>,
+    mut app_exit_events: EventWriter<AppExit>,
     mut next_state: ResMut<NextState<InGameState>>,
 ) {
     if camera_query.is_empty() || menu_query.is_empty() {
@@ -766,6 +799,9 @@ fn handle_stopmenu2 (
                                                 .with_translation(Vec3::new(loc.x-3200.0, loc.y, 100.0)),
                                             Transition,
                                         ));
+                                    },
+                                    "exit" => {
+                                        app_exit_events.send(AppExit::Success);
                                     },
                                     _ => {}
                                 }
@@ -1597,7 +1633,8 @@ fn cleanup_soramenu(
 fn setup_choosingbuffmenu(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    camera_query: Query<&Transform, (With<Camera2d>)>,
+    camera_query: Query<&Transform, (With<Camera2d>, Without<Chest>)>,
+    chest_query: Query<&ChestType, (With<Chest>, Without<Camera2d>)>,
     source: Res<GlobalMenuTextureAtlas>,
 ) {
     if camera_query.is_empty() {
@@ -1658,52 +1695,181 @@ fn setup_choosingbuffmenu(
                     ..Default::default()
                 },
             ));
+            let ctype = chest_query.single().0;
+            let mut rng = rand::rng();
 
-            parent.spawn((
-                Name::new("buff1"),
-                // ImageNode::new(source.utaha_skill1.clone()),
-                ImageNode::new(asset_server.load("Icon_Buff_AmmoUp.png")),
-                Node {
-                    width: Val::Percent(34.0),
-                    height: Val::Percent(33.6),
-                    top: Val::Percent(33.3),
-                    left: Val::Percent(4.3),
-                    align_items: AlignItems::Center,
-                    position_type: PositionType::Absolute,
-                    ..default()
+            match ctype {
+                0 => {
+                    // 最好的宝箱选buff
+                    // 随机生成三个buff
+                    let mut unique_numbers = HashSet::new();
+                    while unique_numbers.len() < 3 {
+                        let num: i32 = rng.gen_range(0..5); // 生成1到100之间的整数
+                        unique_numbers.insert(num);
+                    }
+                    let numbers: Vec<i32> = unique_numbers.into_iter().collect();
+
+                    parent.spawn((
+                        Name::new("buff1"),
+                        // ImageNode::new(asset_server.load("Icon_Buff_AmmoUp.png")),
+                        ImageNode::new(source.buff_icon[numbers[0] as usize].clone()),
+                        Node {
+                            width: Val::Percent(34.0),
+                            height: Val::Percent(33.6),
+                            top: Val::Percent(33.3),
+                            left: Val::Percent(4.3),
+                            align_items: AlignItems::Center,
+                            position_type: PositionType::Absolute,
+                            ..default()
+                        },
+                        Button,
+                    ));
+                    parent.spawn((
+                        Name::new("buff2"),
+                        // ImageNode::new(asset_server.load("Icon_Buff_AttackUp.png")),
+                        ImageNode::new(source.buff_icon[numbers[1] as usize].clone()),
+                        Node {
+                            width: Val::Percent(34.0),
+                            height: Val::Percent(33.6),
+                            top: Val::Percent(33.1),
+                            left: Val::Percent(36.1),
+                            align_items: AlignItems::Center,
+                            position_type: PositionType::Absolute,
+                            ..default()
+                        },
+                        Button,
+                    ));
+                    parent.spawn((
+                        Name::new("buff3"),
+                        // ImageNode::new(asset_server.load("Icon_Buff_AbnormalUp.png")),
+                        ImageNode::new(source.buff_icon[numbers[2] as usize].clone()),
+                        Node {
+                            width: Val::Percent(34.0),
+                            height: Val::Percent(33.6),
+                            top: Val::Percent(33.1),
+                            left: Val::Percent(67.9),
+                            align_items: AlignItems::Center,
+                            position_type: PositionType::Absolute,
+                            ..default()
+                        },
+                        Button,
+                    ));
                 },
-                Button,
-            ));
-            parent.spawn((
-                Name::new("buff2"),
-                // ImageNode::new(source.utaha_skill2.clone()),
-                ImageNode::new(asset_server.load("Icon_Buff_AttackUp.png")),
-                Node {
-                    width: Val::Percent(34.0),
-                    height: Val::Percent(33.6),
-                    top: Val::Percent(33.1),
-                    left: Val::Percent(36.1),
-                    align_items: AlignItems::Center,
-                    position_type: PositionType::Absolute,
-                    ..default()
+                1 => {
+                    // 差一点的宝箱选mod
+                    // 随机生成三个buff
+                    let mut unique_numbers = HashSet::new();
+                    while unique_numbers.len() < 3 {
+                        let num: i32 = rng.gen_range(0..3); // 生成1到100之间的整数
+                        unique_numbers.insert(num);
+                    }
+                    let numbers: Vec<i32> = unique_numbers.into_iter().collect();
+
+                    parent.spawn((
+                        Name::new("buff1"),
+                        // ImageNode::new(asset_server.load("Icon_Buff_AmmoUp.png")),
+                        ImageNode::new(source.mod_icon[numbers[0] as usize].clone()),
+                        Node {
+                            width: Val::Percent(34.0),
+                            height: Val::Percent(33.6),
+                            top: Val::Percent(33.3),
+                            left: Val::Percent(4.3),
+                            align_items: AlignItems::Center,
+                            position_type: PositionType::Absolute,
+                            ..default()
+                        },
+                        Button,
+                    ));
+                    parent.spawn((
+                        Name::new("buff2"),
+                        // ImageNode::new(asset_server.load("Icon_Buff_AttackUp.png")),
+                        ImageNode::new(source.mod_icon[numbers[1] as usize].clone()),
+                        Node {
+                            width: Val::Percent(34.0),
+                            height: Val::Percent(33.6),
+                            top: Val::Percent(33.1),
+                            left: Val::Percent(36.1),
+                            align_items: AlignItems::Center,
+                            position_type: PositionType::Absolute,
+                            ..default()
+                        },
+                        Button,
+                    ));
+                    parent.spawn((
+                        Name::new("buff3"),
+                        // ImageNode::new(asset_server.load("Icon_Buff_AbnormalUp.png")),
+                        ImageNode::new(source.mod_icon[numbers[2] as usize].clone()),
+                        Node {
+                            width: Val::Percent(34.0),
+                            height: Val::Percent(33.6),
+                            top: Val::Percent(33.1),
+                            left: Val::Percent(67.9),
+                            align_items: AlignItems::Center,
+                            position_type: PositionType::Absolute,
+                            ..default()
+                        },
+                        Button,
+                    ));
                 },
-                Button,
-            ));
-            parent.spawn((
-                Name::new("buff3"),
-                // ImageNode::new(source.utaha_skill2.clone()),
-                ImageNode::new(asset_server.load("Icon_Buff_AbnormalUp.png")),
-                Node {
-                    width: Val::Percent(34.0),
-                    height: Val::Percent(33.6),
-                    top: Val::Percent(33.1),
-                    left: Val::Percent(67.9),
-                    align_items: AlignItems::Center,
-                    position_type: PositionType::Absolute,
-                    ..default()
+                2 => {
+                    // 最小的宝箱选消耗品
+                    // 随机生成三个consump
+                    let mut unique_numbers = HashSet::new();
+                    while unique_numbers.len() < 3 {
+                        let num: i32 = rng.gen_range(0..3); // 生成1到100之间的整数
+                        unique_numbers.insert(num);
+                    }
+                    let numbers: Vec<i32> = unique_numbers.into_iter().collect();
+
+                    parent.spawn((
+                        Name::new("buff1"),
+                        // ImageNode::new(asset_server.load("Icon_Buff_AmmoUp.png")),
+                        ImageNode::new(source.buff_consumptions[numbers[0] as usize].clone()),
+                        Node {
+                            width: Val::Percent(34.0),
+                            height: Val::Percent(33.6),
+                            top: Val::Percent(33.3),
+                            left: Val::Percent(4.3),
+                            align_items: AlignItems::Center,
+                            position_type: PositionType::Absolute,
+                            ..default()
+                        },
+                        Button,
+                    ));
+                    parent.spawn((
+                        Name::new("buff2"),
+                        // ImageNode::new(asset_server.load("Icon_Buff_AttackUp.png")),
+                        ImageNode::new(source.buff_consumptions[numbers[1] as usize].clone()),
+                        Node {
+                            width: Val::Percent(34.0),
+                            height: Val::Percent(33.6),
+                            top: Val::Percent(33.1),
+                            left: Val::Percent(36.1),
+                            align_items: AlignItems::Center,
+                            position_type: PositionType::Absolute,
+                            ..default()
+                        },
+                        Button,
+                    ));
+                    parent.spawn((
+                        Name::new("buff3"),
+                        // ImageNode::new(asset_server.load("Icon_Buff_AbnormalUp.png")),
+                        ImageNode::new(source.buff_consumptions[numbers[2] as usize].clone()),
+                        Node {
+                            width: Val::Percent(34.0),
+                            height: Val::Percent(33.6),
+                            top: Val::Percent(33.1),
+                            left: Val::Percent(67.9),
+                            align_items: AlignItems::Center,
+                            position_type: PositionType::Absolute,
+                            ..default()
+                        },
+                        Button,
+                    ));
                 },
-                Button,
-            ));
+                _ => {}
+            }
+
         });
 }
 
