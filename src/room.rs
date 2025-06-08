@@ -739,7 +739,7 @@ fn check_ifcomplete(
             if chest.0 == 2 { chest.0 = 4; }
         }
 
-        
+        //通关提示
 
         let distance = player_transform.translation.distance(door_transform.translation);
 
