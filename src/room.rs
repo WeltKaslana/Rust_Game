@@ -32,6 +32,9 @@ pub struct Door(pub i32);
 ////test
 pub type MapInfosCallback = fn(&mut EntityCommands);
 
+// 打完一个循环就重新刷新地图
+static mut reload_map: bool = false;
+
 pub struct MapInfos {
     pub asset: Handle<TiledMap>,
     path: String,
@@ -59,18 +62,18 @@ impl MapInfos {
 pub struct AssetsManager {
     pub map_assets: Vec<MapInfos>,
     map_entity: Option<Entity>,
-    text_entity: Entity,
+    // text_entity: Entity,
     pub map_index: usize,
 }
 
 impl AssetsManager {
-    const BASE_TEXT: &'static str = "<P> = Cycle through different maps";
+    // const BASE_TEXT: &'static str = "<P> = Cycle through different maps";
 
     pub fn new(commands: &mut Commands) -> Self {
         Self {
             map_assets: Vec::new(),
             map_entity: None,
-            text_entity: commands.spawn(Text::from(AssetsManager::BASE_TEXT)).id(),
+            // text_entity: commands.spawn(Text::from(AssetsManager::BASE_TEXT)).id(),
             map_index: 0,
         }
     }
@@ -78,7 +81,7 @@ impl AssetsManager {
     pub fn clear(&mut self, commands: &mut Commands) {
         self.map_assets = Vec::new();
         self.map_entity = None;
-        self.text_entity = commands.spawn(Text::from(AssetsManager::BASE_TEXT)).id();
+        // self.text_entity = commands.spawn(Text::from(AssetsManager::BASE_TEXT)).id();
         self.map_index = 0;
     }
 
@@ -91,14 +94,6 @@ impl AssetsManager {
             " => Switching to map '{}'",
             self.map_assets[self.map_index].path
         );
-
-        // // Update displayed text
-        // commands.entity(self.text_entity).insert(Text::from(format!(
-        //     "{}\nmap name = {}\n{}",
-        //     AssetsManager::BASE_TEXT,
-        //     self.map_assets[self.map_index].path,
-        //     self.map_assets[self.map_index].description
-        // )));
 
         // Handle map update: despawn the map if it already exists
         if let Some(entity) = self.map_entity {
@@ -120,6 +115,12 @@ impl AssetsManager {
         self.map_index += 1;
         if self.map_index >= self.map_assets.len() {
             self.map_index = 0;
+
+            // Reload the map
+            unsafe {
+                reload_map = true;
+                println!("Reloading map");//test
+            }
         }
     }
     // 用于在从游戏回到大厅和封面时删除地图
@@ -147,17 +148,14 @@ impl Plugin for RoomPlugin {
             .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
             .add_plugins(RapierDebugRenderPlugin::default())
 
-            // .add_systems(OnEnter(GameState::InGame), load_room)
-            // .add_systems(Update, switch_map.run_if(in_state(GameState::InGame)))
-
-            // .add_systems(OnEnter(GameState::Loading), load_room)
             .add_systems(Startup, load_room)
             .add_systems(OnEnter(GameState::Home), load_room1)
+            // .add_systems(Update, load_room2)
             .add_systems(Update, (
                 // check_collision,
-                // check_contact,
-                evt_object_created,
-                evt_map_created,
+                evt_object_created.before(load_room2),
+                evt_map_created.before(load_room2),
+                load_room2,
                 ).run_if(in_state(GameState::Loading)))
             .add_systems(OnEnter(GameState::Loading),(
                 del_door_chest_base,
@@ -169,7 +167,6 @@ impl Plugin for RoomPlugin {
             .add_systems(Update, (
                 handle_base_timer,
             ).run_if(in_state(InGameState::Running)))
-            // .add_systems(Update, log_transitions::<GameState>)
             ;
     }
 }   
@@ -188,9 +185,9 @@ fn load_room1(
     // 普通房数量
     let room_size = 8;
     // 普通房长度
-    let len = 2;
+    let len = 1;
     for _ in 1..=len {
-        let path = format!("普通房{}.tmx", rand::rng().random_range(1..room_size));
+        let path = format!("普通房{}.tmx", rand::rng().random_range(1..room_size + 1));
         mgr.add_map(MapInfos::new(
             &asset_server, 
             &path, 
@@ -212,9 +209,13 @@ fn load_room1(
             },
         ));
     }
+    let boss_room_size = 2;
+    let boss_path = format!("boss房{}.tmx", rand::rng().random_range(2..boss_room_size + 1));
+    // let boss_path = format!("boss房{}.tmx", rand::rng().random_range(2..3));
+    // info!("boss_path:{}", &boss_path);
     mgr.add_map(MapInfos::new(
         &asset_server, 
-        "boss房1.tmx", 
+        &boss_path, 
         "A finite orthogonal map with only object colliders", 
         |c| {
             c.insert((
@@ -233,6 +234,68 @@ fn load_room1(
         },
     ));
 }
+
+// 在加载boss房2的时候重载boss房1的话坐标会错位，反之也会错位
+fn load_room2(
+    mut commands: Commands, 
+    asset_server: Res<AssetServer>,
+    mut mgr: ResMut<AssetsManager>,
+) {
+    unsafe {
+        if !reload_map {
+            return;
+        }
+    }
+    let map_now = mgr.map_entity.clone();
+    mgr.clear(&mut commands);
+    mgr.map_entity = map_now.clone();
+    // 普通房数量
+    let room_size = 8;
+    // 普通房长度
+    let len = 1;
+    for _ in 1..=len {
+        let path = format!("普通房{}.tmx", rand::rng().random_range(1..room_size + 1));
+        mgr.add_map(MapInfos::new(
+            &asset_server, 
+            &path, 
+            "A finite orthogonal map with only object colliders", 
+            |c| {
+                c.insert((
+                    TiledMapAnchor::Center,
+                    TiledPhysicsSettings::<TiledPhysicsRapierBackend> {
+                        objects_filter: TiledName::All,
+                        tiles_objects_filter: TiledName::All,
+                        ..default()
+                    },
+                ));
+            },
+        ));
+    }
+    let boss_room_size = 2;
+    let boss_path = format!("boss房{}.tmx", rand::rng().random_range(2..boss_room_size + 1));
+
+    // let boss_path = format!("boss房{}.tmx", rand::rng().random_range(1..2));
+    // println!("boss_path: {}", boss_path);
+    mgr.add_map(MapInfos::new(
+        &asset_server, 
+        &boss_path, 
+        "A finite orthogonal map with only object colliders", 
+        |c| {
+            c.insert((
+                TiledMapAnchor::Center,
+                TiledPhysicsSettings::<TiledPhysicsRapierBackend> {
+                    objects_filter: TiledName::All,
+                    tiles_objects_filter: TiledName::All,
+                    ..default()
+                },
+            ));
+        },
+    ));
+    unsafe {
+        reload_map = false;
+    }
+}
+
 fn switch_map(
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
@@ -709,11 +772,11 @@ fn handle_base_timer(
     }
     let (mut progress, mut dtimer) = base_query.single_mut();
     dtimer.timer.tick(time.delta());
-    if dtimer.timer.elapsed() >= dtimer.duration  && progress.0 < 90.0 {
+    if dtimer.timer.elapsed() >= dtimer.duration  && progress.0 < 10.0 {
         progress.0 += 1.0;
         dtimer.timer.reset();
         println!("进度:{}", progress.0);
-        if progress.0 >= 90.0 {
+        if progress.0 >= 10.0 {
             for mut enemyterm in enemybornpoint_query.iter_mut() {
                 enemyterm.0 = 0;
             }

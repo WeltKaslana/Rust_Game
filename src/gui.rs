@@ -298,7 +298,7 @@ fn statetransition(
             }
         },
         GameState::Home if delta >= 400.0 && delta < 420.0 => {
-            println!("transition to {:?}!", *nextstate);
+            println!("Home transition to {:?}!", *nextstate);
             match *nextstate {
                 GameState::MainMenu => {
                     *nextstate = GameState::None;
@@ -325,7 +325,7 @@ fn statetransition(
         },
 
         GameState::InGame if delta >= 400.0 && delta < 420.0 => {
-            println!("transition to {:?}!", *nextstate);
+            println!("InGame transition to {:?}!", *nextstate);
             match *nextstate {
                 GameState::MainMenu => {
                     *nextstate = GameState::None;

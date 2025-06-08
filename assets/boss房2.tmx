@@ -164,7 +164,7 @@
 </data>
  </layer>
  <objectgroup id="5" name="对象层 1">
-  <object id="1" name="Player" x="316.5" y="300">
+  <object id="1" name="Player" x="313.758" y="393.219">
    <point/>
   </object>
   <object id="3" name="Boss" x="314.5" y="490.5">
