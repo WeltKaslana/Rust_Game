@@ -54,14 +54,14 @@ impl Plugin for UIPlugin {
             // update_ui,
             handle_state_bar,
             handle_player_skill,
+            handle_boss_ui_setup,
+            handle_timer_ui_setup,
         ))
         .add_systems(Update, (
             handle_boss_ui_update,
             handle_boss_ui_delete,
             handle_timer_ui_update,
             handle_timer_ui_delete,
-            handle_boss_ui_setup,
-            handle_timer_ui_setup,
         ).run_if(in_state(InGameState::Running)))
         ;
     }

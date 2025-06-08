@@ -523,10 +523,10 @@ fn evt_object_created(
             let mut rng = rand::rng();
             let mut i = rng.random_range(0..99);
 
-            let map_index = score.map_index as i32 + 1;
+            let map_index = score.map_index as i32;
             
-            let map = map_index - 1 - map_index / ROOMS;
-            if map == ROOMS {i = 0;}
+            let map = map_index - map_index / ROOMS;
+            if map == ROOMS - 1 {i = 0;}
 
             match i {
                 0..=5 => {
