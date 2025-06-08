@@ -1,13 +1,16 @@
 use bevy::math::vec3;
 use bevy::render::render_resource::encase::private::Length;
+use bevy::transform;
 use bevy::{
     prelude::*, 
     time::Stopwatch,
     ecs::world::DeferredWorld,};
+use bevy_rapier2d::na::distance_squared;
 use bevy_rapier2d::prelude::*;
 use bevy::utils::Instant;
 
 use std::{time::Duration};
+use crate::boss::BossComponent;
 use crate::gui::Transition;
 use crate::{
     gamestate::*,
@@ -21,7 +24,9 @@ use crate::{
         GunState,
         BulletDirection,
         ArisuSPDamage,
-        SpawnInstant,},
+        SpawnInstant,
+        BulletHit},
+    boss::{Boss, BossState},
 };
 use crate::*;
 pub struct PlayerPlugin;
@@ -113,6 +118,8 @@ pub struct PlayerEnemyCollisionEvent;
 #[derive(Event)]
 pub struct PlayerRunEvent;
 
+
+
 #[derive(Event)]
 pub struct PlayerJumpEvent;
 
@@ -133,6 +140,9 @@ pub struct ReloadPlayerEvent(pub u8);
 
 #[derive(Event)]
 pub struct GameOverEvent;
+
+#[derive(Component)]
+pub struct Fire(pub i32, pub Vec2);
 
 //定义角色动画帧率
 #[derive(Component)]
@@ -176,6 +186,8 @@ impl Plugin for PlayerPlugin {
                     handle_player_skill4,
                     handle_grenade_despawn,
                     handle_shield_despawn,
+                    handle_mk1,
+                    handle_mk1_move,
                     // handle_play_bullet_collision_events,
             ).run_if(in_state(HomeState::Running))
             )
@@ -191,7 +203,9 @@ impl Plugin for PlayerPlugin {
                         handle_shield_despawn,
                         handle_player_skill4,
                         handle_player_enemy_parry_events,
-                        handle_player_bullet_collision_events
+                        handle_player_bullet_collision_events,
+                        handle_mk1,
+                        handle_mk1_move,
                 ).run_if(in_state(InGameState::Running))
             )
             ;
@@ -648,6 +662,7 @@ fn handle_player_skill2(
                             Player, 
                             AnimationConfig::new(10),
                             SpawnInstant(Instant::now()),
+                            Fire(0,Vec2::ZERO),
                         ));
                     }
                 },
@@ -1486,4 +1501,83 @@ fn handle_player_move3(
     }
 }
 
+fn handle_mk1(
+    mut commands: Commands,
+    mut mk1_query: Query<(Entity, &Transform, &SpawnInstant, &mut Fire), (With<MK1>, Without<Character>)>,
+    player_query: Query<& Transform, (With<Character>, Without<MK1>)>,
+    enemy_query: Query<& Transform, (With<Enemy>, Without<Boss>)>,
+    boss_query: Query<& Transform, (With<Boss>, Without<BossComponent>)>,
+    source: Res<GlobalCharacterTextureAtlas>,
+) {
+    if mk1_query.is_empty() || player_query.is_empty() {
+        return;
+    }
+    let playerloc =  player_query.single();
 
+    for (mk1, mk1_transform, mk1_spawn_instant, mut fire) in mk1_query.iter_mut() {
+        let elapsed = mk1_spawn_instant.0.elapsed();
+        if elapsed >= Duration::from_secs(15) {
+            commands.entity(mk1).despawn();
+            commands.spawn((
+                Sprite {
+                    image: source.image_gun_hit.clone(),
+                    texture_atlas: Some(TextureAtlas {
+                        layout: source.lay_out_gun_hit.clone(),
+                        index: 0,
+                    }),
+                    ..default()
+                },
+                Transform {
+                    translation: mk1_transform.translation.clone(),
+                    scale: Vec3::splat(5.0),
+                    ..default()
+                },
+                AnimationConfig::new(15),
+                BulletHit,
+            ));
+            continue;
+        }
+        let mut distance = 9999.9;
+        let mut dx = 0.0;
+        let mut dy = 0.0;
+        if boss_query.is_empty() {
+            
+        } else {
+            let boss_transform = boss_query.single();
+            dx = boss_transform.translation.x - mk1_transform.translation.x;
+            dy = boss_transform.translation.y - mk1_transform.translation.y;
+            distance = (dx * dx + dy * dy).sqrt();
+        }
+        for enemy_transform in enemy_query.iter() {
+            if enemy_transform.translation.distance(mk1_transform.translation) < distance { 
+                distance = enemy_transform.translation.distance(mk1_transform.translation);
+                dx = enemy_transform.translation.x - mk1_transform.translation.x;
+                dy = enemy_transform.translation.y - mk1_transform.translation.y;
+            }
+        }
+        fire.1 = Vec2::new(dx, dy);
+
+        if distance <= 300.0 &&  fire.0 == 0 {
+            fire.0 = 1;
+        } else if distance > 300.0 {
+            fire.0 = 0;
+        }
+
+    }
+}
+
+fn handle_mk1_move(
+    mut mk1_query: Query<&mut Transform, (With<MK1>, Without<Character>)>,
+    player_query: Query<&Transform, (With<Character>, Without<MK1>)>,
+) {
+    if mk1_query.is_empty() || player_query.is_empty() {
+        return;
+    }
+    let playerloc = player_query.single();
+    for mut mk1_transform in mk1_query.iter_mut() {
+        if playerloc.translation.distance(mk1_transform.translation) >= 200.0 {
+            let moveoff = Vec3::new(playerloc.translation.x - mk1_transform.translation.x, playerloc.translation.y - mk1_transform.translation.y, 0.0).normalize() * 5.0;
+            mk1_transform.translation += moveoff;
+        }
+    }
+}

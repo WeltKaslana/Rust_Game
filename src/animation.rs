@@ -1,3 +1,4 @@
+use bevy::transform;
 use bevy::{
     dev_tools::states::*, 
     prelude::*,
@@ -11,13 +12,13 @@ use crate::{
         set_boss, Boss, BossComponent, BossDeathEffect, BossState, Direction, Skillflag
     }, 
     character::{
-        AnimationConfig, Character, Player, Drone, DroneBullet, PlayerState, State, GrenadeHit, MK1, MK2, MK2LockOn, MK2Born, MK2Loc,
+        AnimationConfig, Character, Player, Drone, DroneBullet, PlayerState, State, GrenadeHit, MK1, MK2, MK2LockOn, MK2Born, MK2Loc, Fire
     }, 
     enemy::{
         set_enemy, BulletDirection, Enemy, EnemyBullet, EnemyDeathEffect, EnemyState, EnemyType, Fireflag, PatrolState
     }, 
     gamestate::*, 
-    gun::{self, Bullet, BulletHit, Cursor, Gun, GunFire, SpawnInstant, GunState, BulletDamage, GunTimer}, 
+    gun::{self, Bullet, BulletHit, Cursor, Gun, GunFire, SpawnInstant, GunState, BulletDamage, GunTimer,}, 
     home::{Fridge, FridgeState, Sora, SoraState}, 
     resources::{
         GlobalBossTextureAtlas, GlobalCharacterTextureAtlas, GlobalEnemyTextureAtlas, GlobalHomeTextureAtlas
@@ -51,6 +52,7 @@ impl Plugin for AnimationPlugin {
                 animate_mk2,
                 mk2_flip_rotate,
                 animate_door_and_chest,
+                animate_mk1,
             ).run_if(in_state(InGameState::Running)),)
             .add_systems(Update, 
                 (
@@ -64,6 +66,7 @@ impl Plugin for AnimationPlugin {
                     animate_gunfire,
                     animate_sora,
                     animate_fridge,
+                    animate_mk1,
             ).run_if(in_state(HomeState::Running))
             );
     }
@@ -1262,4 +1265,78 @@ fn animate_door_and_chest (
         }
     }
 
+}
+
+fn animate_mk1(
+    mut mk1_query: Query<(&Transform,&mut Sprite, &mut Fire, &mut AnimationConfig), With<MK1>>,
+    time: Res<Time>,
+    mut commands: Commands,
+    source: Res<GlobalCharacterTextureAtlas>,
+) {
+    if mk1_query.is_empty() {
+        return;
+    }
+    for (transform, mut sprite, mut fire, mut animation_config) in mk1_query.iter_mut() {
+        if fire.1.x < 0.0 {
+            sprite.flip_x = true;
+        } else {
+            sprite.flip_x = false;
+        }
+        
+        if fire.0 == 0 {
+            animation_config.frame_timer.tick(time.delta());
+            if animation_config.frame_timer.just_finished() {
+                if let Some(atlas) = &mut sprite.texture_atlas { 
+                    animation_config.frame_timer = AnimationConfig::timer_from_fps(animation_config.fps2p);
+                    atlas.index = (atlas.index + 1) % 4;
+                }
+            }
+        } else {
+            animation_config.frame_timer.tick(time.delta());
+            if animation_config.frame_timer.just_finished() {
+                if let Some(atlas) = &mut sprite.texture_atlas { 
+                    animation_config.frame_timer = AnimationConfig::timer_from_fps(animation_config.fps2p);
+                    atlas.index = (atlas.index + 1) % 4 + 4;
+                    fire.0 = 1;
+                }
+            }
+            if fire.0 == 1 {
+                commands.spawn((
+                    Sprite {
+                        image: source.image_bullet.clone(),
+                        texture_atlas: Some(TextureAtlas {
+                            layout: source.lay_out_bullet.clone(),
+                            index: 0,
+                        }),
+                        ..default()
+                    },
+                    Transform {
+                        translation: vec3(
+                            transform.translation.x,
+                            transform.translation.y - 10.0,
+                            1.0),
+                        rotation: Quat::from_rotation_z(fire.1.y.atan2(fire.1.x)),
+                        scale: Vec3::splat(2.5),
+                    },
+                    AnimationConfig::new(8),
+                    Player,
+                    Bullet,
+                    gun::BulletDirection(Vec3::new(fire.1.x, fire.1.y, 0.0)),
+                    BulletDamage(5.0),
+                    SpawnInstant(Instant::now()),
+                    //碰撞体
+                    Collider::cuboid(2.0, 1.0),
+
+                    RigidBody::Dynamic,
+                    GravityScale(0.0),
+                    ColliderMassProperties::Mass(1000.0),
+                    LockedAxes::ROTATION_LOCKED,
+                    // Sensor,
+                    // CollisionGroups::new(Group::GROUP_3, Group::GROUP_2),
+                    ActiveEvents::COLLISION_EVENTS,
+                ));
+                fire.0 =2;
+            }
+        }
+    }
 }
