@@ -485,10 +485,10 @@ impl GlobalMenuTextureAtlas {
             shiroko_skill3_cool: asset_server.load(path_shiroko_skill3_cool),
             shiroko_skill4_cool: asset_server.load(path_shiroko_skill4_cool),
             shiroko_skill_text: [
-                "shiroko1:blabla".to_string(),
-                "shiroko2:blabla".to_string(),
-                "shiroko3:blabla".to_string(),
-                "shiroko4:blabla".to_string(),
+                "shiroko1:\n发射子弹进行快速射击".to_string(),
+                "翻滚闪避:\n向指针方向闪避一段距离，期间不会受到伤害".to_string(),
+                "投掷手雷:\n向指针方向投掷一枚手榴弹，击中物体后爆炸".to_string(),
+                "Man!:\n召唤一架无人机，向最近的敌人发射共8枚跟踪导弹".to_string(),
             ],
 
             arisu: asset_server.load(path_arisu),
@@ -519,10 +519,10 @@ impl GlobalMenuTextureAtlas {
             utaha_skill3_cool: asset_server.load(path_utaha_skill3_cool),
             utaha_skill4_cool: asset_server.load(path_utaha_skill4_cool),
             utaha_skill_text: [
-                "utaha1:blabla".to_string(),
-                "utaha2:blabla".to_string(),
-                "utaha3:blabla".to_string(),
-                "utaha4:blabla".to_string(),
+                "大师重击:\n使用物理学圣剑对指针一定范围内的敌人造成一次伤害".to_string(),
+                "技术革命:\n向指针方向冲刺一段距离并对沿路敌人造成伤害,若击杀\n敌人则将其改造为MK1无人机".to_string(),
+                "现场拆除:\n展开持续一定时间的力场护盾,无效话所有来袭的子弹攻击".to_string(),
+                "炮台支援:\n召唤持续一定时间的MK2炮台,自动对最近的敌人展开火力\n压制,最多存在2台".to_string(),
             ],
 
             buff_icon: buff_icon,
