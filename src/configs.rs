@@ -16,8 +16,8 @@ pub const WORLD_W: f32 = 3000.0;
 pub const WORLD_H: f32 = 2500.0;
 pub const fps: u8 = 60;
 
-pub const Survial_Time: f32 = 10.0;
-pub const ROOMS: i32 = 2;
+pub const Survial_Time: f32 = 90.0;
+pub const ROOMS: i32 = 5;
 
 // Player
 pub const PLAYER_SPEED: f32 = 2.0 * 240.0 / fps as f32;
@@ -41,8 +41,8 @@ pub const ENEMY_HEALTH: f32 = 100.0;
 pub const ENEMY_SPAWN_INTERVAL: f32 = 1.0;
 pub const ENEMY_SPEED: f32 = 1.0 * 240.0 / fps as f32;
 pub const ENEMY_BULLET_SPEED: f32 = 2.0 * 240.0 / fps as f32;
-pub const ENEMY_ALARM: f32 = 500.0;//该数值为测试数据，实际游玩时应适当调大
-pub const ENEMY_FIRE: f32 = 400.0;//该数值为测试数据，实际游玩时应适当调大
+pub const ENEMY_ALARM: f32 = 600.0;//该数值为测试数据，实际游玩时应适当调大
+pub const ENEMY_FIRE: f32 = 450.0;//该数值为测试数据，实际游玩时应适当调大
 pub const ENEMY_ATTACK: f32 = 75.0;
 
 // Boss
@@ -53,7 +53,7 @@ pub const BOSS_CHARGE_SPEED: f32 = 2.0 * 240.0 / fps as f32;
 pub const KD_TREE_REFRESH_RATE: f32 = 0.1;
 
 // Gun
-pub const BULLET_SPAWN_INTERVAL: f32 = 0.3 / 3.0;
+pub const BULLET_SPAWN_INTERVAL: f32 = 0.2;
 pub const BULLET_TIME_SECS: f32 = 3.0;
 pub const BULLET_SPEED: f32 = 8.0 * 100.0 / fps as f32;
 pub const BULLET_DAMAGE: f32 = 15.0 * 2.0;

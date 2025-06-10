@@ -186,7 +186,7 @@ pub fn set_enemy(
                 Fireflag::Fire,
                 Health(ENEMY_HEALTH * xishu),
                 //Velocity(ENEMY_SPEED),
-                AnimationConfig::new(15),
+                AnimationConfig::new(13),
                 PatrolState {
                     directionx: 0.0,
                     directiony: 0.0,
@@ -231,7 +231,7 @@ pub fn set_enemy(
                 Fireflag::Fire,
                 Health(ENEMY_HEALTH * xishu),
                 //Velocity(ENEMY_SPEED),
-                AnimationConfig::new(10),
+                AnimationConfig::new(9),
                 PatrolState {
                     directionx: 0.0,
                     directiony: 0.0,
@@ -276,7 +276,7 @@ pub fn set_enemy(
                 Fireflag::Fire,
                 Health(ENEMY_HEALTH * xishu),
                 //Velocity(ENEMY_SPEED),
-                AnimationConfig::new(10),
+                AnimationConfig::new(9),
                 PatrolState {
                     directionx: 0.0,
                     directiony: 0.0,
@@ -321,7 +321,7 @@ pub fn set_enemy(
                 Fireflag::Fire,
                 Health(ENEMY_HEALTH * xishu),
                 //Velocity(ENEMY_SPEED),
-                AnimationConfig::new(10),
+                AnimationConfig::new(9),
                 PatrolState {
                     directionx: 0.0,
                     directiony: 0.0,
