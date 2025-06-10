@@ -939,7 +939,7 @@ fn animate_droneskill (
                         DroneBullet,
                         Bullet,
                         gun::BulletDirection(dir),
-                        BulletDamage(5.0),
+                        BulletDamage(30.0),
                         AnimationConfig::new(10),
                         SpawnInstant(Instant::now()),
                         
@@ -964,7 +964,7 @@ fn animate_droneskill (
                         DroneBullet,
                         Bullet,
                         gun::BulletDirection(dir),
-                        BulletDamage(5.0),
+                        BulletDamage(30.0),
                         AnimationConfig::new(10),
                         SpawnInstant(Instant::now()),
                         

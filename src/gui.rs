@@ -5,8 +5,8 @@ use std::collections::HashSet;
 
 use crate::{
     character::{
-        Buff, Character, Health, Player, ReloadPlayerEvent
-    }, gamestate::*, gun::{Cursor, Gun}, home::Home, resources::*, room::{AssetsManager, Chest, ChestType, Map, clear_sound}, ui::UI, configs::*,
+        Buff, Character, Health, Player, PlayerHurtEvent, ReloadPlayerEvent
+    }, configs::*, gamestate::*, gun::{Cursor, Gun}, home::Home, resources::*, room::{clear_sound, AssetsManager, Chest, ChestType, Map}, ui::UI
 };
 
 pub struct GuiPlugin;
@@ -2025,6 +2025,7 @@ fn handle_choosingbuffmenu (
     buff_text_query: Query<Entity, With<BuffTextBox>>,
     mut windows: Query<&mut Window>,
     mut query: Query<&mut Node, (With<ChoosingBuffMenu>, Without<Camera2d>, Without<BuffTextBox>)>,
+    mut hurt_events: EventWriter<PlayerHurtEvent>,
     source: Res<GlobalMenuTextureAtlas>,
     mut next_state: ResMut<NextState<InGameState>>,
 ) {
@@ -2074,37 +2075,22 @@ fn handle_choosingbuffmenu (
                                         match name.as_str() {
                                             "0" => {
                                                 // 子弹分裂
-                                                // if let Ok(mut window) = windows.get_single_mut() {
-                                                //     window.cursor_options.visible = false;
-                                                // }
                                                 buff.0 += 2;
                                             },
                                             "1" => {
                                                 // 伤害增加
-                                                // if let Ok(mut window) = windows.get_single_mut() {
-                                                //     window.cursor_options.visible = false;
-                                                // }
                                                 buff.4 += 2;
                                             },
                                             "2" => {
-                                                // 射速提高
-                                                // if let Ok(mut window) = windows.get_single_mut() {
-                                                //     window.cursor_options.visible = false;
-                                                // }
-                                                buff.1 += 1;
+                                                // 技能伤害提高
+                                                buff.5 += 1;
                                             },
                                             "3" => {
-                                                // 技能冷却加快
-                                                // if let Ok(mut window) = windows.get_single_mut() {
-                                                //     window.cursor_options.visible = false;
-                                                // }
+                                                // 击杀回血
                                                 buff.6 += 1;
                                             },
                                             "4" => {
                                                 // 抗性增加
-                                                // if let Ok(mut window) = windows.get_single_mut() {
-                                                //     window.cursor_options.visible = false;
-                                                // }
                                                 buff.7 += 1;
                                             },
                                             _ => {}
@@ -2113,54 +2099,53 @@ fn handle_choosingbuffmenu (
                                     1 => {
                                         match name.as_str() {
                                             "0" => {
-                                                // if let Ok(mut window) = windows.get_single_mut() {
-                                                //     window.cursor_options.visible = false;
-                                                // }
-                                                buff.0+=2;
+                                                // 射速提高
+                                                buff.1 += 1;
                                             },
                                             "1" => {
-                                                // if let Ok(mut window) = windows.get_single_mut() {
-                                                //     window.cursor_options.visible = false;
-                                                // }
-                                                buff.4 += 2;
+                                                // 加移速
+                                                buff.8 += 1;
                                             },
                                             "2" => {
-                                                // if let Ok(mut window) = windows.get_single_mut() {
-                                                //     window.cursor_options.visible = false;
-                                                // }
-                                                buff.1 += 1;
+                                                // 减散步
+                                                buff.3 += 1;
                                             },
                                             _ => {}
                                         }
                                     },
                                     2 => {
+                                        let pos = rand::rng().random_range(0..99);
                                         match name.as_str() {
                                             "0" => {
-                                                // 回生命
-                                                // if let Ok(mut window) = windows.get_single_mut() {
-                                                //     window.cursor_options.visible = false;
-                                                // }
-                                                health.0 += PLAYER_HEALTH * 0.15;
+                                                // %70回%10生命, %30回%40生命
+                                                health.0 += match pos {
+                                                    0..=69 => PLAYER_HEALTH * 0.1,
+                                                    _ => PLAYER_HEALTH * 0.4,
+                                                };
                                                 if health.0 > PLAYER_HEALTH {
                                                     health.0 = PLAYER_HEALTH;
                                                 }
                                             },
                                             "1" => {
-                                                // if let Ok(mut window) = windows.get_single_mut() {
-                                                //     window.cursor_options.visible = false;
-                                                // }
-                                                health.0 += PLAYER_HEALTH * 0.15;
+                                                // 回%30生命
+                                                health.0 += PLAYER_HEALTH * 0.2;
                                                 if health.0 > PLAYER_HEALTH {
                                                     health.0 = PLAYER_HEALTH;
                                                 }
                                             },
                                             "2" => {
-                                                // if let Ok(mut window) = windows.get_single_mut() {
-                                                //     window.cursor_options.visible = false;
-                                                // }
-                                                health.0 += PLAYER_HEALTH * 0.15;
+                                                // %15回%80生命, %85扣%20生命
+                                                health.0 += match pos {
+                                                    0..=14 => PLAYER_HEALTH * 0.8,
+                                                    _ => {
+                                                        hurt_events.send(PlayerHurtEvent);
+                                                        PLAYER_HEALTH * (-0.2)
+                                                    },
+                                                };
                                                 if health.0 > PLAYER_HEALTH {
                                                     health.0 = PLAYER_HEALTH;
+                                                } else if health.0 < 0.0 { 
+                                                    health.0 = 0.0;
                                                 }
                                             },
                                             _ => {}

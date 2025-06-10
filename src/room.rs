@@ -154,7 +154,7 @@ impl Plugin for RoomPlugin {
             .add_plugins(TiledPhysicsPlugin::<TiledPhysicsRapierBackend>::default())
             // Rapier physics plugins to test and see the collider
             .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
-            .add_plugins(RapierDebugRenderPlugin::default())
+            // .add_plugins(RapierDebugRenderPlugin::default())
 
             .add_systems(Startup, load_room)
             .add_systems(OnEnter(GameState::Home), load_room1)

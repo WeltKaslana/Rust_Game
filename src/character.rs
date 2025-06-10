@@ -27,7 +27,7 @@ use crate::{
         ArisuSPDamage,
         SpawnInstant,
         BulletHit},
-    boss::{Boss, BossState},
+    boss::{Boss, BossState, BossDeathEvent},
 };
 use crate::*;
 pub struct PlayerPlugin;
@@ -109,11 +109,12 @@ pub struct Buff(
     pub i8, // 2.bullet_speed
     pub i8, // 3.bullet_spread
     pub i8, // 4.bullet_damage
-    pub i8, // 5.grenade_range
-    pub i8, // 6.skill_cooldown
+    pub i8, // 5.skill_damage
+    pub i8, // 6.blood_addict
     pub i8, // 7.resistence_up
+    pub i8, // 8.move_speed
     // to design 
-);
+); // 后续成员可以改为[i8; 9]的数组
 
 impl Default for Buff {
     fn default() -> Self {
@@ -125,6 +126,7 @@ impl Default for Buff {
             1, 
             1, 
             1, 
+            1,
             1)
     }
 }
@@ -230,6 +232,7 @@ impl Plugin for PlayerPlugin {
                         handle_player_skill4,
                         handle_player_enemy_parry_events,
                         handle_player_bullet_collision_events,
+                        handle_play_bloodaddict,
                         handle_mk1,
                         handle_mk1_move,
                 ).run_if(in_state(InGameState::Running))
@@ -586,15 +589,22 @@ fn handle_player_move(
 
 fn handle_player_enemy_parry_events(
     mut events: EventReader<PlayerParryEvent>,
-    player_query: Query<&Transform, (With<Character>, Without<Enemy>)>,
-    mut enemy_query: Query<(&mut Health, &Transform), (With<Enemy>, Without<Character>)>,
-
+    player_query: Query<(&Transform, &Buff), (With<Character>, Without<Enemy>)>,
+    mut enemy_query: Query<(&mut Health, &Transform), (With<Enemy>, Without<Character>, Without<Boss>)>,
+    mut boss_query: Query<(&mut Health, &Transform), (With<Boss>, Without<EnemyBullet>, Without<Enemy>)>
 ) {
     for _ in events.read() {
-        for transp in player_query.iter() {
-            for (mut health, trans) in &mut enemy_query.iter_mut()  {
+        for (transp, buff) in player_query.iter() {
+            let damage = 1.0 + (buff.5 - 1) as f32 * 0.05;
+            for (mut health, trans) in &mut enemy_query.iter_mut()  {    
                 if trans.translation.distance(transp.translation) < GRENADE_BOOM_RANGE * 2.0 {
-                    health.0 -= BULLET_DAMAGE * 5.0;
+                    health.0 -= BULLET_DAMAGE * 5.0 * damage;
+                    println!("BANG!");
+                }
+            }
+            for (mut health, trans) in &mut boss_query.iter_mut()  {    
+                if trans.translation.distance(transp.translation) < GRENADE_BOOM_RANGE * 2.0 {
+                    health.0 -= BULLET_DAMAGE * 5.0 * damage;
                     println!("BANG!");
                 }
             }
@@ -762,7 +772,7 @@ fn handle_player_skill2(
 
 fn handle_utaha_attack_damage (
     mut commands: Commands,
-    player_query: Query<(&Transform, &PlayerState), (With<Character>, Without<Enemy>)>,
+    player_query: Query<(&Transform, &PlayerState, &Buff), (With<Character>, Without<Enemy>)>,
     weapen_query: Query<(&Transform, &GunState), (With<Gun>, Without<Enemy>)>,
     enemy_bullet_query: Query<(Entity, &Transform), (With<EnemyBullet>, Without<Character>)>,
     mut enemy_query: Query<(&mut Health, &Transform), (With<Enemy>, Without<EnemyBullet>, Without<Boss>)>,
@@ -773,6 +783,7 @@ fn handle_utaha_attack_damage (
     let mut flag = false;
     let mut trans = Vec2::ZERO;
     let mut damage = 1.0;
+    let mut damage1 = 1.0;
     if source.id == 3 {
         if !weapen_query.is_empty() { 
             let (wtrans, state) = weapen_query.single();
@@ -786,7 +797,8 @@ fn handle_utaha_attack_damage (
         }
 
         if !player_query.is_empty() {
-            let (ptrans, state) = player_query.single();
+            let (ptrans, state, buff) = player_query.single();
+            damage1 = 1.0 + (buff.5 - 1) as f32 * 0.05;
             match *state {
                 PlayerState::Dodge => {
                     trans = ptrans.translation.truncate().clone();
@@ -811,13 +823,13 @@ fn handle_utaha_attack_damage (
         // 对敌方造成伤害
         for (mut health, etrans) in enemy_query.iter_mut() {
             if (etrans.translation.x - trans.x).abs() < 90.0 && (etrans.translation.y - trans.y).abs() < 130.0 {
-                health.0 -= damage * BULLET_DAMAGE;
+                health.0 -= damage * BULLET_DAMAGE * damage1;
             }
         }
         // 对boss造成伤害
         for (mut health, btrans) in boss_query.iter_mut() {
             if (btrans.translation.x - trans.x).abs() < 90.0 && (btrans.translation.y - trans.y).abs() < 130.0 {
-                health.0 -= damage * BULLET_DAMAGE * 0.2;
+                health.0 -= damage * BULLET_DAMAGE * 0.2 * damage1;
             }
         }
     }
@@ -987,9 +999,10 @@ pub fn handle_player_skill4 (
     mut drone_query: Query<(&mut Sprite, & State), (With<Drone>, Without<DroneBullet>, Without<Enemy>, Without<Character>)>,
     mut drone_bullet_query: Query<(&Transform, &mut BulletDirection), (With<DroneBullet>, Without<Drone>, Without<Enemy>, Without<Character>)>,
     mk2_query: Query<(Entity, &SpawnInstant, &Transform), With<MK2>>,
-    enemy_query: Query<&Transform, (With<Enemy>, Without<DroneBullet>, Without<Drone>, Without<Character>)>,
+    enemy_query: Query<&Transform, (With<Enemy>, Without<DroneBullet>, Without<Drone>, Without<Character>, Without<Boss>, Without<BossComponent>)>,
     mut events: EventWriter<PlayerSkill4Event>,
     source: Res<GlobalCharacterTextureAtlas>,
+    boss_query: Query<&Transform, (With<Boss>, Without<BossComponent>, Without<Enemy>)>,
 ) {
     if transform_query.is_empty() {
         return;
@@ -1011,6 +1024,10 @@ pub fn handle_player_skill4 (
                             dis = d;
                             bullet_direction.0 = (enemy_transform.translation - bullet_transform.translation).normalize();
                         }
+                    }
+                    if !boss_query.is_empty() {
+                        let boss_transform = boss_query.single();
+                        bullet_direction.0 = (boss_transform.translation - bullet_transform.translation).normalize();
                     }
                 }
             }
@@ -1162,7 +1179,7 @@ fn handle_player_bullet_collision_events(
     // mut commands: Commands,
     mut events: EventWriter<PlayerHurtEvent>,
     mut events2: EventWriter<PlayerParryEvent>,
-    mut player_query: Query<(Entity, &mut Health, &PlayerState), With<Character>>,
+    mut player_query: Query<(Entity, &mut Health, &PlayerState, &Buff), With<Character>>,
     mut collision_events: EventReader<CollisionEvent>,
     enemy_query: Query<Entity, With<EnemyBullet>>,
     shield_query: Query<Entity, (With<Shield>)>,
@@ -1173,8 +1190,11 @@ fn handle_player_bullet_collision_events(
             return;
         }
 
-        let (player, mut health, state) = player_query.single_mut();
-        
+        let (player, mut health, state, buff) = player_query.single_mut();
+        let mut resist = 1.0 - (buff.7 - 1) as f32 * 0.1;
+        if resist < 0.5  {
+            resist = 0.5;
+        }
         match collision_event {
             CollisionEvent::Started(entity1, entity2, _) => {
                 if entity1.eq(&player) {
@@ -1189,7 +1209,7 @@ fn handle_player_bullet_collision_events(
                             },
                             _ => {
                                 if shield_query.is_empty() {
-                                    health.0 -= ENEMY_DAMAGE * 5.0;
+                                    health.0 -= ENEMY_DAMAGE * 5.0 * resist;
                                 }
                             },
                         }
@@ -1211,17 +1231,38 @@ fn handle_player_bullet_collision_events(
                             },
                             _ => {
                                 if shield_query.is_empty() {
-                                    health.0 -= ENEMY_DAMAGE * 5.0;
+                                    health.0 -= ENEMY_DAMAGE * 5.0 * resist;
                                 }
                             },
                         }
                         events.send(PlayerHurtEvent);
                     }               
-                }            
+                }       
             }
             CollisionEvent::Stopped(entity1, entity2, _) => {
-
             }
+        }
+    }
+}
+
+fn handle_play_bloodaddict (
+    mut player_query: Query<(&mut Health, &Buff), With<Character>>,
+    mut enemydeath: EventReader<EnemyDeathEvent>,
+    mut bossdeath: EventReader<BossDeathEvent>,
+) {
+    if player_query.is_empty() {
+        return;
+    }
+    for (mut health, buff) in player_query.iter_mut() {
+        let add_health = (buff.6 - 1) as f32 * 0.01 * PLAYER_HEALTH;
+        for _ in enemydeath.read() {
+            health.0 += add_health;
+        }
+        for _ in bossdeath.read() {
+            health.0 += add_health;
+        }
+        if health.0 > PLAYER_HEALTH {
+            health.0 = PLAYER_HEALTH;
         }
     }
 }
@@ -1446,6 +1487,7 @@ fn handle_player_move3(
         &mut Sprite, 
         &mut PlayerState, 
         &mut KinematicCharacterController,
+        &Buff,
         ), (With<Character>, Without<Gun>)>,
     gun_query: Query<&Transform, (With<Gun>, Without<Character>)>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
@@ -1462,22 +1504,23 @@ fn handle_player_move3(
         mut player, 
         mut player_state,
         mut controller,
-        ) = player_query.single_mut();
+        buff,
+    ) = player_query.single_mut();
 
-        // controller.
+    let movefast = 1.0 + (buff.8 - 1) as f32 * 0.05;
 
-        match *player_state {
-            PlayerState::Dodge => {
-                if source.id == 1 || source.id == 3 {
-                    let gun_transform = gun_query.single();
-                    let direction = gun_transform.local_x();
-                    controller.translation = Some(
-                        Vec2::new(direction.x, direction.y).normalize() * 10.0);
-                }
-                return;
-            },
-            _ => {},
-        }
+    match *player_state {
+        PlayerState::Dodge => {
+            if source.id == 1 || source.id == 3 {
+                let gun_transform = gun_query.single();
+                let direction = gun_transform.local_x();
+                controller.translation = Some(
+                    Vec2::new(direction.x, direction.y).normalize() * 10.0);
+            }
+            return;
+        },
+        _ => {},
+    }
 
 
     let jump = keyboard_input.pressed(KeyCode::KeyW) || keyboard_input.pressed(KeyCode::Space);
@@ -1503,7 +1546,7 @@ fn handle_player_move3(
         delta.y += 2.0;
     }
     //不主动在外面赋值的话当没有按键时translation会变为none导致错误
-    controller.translation = Some(delta.normalize_or_zero().clone() * PLAYER_SPEED);
+    controller.translation = Some(delta.normalize_or_zero().clone() * PLAYER_SPEED * movefast);
     if delta.is_finite() && (jump || down || left || right) {
         match *player_state {
             PlayerState::Move =>{},

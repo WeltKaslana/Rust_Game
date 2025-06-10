@@ -3,6 +3,7 @@ use bevy::render::texture;
 use bevy::state::commands;
 use bevy::transform;
 use bevy::{dev_tools::states::*, prelude::*, time::Stopwatch};
+use crate::gun::BulletDamage;
 use crate::{gamestate::*,
     configs::*,character::{*, Health}, gun::Bullet, enemy::*, room::{Map, EnemyBorn},};
 use crate::*;
@@ -1046,28 +1047,46 @@ fn handle_boss_death(
 }
 
 fn handle_boss_hurt(
-    // mut commands: Commands,
-    player_query: Query<Entity, With<Bullet>>,
+    buff_query: Query<&Buff>,
+    player_query: Query<(Entity, &BulletDamage), With<Bullet>>,
     mut collision_events: EventReader<CollisionEvent>,
     mut boss_query: Query<(Entity, &mut Health), (With<Boss>, Without<BossComponent>)>,
+    source: Res<GlobalCharacterTextureAtlas>,
 ) {
     if player_query.is_empty() || boss_query.is_empty() {
         return;
     }
+
+    let buff = buff_query.single();
+    let vulnerable = match source.id {
+        // 不同子弹伤害不同，后续可以叠加dot之类的伤害
+        2 => 3.0,
+        _ => 1.0,
+    };
+    let bulletdamage = ((buff.4 - 1) as f32 * 0.25 + 1.0) * vulnerable;
+    
     for collision_event in collision_events.read() {
         let (boss, mut health) =  boss_query.single_mut();
             match collision_event {
                 CollisionEvent::Started(entity1,entity2, _) => {
                     if entity2.eq(&boss) {
-                        if let Ok(b) = player_query.get(*entity1) {
-                            // commands.entity(*entity1).despawn();
-                            health.0 -= BULLET_DAMAGE;
+                        if let Ok((_, arisu)) = player_query.get(*entity1) {
+                            // 还有arisu的光之剑伤害
+                            health.0 -= BULLET_DAMAGE * bulletdamage * match arisu.0 {
+                                x if x > 30.0 => (x * 0.25) * (1.0 + (buff.5 - 1) as f32 * 0.05),
+                                x if x == 30.0 => 3.0 * (1.0 + (buff.5 - 1) as f32 * 0.05),
+                                _ => 1.0
+                            };
                         }
                     }
                     if entity1.eq(&boss) {
-                        if let Ok(b) = player_query.get(*entity2) {
-                            // commands.entity(*entity2).despawn();
-                            health.0 -= BULLET_DAMAGE;
+                        if let Ok((_, arisu)) = player_query.get(*entity1) {
+                            // 还有arisu的光之剑伤害
+                            health.0 -= BULLET_DAMAGE * bulletdamage * match arisu.0 {
+                                x if x > 30.0 => (x * 0.25) * (1.0 + (buff.5 - 1) as f32 * 0.05),
+                                x if x == 30.0 => 3.0 * (1.0 + (buff.5 - 1) as f32 * 0.05),
+                                _ => 1.0
+                            };
                         }
                     }
                 },

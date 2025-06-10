@@ -346,7 +346,7 @@ fn handle_gun_fire(
                 Player,
                 Bullet,
                 BulletDirection(bullet_direction.clone().into()),
-                BulletDamage(40.0),
+                BulletDamage(arisu_damage.0 as f32 + 40.0),
                 SpawnInstant(Instant::now()),
                 //碰撞体
                 Collider::ball(bullet_size * 15.0),

@@ -1,12 +1,13 @@
 use bevy::transform;
 use bevy::{dev_tools::states::*, prelude::*, time::Stopwatch};
 
+use crate::gun::BulletDamage;
 use crate::{
     gamestate::*,
     configs::*, 
     character::*, 
     gun::{BulletHit, Bullet, GunState, Gun},
-    boss::Boss,
+    boss::{Boss, BossComponent},
     room::{Map, EnemyBorn},
 };
 use crate::*;
@@ -1059,9 +1060,8 @@ fn handle_enemy_death(
 }
 
 fn handle_enemy_hurt_collision_events(
-    // mut commands: Commands,
     buff_query: Query<&Buff>,
-    player_query: Query<Entity, (With<Bullet>)>,
+    player_query: Query<(Entity, &BulletDamage), (With<Bullet>)>,
     mut collision_events: EventReader<CollisionEvent>,
     mut enemy_query: Query<(Entity, &mut Health), (With<Enemy>, Without<Bullet>)>,
     source: Res<GlobalCharacterTextureAtlas>,
@@ -1082,15 +1082,23 @@ fn handle_enemy_hurt_collision_events(
             match collision_event {
                 CollisionEvent::Started(entity1,entity2, _) => {
                     if entity2.eq(&enemy) {
-                        if let Ok(b) = player_query.get(*entity1) {
-                            // commands.entity(*entity1).despawn();
-                            health.0 -= BULLET_DAMAGE * bulletdamage;
+                        if let Ok((_, arisu)) = player_query.get(*entity1) {
+                            // 还有arisu的光之剑伤害
+                            health.0 -= BULLET_DAMAGE * bulletdamage * match arisu.0 {
+                                x if x > 30.0 => (x * 0.25) * (1.0 + (buff.5 - 1) as f32 * 0.05),
+                                x if x == 30.0 => 3.0 * (1.0 + (buff.5 - 1) as f32 * 0.05),
+                                _ => 1.0
+                            };
                         }
                     }
                     if entity1.eq(&enemy) {
-                        if let Ok(b) = player_query.get(*entity2) {
-                            // commands.entity(*entity2).despawn();
-                            health.0 -= BULLET_DAMAGE * bulletdamage;
+                        if let Ok((_, arisu)) = player_query.get(*entity2) {
+                            // 还有arisu的光之剑伤害
+                            health.0 -= BULLET_DAMAGE * bulletdamage * match arisu.0 {
+                                x if x > 30.0 => (x * 0.25) * (1.0 + (buff.5 - 1) as f32 * 0.05),
+                                x if x == 30.0 => 3.0 * (1.0 + (buff.5 - 1) as f32 * 0.05),
+                                _ => 1.0
+                            };
                         }
                     }
                 },
@@ -1102,21 +1110,31 @@ fn handle_enemy_hurt_collision_events(
 
 
 fn handle_enemy_hurt_collision_events_special(
+    buff_query: Query<&Buff>,
     grenade_query: Query<(Entity, &Transform), (With<Grenade>)>,
     mut collision_events: EventReader<CollisionEvent>,
-    mut enemy_query: Query<(Entity, &mut Health, &Transform), (With<Enemy>, Without<Bullet>)>,
+    mut enemy_query: Query<(Entity, &mut Health, &Transform), (With<Enemy>, Without<Bullet>, Without<Boss>)>,
+    mut boss_query: Query<(Entity, &mut Health, &Transform), (With<Boss>, Without<BossComponent>, Without<Enemy>)>,
 ) {
     for collision_event in collision_events.read() {
-        if grenade_query.is_empty() || enemy_query.is_empty() {
+        if grenade_query.is_empty() || enemy_query.is_empty() || buff_query.is_empty() {
             break;
         }
+        let buff = buff_query.single();
+        let damage = 1.0 + (buff.5 - 1) as f32 * 0.05;
         match collision_event {
             CollisionEvent::Started(entity1, entity2, _) => {
                 // 手雷爆炸范围内的敌人都扣血
                 if let Ok((_, transg)) = grenade_query.get(*entity1) {
                     for (_, mut health, trans) in &mut enemy_query.iter_mut()  {
                         if trans.translation.distance(transg.translation) < GRENADE_BOOM_RANGE {
-                            health.0 -= BULLET_DAMAGE * 5.0;
+                            health.0 -= BULLET_DAMAGE * 5.0 * damage;
+                            println!("BOOM!");
+                        }
+                    }
+                    for (_, mut health, trans) in &mut boss_query.iter_mut()  {
+                        if trans.translation.distance(transg.translation) < GRENADE_BOOM_RANGE {
+                            health.0 -= BULLET_DAMAGE * 5.0 * damage;
                             println!("BOOM!");
                         }
                     }
@@ -1124,7 +1142,13 @@ fn handle_enemy_hurt_collision_events_special(
                 if let Ok((_, transg)) = grenade_query.get(*entity2) {
                     for (_, mut health, trans) in &mut enemy_query.iter_mut()  {
                         if trans.translation.distance(transg.translation) < GRENADE_BOOM_RANGE {
-                            health.0 -= BULLET_DAMAGE * 5.0;
+                            health.0 -= BULLET_DAMAGE * 5.0 * damage;
+                            println!("BOOM!");
+                        }
+                    }
+                    for (_, mut health, trans) in &mut boss_query.iter_mut()  {
+                        if trans.translation.distance(transg.translation) < GRENADE_BOOM_RANGE {
+                            health.0 -= BULLET_DAMAGE * 5.0 * damage;
                             println!("BOOM!");
                         }
                     }
