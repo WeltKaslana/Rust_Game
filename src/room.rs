@@ -525,7 +525,6 @@ fn evt_object_created(
             
             let map = map_index - map_index / ROOMS * ROOMS;
             if map == ROOMS - 1 {i = 0;}
-
             match i {
                 0..=5 => {
                     commands.spawn((

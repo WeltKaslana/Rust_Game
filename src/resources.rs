@@ -541,23 +541,23 @@ impl GlobalMenuTextureAtlas {
 
             buff_icon: buff_icon,
             buff_text: [
-                "1:blabla".to_string(),
-                "2:blabla".to_string(),
-                "3:blabla".to_string(),
-                "4:blabla".to_string(),
-                "5:blabla".to_string(),
+                "子弹分裂".to_string(),
+                "子弹伤害增加".to_string(),
+                "技能伤害增加".to_string(),
+                "嗜血".to_string(),
+                "远程抗性提高".to_string(),
             ],
             mod_icon: mod_icon,
             mod_text: [
-                "1:blabla".to_string(),
-                "2:blabla".to_string(),
-                "3:blabla".to_string(),
+                "射速提高".to_string(),
+                "移速提高".to_string(),
+                "子弹散布降低".to_string(),
             ],
             buff_consumptions: buff_consumptions,
             buff_consumptions_text: [
-                "1:blabla".to_string(),
-                "2:blabla".to_string(),
-                "3:blabla".to_string(),
+                "概率恢复中量生命".to_string(),
+                "恢复少量生命".to_string(),
+                "概率恢复大量生命或失去少量生命".to_string(),
             ],
             buff_text_box: asset_server.load("BookMenu_Codex_Slot.png"),
             room_clear: asset_server.load("mission_complete.png"),
@@ -566,7 +566,7 @@ impl GlobalMenuTextureAtlas {
             font_en: asset_server.load("Fonts/FIXEDSYS-EXCELSIOR-301.ttf"),
             font_cn: asset_server.load("fonts/pixel_font.ttf"),
 
-            operation_text: "blabla".to_string(),
+            operation_text: "WASD控制角色移动\n部分场景Space键跳跃\n鼠标左键技能1\nShift键技能2\n鼠标右键技能3\nQ键技能4\nF键与宝箱交互\nE键与门交互".to_string(),
         }
     }
 }

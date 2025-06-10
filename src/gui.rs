@@ -483,7 +483,7 @@ fn setup_stopmenu(
                 TextColor(Color::rgb(123.0, 0.0, 131.0)),
                 Node {
                     top: Val::Percent(0.0),
-                    left: Val::Percent(40.0),
+                    left: Val::Percent(29.5),
                     position_type: PositionType::Absolute,
                     ..Default::default()
                 }, 
@@ -586,7 +586,6 @@ fn setup_stopmenu(
                     ..default()
                 },
                 Button,
-                test,
             ))
             .with_child((
                 Text::new("退出游戏"),
@@ -1135,7 +1134,7 @@ fn setup_soramenu(
                     },
                     TextColor(Color::rgb(1.0, 1.0, 1.0)),
                     Node {
-                        top: Val::Percent(0.0),
+                        top: Val::Percent(30.0),
                         left: Val::Percent(20.0),
                         position_type: PositionType::Absolute,
                         ..Default::default()
@@ -1163,8 +1162,8 @@ fn setup_soramenu(
                         },
                         TextColor(Color::rgb(1.0, 1.0, 1.0)),
                         Node {
-                            top: Val::Percent(0.0),
-                            left: Val::Percent(20.0),
+                            top: Val::Percent(3.0),
+                            left: Val::Percent(30.0),
                             position_type: PositionType::Absolute,
                             ..Default::default()
                         },
@@ -1173,13 +1172,13 @@ fn setup_soramenu(
                         Text::new(source.operation_text.clone()),
                         TextFont {
                             font: source.font_cn.clone(),
-                            font_size: 35.0,
+                            font_size: 30.0,
                             ..default()
                         },
                         TextColor(Color::rgb(0.0, 0.0, 10.0)),
                         Node {
-                            top: Val::Percent(150.0),
-                            left: Val::Percent(20.0),
+                            top: Val::Percent(142.5),
+                            left: Val::Percent(11.0),
                             position_type: PositionType::Absolute,
                             ..Default::default()
                         },
@@ -1433,7 +1432,7 @@ fn setup_soramenu(
                     },
                     TextColor(Color::rgb(10.0, 0.0, 7.0)),
                     Node {
-                        top: Val::Percent(0.0),
+                        top: Val::Percent(20.0),
                         left: Val::Percent(20.0),
                         position_type: PositionType::Absolute,
                         ..Default::default()
@@ -1817,8 +1816,8 @@ fn setup_choosingbuffmenu(
                 },  
                 TextColor(Color::rgb(123.0, 0.0, 131.0)),
                 Node {
-                    top: Val::Percent(0.0),
-                    left: Val::Percent(40.0),
+                    top: Val::Percent(11.5),
+                    left: Val::Percent(32.0),
                     position_type: PositionType::Absolute,
                     ..Default::default()
                 },
@@ -1902,10 +1901,10 @@ fn setup_choosingbuffmenu(
                         // ImageNode::new(asset_server.load("Icon_Buff_AmmoUp.png")),
                         ImageNode::new(source.mod_icon[numbers[0] as usize].clone()),
                         Node {
-                            width: Val::Percent(34.0),
-                            height: Val::Percent(33.6),
-                            top: Val::Percent(33.3),
-                            left: Val::Percent(4.3),
+                            width: Val::Percent(24.0),
+                            height: Val::Percent(23.6),
+                            top: Val::Percent(34.8),
+                            left: Val::Percent(7.7),
                             align_items: AlignItems::Center,
                             position_type: PositionType::Absolute,
                             ..default()
@@ -1918,10 +1917,10 @@ fn setup_choosingbuffmenu(
                         // ImageNode::new(asset_server.load("Icon_Buff_AttackUp.png")),
                         ImageNode::new(source.mod_icon[numbers[1] as usize].clone()),
                         Node {
-                            width: Val::Percent(34.0),
-                            height: Val::Percent(33.6),
-                            top: Val::Percent(33.1),
-                            left: Val::Percent(36.1),
+                            width: Val::Percent(24.0),
+                            height: Val::Percent(23.6),
+                            top: Val::Percent(34.6),
+                            left: Val::Percent(39.5),
                             align_items: AlignItems::Center,
                             position_type: PositionType::Absolute,
                             ..default()
@@ -1936,8 +1935,8 @@ fn setup_choosingbuffmenu(
                         Node {
                             width: Val::Percent(24.0),
                             height: Val::Percent(23.6),
-                            top: Val::Percent(33.1),
-                            left: Val::Percent(67.9),
+                            top: Val::Percent(34.6),
+                            left: Val::Percent(71.3),
                             align_items: AlignItems::Center,
                             position_type: PositionType::Absolute,
                             ..default()
@@ -2198,10 +2197,11 @@ fn handle_choosingbuffmenu (
                                     },
                                     TextColor(Color::rgb(10.0, 30.0, 70.0)),
                                     Node {
-                                        top: Val::Percent(33.1),
-                                        left: Val::Percent(36.1),
+                                        top: Val::Percent(-13.3),
+                                        left: Val::Percent(7.3),
                                         ..default()
                                     },
+                                    test,
                                 ));
                             },
                             Interaction::None => {
@@ -2327,7 +2327,6 @@ fn setup_gameovermenu (
                         left: Val::Percent(6.6),
                         ..Default::default()
                     },
-                    test,
                 ));
                 parent.spawn((
                     Text::new(format!("Boss击杀数:{}", source1.boss_score)),
@@ -2342,7 +2341,6 @@ fn setup_gameovermenu (
                         left: Val::Percent(6.6),
                         ..Default::default()
                     },
-                    test,
                 ));
                 parent.spawn((
                     Text::new(format!("存活时间:  {}:{}", source1.time_min, source1.time_sec)),
@@ -2357,7 +2355,6 @@ fn setup_gameovermenu (
                         left: Val::Percent(6.6),
                         ..Default::default()
                     },
-                    test,
                 ));
                 parent.spawn((
                     Text::new(format!("通过关卡:{}", source1.map_index)),
@@ -2372,7 +2369,6 @@ fn setup_gameovermenu (
                         left: Val::Percent(6.6),
                         ..Default::default()
                     },
-                    test,
                 ));
                 parent.spawn((
                     Text::new(format!("角色等级:{}", level)),
@@ -2387,7 +2383,6 @@ fn setup_gameovermenu (
                         left: Val::Percent(6.6),
                         ..Default::default()
                     },
-                    test,
                 ));
 
                 // 按钮
