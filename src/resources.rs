@@ -384,7 +384,21 @@ pub struct GlobalMenuTextureAtlas {
     // 消耗品图标
     pub buff_consumptions: [Handle<Image>; 3],
     pub buff_consumptions_text: [String; 3],
+    // 说明文本框
+    pub buff_text_box: Handle<Image>,
 
+    // 房间清空图标
+    pub room_clear: Handle<Image>,
+
+    // 状态切换图标
+    pub transition: Handle<Image>,
+
+    // 字体
+    pub font_en:  Handle<Font>,
+    pub font_cn:  Handle<Font>,
+
+    // 操作说明
+    pub operation_text: String,
 }
 
 impl GlobalMenuTextureAtlas {
@@ -485,7 +499,7 @@ impl GlobalMenuTextureAtlas {
             shiroko_skill3_cool: asset_server.load(path_shiroko_skill3_cool),
             shiroko_skill4_cool: asset_server.load(path_shiroko_skill4_cool),
             shiroko_skill_text: [
-                "shiroko1:\n发射子弹进行快速射击".to_string(),
+                "For the family!:\n发射子弹进行快速射击".to_string(),
                 "翻滚闪避:\n向指针方向闪避一段距离，期间不会受到伤害".to_string(),
                 "投掷手雷:\n向指针方向投掷一枚手榴弹，击中物体后爆炸".to_string(),
                 "Man!:\n召唤一架无人机，向最近的敌人发射共8枚跟踪导弹".to_string(),
@@ -545,6 +559,14 @@ impl GlobalMenuTextureAtlas {
                 "2:blabla".to_string(),
                 "3:blabla".to_string(),
             ],
+            buff_text_box: asset_server.load("BookMenu_Codex_Slot.png"),
+            room_clear: asset_server.load("mission_complete.png"),
+            transition: asset_server.load("Menu_Transition1.png"),
+
+            font_en: asset_server.load("Fonts/FIXEDSYS-EXCELSIOR-301.ttf"),
+            font_cn: asset_server.load("fonts/pixel_font.ttf"),
+
+            operation_text: "blabla".to_string(),
         }
     }
 }

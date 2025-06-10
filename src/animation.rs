@@ -12,7 +12,7 @@ use crate::{
         set_boss, Boss, BossComponent, BossDeathEffect, BossState, Direction, Skillflag
     }, 
     character::{
-        AnimationConfig, Character, Player, Drone, DroneBullet, PlayerState, State, GrenadeHit, MK1, MK2, MK2LockOn, MK2Born, MK2Loc, Fire
+        AnimationConfig, Character, Player, Drone, DroneBullet, PlayerState, State, GrenadeHit, MK1, MK2, MK2LockOn, MK2Born, MK2Loc, Fire, PlayerSkill3Event,
     }, 
     enemy::{
         set_enemy, BulletDirection, Enemy, EnemyBullet, EnemyDeathEffect, EnemyState, EnemyType, Fireflag, PatrolState
@@ -30,10 +30,22 @@ use std::f32::consts::PI;
 use bevy::time::{self, Stopwatch};
 pub struct AnimationPlugin;
 
+#[derive(Event)]
+pub struct ChestOpenEvent;
+
+#[derive(Event)]
+pub struct BossRoarEvent;
+
+#[derive(Event)]
+pub struct DoorEvent(pub usize);
+
 
 impl Plugin for AnimationPlugin {
     fn build(&self, app: &mut App) {
         app
+        .add_event::<ChestOpenEvent>()
+        .add_event::<BossRoarEvent>()
+        .add_event::<DoorEvent>()
         .add_systems(
             Update,
             (
@@ -313,6 +325,7 @@ fn animate_enemy_born(
     time: Res<Time>,
     mut e_query: Query<(&mut Transform, &mut AnimationConfig, &mut Sprite, Entity), (With<EnemyBorn>, With<Enemy>, Without<BossComponent>)>,
     mut b_query: Query<(&mut Transform, &mut AnimationConfig, &mut Sprite, Entity), (With<EnemyBorn>, With<BossComponent>, Without<Enemy>)>,
+    mut events: EventWriter<BossRoarEvent>,
     source1: Res<GlobalEnemyTextureAtlas>,
     source2: Res<GlobalBossTextureAtlas>,
     score: ResMut<ScoreResource>
@@ -359,6 +372,7 @@ fn animate_enemy_born(
                         &source2,
                         &score,
                     );
+                    events.send(BossRoarEvent);
                     println!("boss born!");
                 }
             }
@@ -730,11 +744,8 @@ fn animate_gunfire(
     mut Gun_query: Query<(&mut AnimationConfig, &mut Sprite, Entity), (With<GunFire>, Without<BulletHit>, Without<GrenadeHit>)>,
     mut Hit_query: Query<(&mut AnimationConfig, &mut Sprite, Entity), (With<BulletHit>, Without<GunFire>, Without<GrenadeHit>)>,
     mut grenade_query: Query<(&mut AnimationConfig, &mut Sprite, Entity), (With<GrenadeHit>, Without<GunFire>, Without<BulletHit>)>,
+    mut events: EventWriter<PlayerSkill3Event>,
 ) {
-    // if Gun_query.is_empty() {
-    //     return;
-    // }
-    // let (mut config, mut sprite, entity) = Gun_query.single_mut();
     for (mut config, mut sprite, entity) in &mut Gun_query.iter_mut() {
         config.frame_timer.tick(time.delta());
         if config.frame_timer.just_finished(){
@@ -764,6 +775,9 @@ fn animate_gunfire(
         if config.frame_timer.just_finished(){
             if let Some(atlas) = &mut sprite.texture_atlas {
                 config.frame_timer = AnimationConfig::timer_from_fps(config.fps2p);
+                if atlas.index == 0 {
+                    events.send(PlayerSkill3Event);
+                }
                 atlas.index = atlas.index + 1;
                 if atlas.index == 5 {
                     commands.entity(entity).despawn();
@@ -1149,6 +1163,8 @@ fn animate_door_and_chest (
     mut windows: Query<&mut Window>,
     source: Res<GlobalRoomTextureAtlas>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut events: EventWriter<ChestOpenEvent>,
+    mut door_events: EventWriter<DoorEvent>,
     mut next_state: ResMut<NextState<InGameState>>,
 ) {
     if door_query.is_empty() && chest_query.is_empty() { return; }
@@ -1162,7 +1178,9 @@ fn animate_door_and_chest (
                 let distance = player_transform.translation.distance(door_transfrom.translation);
                 if distance <= 150.0 { 
                     door.0 = 2;
+                    door_events.send(DoorEvent(1));
                 }
+
             },
             2 => {
                 let all = 13;
@@ -1181,6 +1199,7 @@ fn animate_door_and_chest (
                 let distance = player_transform.translation.distance(door_transfrom.translation);
                 if distance > 150.0 { 
                     door.0 = 4;
+                    door_events.send(DoorEvent(2));
                     door_sprite.image = source.image_door_close.clone();
                     if let Some(atlas) =&mut door_sprite.texture_atlas {
                         atlas.index = 0;
@@ -1228,6 +1247,7 @@ fn animate_door_and_chest (
                     if distance <= 150.0 {
                         if keyboard_input.just_pressed(KeyCode::KeyF) {
                             chest.0 = 5;
+                            events.send(ChestOpenEvent);
                         }
                     }
                 },
@@ -1236,6 +1256,7 @@ fn animate_door_and_chest (
                     if distance <= 150.0 {
                         if keyboard_input.just_pressed(KeyCode::KeyF) {
                             chest.0 = 6;
+                            events.send(ChestOpenEvent);
                         }
                     }
                 },

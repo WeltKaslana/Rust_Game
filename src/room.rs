@@ -8,14 +8,7 @@ use bevy_rapier2d::{prelude::*};
 use rand::Rng;
 
 use crate::{
-    boss::{self, Boss, BossComponent, BossSetupEvent, BossDeathEvent}, 
-    character::{AnimationConfig, Character, Health}, 
-    enemy::{BaseSetupEvent, Enemy, EnemybornPoint, Enemybornduration, Enemybornflag, Enemyterm, EnemyDeathEvent, EnemyDeathEffect}, 
-    gamestate::{GameState, InGameState}, 
-    gui::Transition, 
-    gun::Bullet, 
-    resources::*,
-    configs::*,
+    boss::{self, Boss, BossComponent, BossDeathEvent, BossSetupEvent}, character::{AnimationConfig, Character, Health, Player}, configs::*, enemy::{BaseSetupEvent, Enemy, EnemyDeathEffect, EnemyDeathEvent, EnemybornPoint, Enemybornduration, Enemybornflag, Enemyterm}, gamestate::{GameState, InGameState}, gui::{test, Transition}, gun::Bullet, resources::*
 };
 pub struct RoomPlugin;
 
@@ -39,11 +32,16 @@ pub struct ChestType(pub u8);
 pub struct Door(pub i32);
 // 0:can't open 1:ready to open 2:opening 3:opened 4:closing
 
+#[derive(Event)]
+pub struct RoomCleanEvent;
+
 ////test
 pub type MapInfosCallback = fn(&mut EntityCommands);
 
 // 打完一个循环就重新刷新地图
 static mut reload_map: bool = false;
+// 播放房间清空音效
+pub static mut clear_sound: bool = false;
 
 pub struct MapInfos {
     pub asset: Handle<TiledMap>,
@@ -129,7 +127,7 @@ impl AssetsManager {
             // Reload the map
             unsafe {
                 reload_map = true;
-                println!("Reloading map");//test
+                // println!("Reloading map");//test
             }
         }
     }
@@ -525,7 +523,7 @@ fn evt_object_created(
 
             let map_index = score.map_index as i32;
             
-            let map = map_index - map_index / ROOMS;
+            let map = map_index - map_index / ROOMS * ROOMS;
             if map == ROOMS - 1 {i = 0;}
 
             match i {
@@ -646,7 +644,6 @@ fn evt_map_created (
 
 fn check_ifcomplete(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,//test
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut enemyclear_query1: Query<(&mut Health), (With<Enemy>, Without<EnemyBorn>, Without<BossComponent>)>,
     enemyclear_query2: Query<Entity, (With<EnemyBorn>)>,
@@ -658,13 +655,15 @@ fn check_ifcomplete(
     player_query: Query<&Transform, With<Character>>,
     mut bornplace_query: Query<(&Transform, &mut Enemybornflag, &mut Enemybornduration, &mut Enemyterm), With<EnemybornPoint>>,
     source: Res<GlobalEnemyTextureAtlas>,
+    clear: Res<GlobalMenuTextureAtlas>,
     time: Res<Time>,
+    mut room_clean_events: EventWriter<RoomCleanEvent>,
     mut score: ResMut<ScoreResource>,
 ) {
 
     let mut flag = true;
     let mut timerng = rand::rng();
-    // let mut st = timer_query.single_mut();
+
     for (transform, mut bornflag, mut duration, mut term) in bornplace_query.iter_mut() {
         if bornflag.0 == true {
             flag = false;
@@ -723,13 +722,20 @@ fn check_ifcomplete(
         } else if bornflag.0 == false && term.0 != 0 {
             if enemyclear_query1.is_empty() && enemyclear_query2.is_empty() {
                 bornflag.0 = true;
-                flag = false;
             }
+            flag = false;
         }
     }
 
     if enemyclear_query1.is_empty() && enemyclear_query2.is_empty() && bossclear_query.is_empty() && flag == true {
-
+        unsafe {
+            if !clear_sound {
+                // 房间清空
+                clear_sound = true;
+                room_clean_events.send(RoomCleanEvent);
+                println!("I        send!");
+            }   
+        }
         let player_transform = player_query.single();
         let (mut door, door_transform) =door_query.single_mut();
         if door.0 == 0 { door.0 = 1; } 
@@ -753,12 +759,13 @@ fn check_ifcomplete(
                 for (trans, mut nextstate) in camera_query.iter_mut() {
                     commands.spawn((
                         Sprite {
-                            image: asset_server.load("Menu_Transition1.png"),
+                            image: clear.transition.clone(),
                             ..Default::default()
                         },
                         Transform::from_scale(Vec3::new(0.7,0.7,0.5))
                             .with_translation(Vec3::new(trans.translation.x-3200.0, trans.translation.y, 100.0)),
                         Transition,
+                        ZIndex(1),
                     )); 
                     *nextstate = GameState::Loading;
                 }
@@ -848,7 +855,7 @@ fn handle_timer(
             score.time_min += 1;
             score.time_sec = 0;
         }
-        println!("{}:{},map:{}",score.time_min,score.time_sec,score.map_index);
+        // println!("{}:{},map:{}",score.time_min,score.time_sec,score.map_index);
     }
 }
 

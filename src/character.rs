@@ -155,6 +155,9 @@ pub struct PlayerParryEvent;
 pub struct PlayerSkill2Event;
 
 #[derive(Event)]
+pub struct PlayerSkill3Event;
+
+#[derive(Event)]
 pub struct PlayerSkill4Event;
 
 #[derive(Event)]
@@ -195,6 +198,7 @@ impl Plugin for PlayerPlugin {
             .add_event::<GameOverEvent>()
             .add_event::<PlayerParryEvent>()
             .add_event::<PlayerSkill2Event>()
+            .add_event::<PlayerSkill3Event>()
             .add_event::<PlayerSkill4Event>()
             .add_systems(OnEnter(GameState::Home), setup_player)
             .add_systems(Update, reload_player)
@@ -711,18 +715,12 @@ fn handle_player_skill2(
 
                 if let Some(image) = source.image_skill.clone() {
                     player.image = image;
-                } else {
-                    //Utaha skill
-
                 }
                 if let Some(layout) = source.lay_out_skill.clone() {
                     player.texture_atlas = Some(TextureAtlas {
                         layout: layout,
                         index: 0,
                     });
-                } else {
-                    //Utaha skill
-
                 }
                 if source.id == 2 {
                     // arisu的光之剑需要隐藏
@@ -800,9 +798,13 @@ fn handle_utaha_attack_damage (
         }
     }
     if flag {
+        let mut xishu = 1.0;
+        if damage > 2.0 {
+            xishu = 2.0;
+        }
         // 消除敌方子弹
         for (bullet, btrans) in enemy_bullet_query.iter() {
-            if btrans.translation.truncate().distance(trans) < 70.0 {
+            if btrans.translation.truncate().distance(trans) < 70.0 * xishu {
                 commands.entity(bullet).despawn();
             }
         }
@@ -815,7 +817,7 @@ fn handle_utaha_attack_damage (
         // 对boss造成伤害
         for (mut health, btrans) in boss_query.iter_mut() {
             if (btrans.translation.x - trans.x).abs() < 90.0 && (btrans.translation.y - trans.y).abs() < 130.0 {
-                health.0 -= damage * BULLET_DAMAGE;
+                health.0 -= damage * BULLET_DAMAGE * 0.2;
             }
         }
     }
@@ -1057,6 +1059,7 @@ pub fn handle_player_skill4 (
             if !keyboard_input.just_pressed(KeyCode::KeyQ) && !keyboard_input.just_pressed(KeyCode::KeyR)  { 
                 return;
             }
+            events.send(PlayerSkill4Event);
             let mut num = 0;
             let mut eldest_mk2: Option<Entity> = None;
             let mut life = 0.0;

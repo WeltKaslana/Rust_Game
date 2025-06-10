@@ -6,7 +6,7 @@ use std::collections::HashSet;
 use crate::{
     character::{
         Buff, Character, Health, Player, ReloadPlayerEvent
-    }, gamestate::*, gun::{Cursor, Gun}, home::Home, resources::*, room::{AssetsManager, Chest, ChestType, Map}, ui::UI, configs::*,
+    }, gamestate::*, gun::{Cursor, Gun}, home::Home, resources::*, room::{AssetsManager, Chest, ChestType, Map, clear_sound}, ui::UI, configs::*,
 };
 
 pub struct GuiPlugin;
@@ -30,15 +30,10 @@ pub struct CharacterSelectButton;
 pub struct ChoosingBuffMenu;
 
 #[derive(Component)]
+pub struct BuffTextBox;
+
+#[derive(Component)]
 pub struct GameOverMenu;
-// #[derive(Component)]
-// pub enum ButtonType {
-//     Close,
-//     ReturntoMainMenu,
-//     ReturntoHome,
-//     Settings,
-//     Quit,
-// }
 
 impl Plugin for GuiPlugin {
     fn build(&self, app: &mut App) {
@@ -314,6 +309,9 @@ fn statetransition(
         },
         GameState::Loading if delta >= 800.0 => {
             next_state.set(GameState::InGame);
+            unsafe {
+                clear_sound = false;
+            }
         },
 
         GameState::InGame if delta >= 400.0 && delta < 420.0 => {
@@ -824,12 +822,11 @@ fn cleanup_stopmenu(
 
 fn setup_soramenu(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    // asset_server: Res<AssetServer>,
     source: Res<GlobalMenuTextureAtlas>,
     source1: Res<GlobalCharacterTextureAtlas>,
 ) {
-    let font: Handle<Font> = asset_server.load("Fonts/FIXEDSYS-EXCELSIOR-301.ttf");
-    let font2: Handle<Font> = asset_server.load("fonts/pixel_font.ttf");
+    let font2 = source.font_cn.clone();
     commands.spawn((
         //底
         ImageNode::new(source.menu.clone()),
@@ -1144,7 +1141,7 @@ fn setup_soramenu(
                         ..Default::default()
                     },
                 ));
-                // 难度选择标题
+                // 操作指南
                 parent.spawn(( 
                     ImageNode::new(source.sub_title.clone()),
                     Node {
@@ -1156,133 +1153,178 @@ fn setup_soramenu(
                         ..Default::default()
                     }, 
                 ))
-                .with_child((
-                    Text::new("Choose difficulty"),
-                    TextFont {
-                        // font: font.clone(),
-                        font_size: 35.0,
-                        ..default()
-                    },
-                    TextColor(Color::rgb(1.0, 1.0, 1.0)),
-                    Node {
-                        top: Val::Percent(0.0),
-                        left: Val::Percent(20.0),
-                        position_type: PositionType::Absolute,
-                        ..Default::default()
-                    },
-                ));
+                .with_children(|parent| {
+                    parent.spawn((
+                        Text::new("操作指南"),
+                        TextFont {
+                            font: source.font_cn.clone(),
+                            font_size: 35.0,
+                            ..default()
+                        },
+                        TextColor(Color::rgb(1.0, 1.0, 1.0)),
+                        Node {
+                            top: Val::Percent(0.0),
+                            left: Val::Percent(20.0),
+                            position_type: PositionType::Absolute,
+                            ..Default::default()
+                        },
+                    ));
+                    parent.spawn((
+                        Text::new(source.operation_text.clone()),
+                        TextFont {
+                            font: source.font_cn.clone(),
+                            font_size: 35.0,
+                            ..default()
+                        },
+                        TextColor(Color::rgb(0.0, 0.0, 10.0)),
+                        Node {
+                            top: Val::Percent(150.0),
+                            left: Val::Percent(20.0),
+                            position_type: PositionType::Absolute,
+                            ..Default::default()
+                        },
+                    ));
+                });
+
+                // 难度选择标题
+                // parent.spawn(( 
+                //     ImageNode::new(source.sub_title.clone()),
+                //     Node {
+                //         width: Val::Percent(37.1),
+                //         height: Val::Percent(11.4),
+                //         top: Val::Percent(22.7),
+                //         left: Val::Percent(6.4),
+                //         position_type: PositionType::Absolute,
+                //         ..Default::default()
+                //     }, 
+                // ))
+                // .with_child((
+                //     Text::new("Choose difficulty"),
+                //     TextFont {
+                //         // font: font.clone(),
+                //         font_size: 35.0,
+                //         ..default()
+                //     },
+                //     TextColor(Color::rgb(1.0, 1.0, 1.0)),
+                //     Node {
+                //         top: Val::Percent(0.0),
+                //         left: Val::Percent(20.0),
+                //         position_type: PositionType::Absolute,
+                //         ..Default::default()
+                //     },
+                // ));
                 // 按钮
-                parent.spawn(( 
-                    Name::new("easy"),
-                    ImageNode::new(source.button.clone()),
-                    Node {
-                        width: Val::Percent(10.9),
-                        height: Val::Percent(8.3),
-                        top: Val::Percent(40.9),
-                        left: Val::Percent(5.1),
-                        position_type: PositionType::Absolute,
-                        ..Default::default()
-                   }, 
-                   Button,
-                ))
-                .with_child((
-                    Text::new("easy"),
-                    TextFont {
-                        // font: font.clone(),
-                        font_size: 20.0,
-                        ..default()
-                    },
-                    TextColor(Color::rgb(0.0, 10.0, 1.0)),
-                    Node {
-                        top: Val::Percent(0.0),
-                        left: Val::Percent(20.0),
-                        position_type: PositionType::Absolute,
-                        ..Default::default()
-                    },
-                ));
-                parent.spawn(( 
-                    Name::new("normal"),
-                    ImageNode::new(source.button.clone()),
-                    Node {
-                        width: Val::Percent(10.9),
-                        height: Val::Percent(8.3),
-                        top: Val::Percent(40.9),
-                        left: Val::Percent(20.7),
-                        position_type: PositionType::Absolute,
-                        ..Default::default()
-                   }, 
-                   Button,
-                ))
-                .with_child((
-                    Text::new("normal"),
-                    TextFont {
-                        // font: font.clone(),
-                        font_size: 20.0,
-                        ..default()
-                    },
-                    TextColor(Color::rgb(0.0, 10.0, 1.0)),
-                    Node {
-                        top: Val::Percent(0.0),
-                        left: Val::Percent(20.0),
-                        position_type: PositionType::Absolute,
-                        ..Default::default()
-                    },
-                ));
-                parent.spawn(( 
-                    Name::new("hard"),
-                    ImageNode::new(source.button.clone()),
-                    Node {
-                        width: Val::Percent(10.9),
-                        height: Val::Percent(8.3),
-                        top: Val::Percent(40.9),
-                        left: Val::Percent(36.1),
-                        position_type: PositionType::Absolute,
-                        ..Default::default()
-                   }, 
-                   Button,
-                ))
-                .with_child((
-                    Text::new("hard"),
-                    TextFont {
-                        // font: font.clone(),
-                        font_size: 20.0,
-                        ..default()
-                    },
-                    TextColor(Color::rgb(0.0, 10.0, 1.0)),
-                    Node {
-                        top: Val::Percent(0.0),
-                        left: Val::Percent(20.0),
-                        position_type: PositionType::Absolute,
-                        ..Default::default()
-                    },
-                ));
+                // parent.spawn(( 
+                //     Name::new("easy"),
+                //     ImageNode::new(source.button.clone()),
+                //     Node {
+                //         width: Val::Percent(10.9),
+                //         height: Val::Percent(8.3),
+                //         top: Val::Percent(40.9),
+                //         left: Val::Percent(5.1),
+                //         position_type: PositionType::Absolute,
+                //         ..Default::default()
+                //    }, 
+                //    Button,
+                // ))
+                // .with_child((
+                //     Text::new("easy"),
+                //     TextFont {
+                //         // font: font.clone(),
+                //         font_size: 20.0,
+                //         ..default()
+                //     },
+                //     TextColor(Color::rgb(0.0, 10.0, 1.0)),
+                //     Node {
+                //         top: Val::Percent(0.0),
+                //         left: Val::Percent(20.0),
+                //         position_type: PositionType::Absolute,
+                //         ..Default::default()
+                //     },
+                // ));
+                // parent.spawn(( 
+                //     Name::new("normal"),
+                //     ImageNode::new(source.button.clone()),
+                //     Node {
+                //         width: Val::Percent(10.9),
+                //         height: Val::Percent(8.3),
+                //         top: Val::Percent(40.9),
+                //         left: Val::Percent(20.7),
+                //         position_type: PositionType::Absolute,
+                //         ..Default::default()
+                //    }, 
+                //    Button,
+                // ))
+                // .with_child((
+                //     Text::new("normal"),
+                //     TextFont {
+                //         // font: font.clone(),
+                //         font_size: 20.0,
+                //         ..default()
+                //     },
+                //     TextColor(Color::rgb(0.0, 10.0, 1.0)),
+                //     Node {
+                //         top: Val::Percent(0.0),
+                //         left: Val::Percent(20.0),
+                //         position_type: PositionType::Absolute,
+                //         ..Default::default()
+                //     },
+                // ));
+                // parent.spawn(( 
+                //     Name::new("hard"),
+                //     ImageNode::new(source.button.clone()),
+                //     Node {
+                //         width: Val::Percent(10.9),
+                //         height: Val::Percent(8.3),
+                //         top: Val::Percent(40.9),
+                //         left: Val::Percent(36.1),
+                //         position_type: PositionType::Absolute,
+                //         ..Default::default()
+                //    }, 
+                //    Button,
+                // ))
+                // .with_child((
+                //     Text::new("hard"),
+                //     TextFont {
+                //         // font: font.clone(),
+                //         font_size: 20.0,
+                //         ..default()
+                //     },
+                //     TextColor(Color::rgb(0.0, 10.0, 1.0)),
+                //     Node {
+                //         top: Val::Percent(0.0),
+                //         left: Val::Percent(20.0),
+                //         position_type: PositionType::Absolute,
+                //         ..Default::default()
+                //     },
+                // ));
                 // 挑战因子
-                parent.spawn(( 
-                    ImageNode::new(source.sub_title.clone()),
-                    Node {
-                        width: Val::Percent(37.1),
-                        height: Val::Percent(11.4),
-                        top: Val::Percent(58.5),
-                        left: Val::Percent(6.4),
-                        position_type: PositionType::Absolute,
-                        ..Default::default()
-                    }, 
-                ))
-                .with_child((
-                    Text::new("difficulty factor"),
-                    TextFont {
-                        // font: font.clone(),
-                        font_size: 35.0,
-                        ..default()
-                    },
-                    TextColor(Color::rgb(1.0, 1.0, 1.0)),
-                    Node {
-                        top: Val::Percent(0.0),
-                        left: Val::Percent(20.0),
-                        position_type: PositionType::Absolute,
-                        ..Default::default()
-                    },
-                ));
+                // parent.spawn(( 
+                //     ImageNode::new(source.sub_title.clone()),
+                //     Node {
+                //         width: Val::Percent(37.1),
+                //         height: Val::Percent(11.4),
+                //         top: Val::Percent(58.5),
+                //         left: Val::Percent(6.4),
+                //         position_type: PositionType::Absolute,
+                //         ..Default::default()
+                //     }, 
+                // ))
+                // .with_child((
+                //     Text::new("difficulty factor"),
+                //     TextFont {
+                //         // font: font.clone(),
+                //         font_size: 35.0,
+                //         ..default()
+                //     },
+                //     TextColor(Color::rgb(1.0, 1.0, 1.0)),
+                //     Node {
+                //         top: Val::Percent(0.0),
+                //         left: Val::Percent(20.0),
+                //         position_type: PositionType::Absolute,
+                //         ..Default::default()
+                //     },
+                // ));
                 // parent.spawn(( 
                 //     Name::new("easy"),
                 //     ImageNode::new(source.button.clone()),
@@ -1892,8 +1934,8 @@ fn setup_choosingbuffmenu(
                         // ImageNode::new(asset_server.load("Icon_Buff_AbnormalUp.png")),
                         ImageNode::new(source.mod_icon[numbers[2] as usize].clone()),
                         Node {
-                            width: Val::Percent(34.0),
-                            height: Val::Percent(33.6),
+                            width: Val::Percent(24.0),
+                            height: Val::Percent(23.6),
                             top: Val::Percent(33.1),
                             left: Val::Percent(67.9),
                             align_items: AlignItems::Center,
@@ -1969,6 +2011,7 @@ fn setup_choosingbuffmenu(
 }
 
 fn handle_choosingbuffmenu (
+    mut commands: Commands,
     camera_query: Query<&Transform, (With<Camera2d>, Without<PauseMenu>)>,
     mut menu_query: Query<(&mut Transform, &PauseMenu,), (Without<Camera2d>, Without<Node>)>,
     mut interaction_query: Query<(
@@ -1979,9 +2022,10 @@ fn handle_choosingbuffmenu (
     >,
     chest_query: Query<&ChestType, With<Chest>>,
     mut buff_query: Query<(&mut Buff, &mut Health), With<Character>>,
+    buff_text_query: Query<Entity, With<BuffTextBox>>,
     mut windows: Query<&mut Window>,
-    mut query: Query<&mut Node, (With<ChoosingBuffMenu>, Without<Camera2d>)>,
-    // source: Res<GlobalMenuTextureAtlas>,
+    mut query: Query<&mut Node, (With<ChoosingBuffMenu>, Without<Camera2d>, Without<BuffTextBox>)>,
+    source: Res<GlobalMenuTextureAtlas>,
     mut next_state: ResMut<NextState<InGameState>>,
 ) {
     if camera_query.is_empty() || menu_query.is_empty() {
@@ -2129,10 +2173,58 @@ fn handle_choosingbuffmenu (
                             },
                             Interaction::Hovered => {
                                 println!("Hovered!");
-                                // image.image = source.button_hover.clone();
+                                let ctype = chest_query.single().0;
+                                let index = match name.parse::<usize>() {
+                                    Ok(index) => index,
+                                    Err(_) => 100,
+                                };
+                                let mut bufftext: String = "".to_string();
+                                match ctype {
+                                    0 => {
+                                        bufftext = source.buff_text[index].clone();
+                                    },
+                                    1 => {
+                                        bufftext = source.mod_text[index].clone();
+                                    },
+                                    2 => {
+                                        bufftext = source.buff_consumptions_text[index].clone();
+                                    },
+                                    _ => {}
+                                }
+                                commands.spawn((
+                                    ImageNode::new(source.buff_text_box.clone()),
+                                    Node {
+                                        width: Val::Percent(24.6),
+                                        height: Val::Percent(12.1),
+                                        top: Val::Percent(58.6),
+                                        left: Val::Percent(38.2),
+                                        align_items: AlignItems::Center,
+                                        position_type: PositionType::Absolute,
+                                        ..default()
+                                    },
+                                    ChoosingBuffMenu,
+                                    BuffTextBox,
+                                )).with_child((
+                                    Text::new(bufftext),
+                                    TextFont  {
+                                        font: source.font_cn.clone(),
+                                        font_size: 20.0,
+                                        ..default()
+                                    },
+                                    TextColor(Color::rgb(10.0, 30.0, 70.0)),
+                                    Node {
+                                        top: Val::Percent(33.1),
+                                        left: Val::Percent(36.1),
+                                        ..default()
+                                    },
+                                ));
                             },
                             Interaction::None => {
-                                // image.image = source.button.clone();
+                                println!("Not Hovered!");
+                                for e in buff_text_query.iter() {
+                                    commands.entity(e).despawn_recursive();
+                                    break;
+                                }
                             },
                         }
                     }

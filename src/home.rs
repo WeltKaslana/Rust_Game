@@ -5,8 +5,8 @@ use crate::{
         Character,
         Player,
         PlayerState,
-        ReloadPlayerEvent,
     }, 
+    animation::{DoorEvent},
     gamestate::*, 
     gui::Transition, 
     ui::UI,
@@ -264,23 +264,20 @@ fn check_state(
     mut windows: Query<&mut Window>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    // mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     player_query: Query<(&Transform, &PlayerState), (With<Character>, Without<Sora>, Without<Fridge>)>,
     mut sora_query: Query<(&Transform, &mut Sprite, &mut SoraState), (With<Sora>, Without<Fridge>, Without<Character>)>,
     mut fridge_query: Query<(&Transform, &mut Sprite, &mut FridgeState), (With<Fridge>, Without<Character>, Without<Sora>)>,
     mut source: ResMut<GlobalHomeTextureAtlas>,
-    // mut character_source: ResMut<GlobalCharacterTextureAtlas>,
     mut camera_query: Query<(&Transform, &mut GameState), With<Camera2d>>,
     transition_query: Query<&mut Transform, (With<Transition>, Without<Character>, Without<Fridge>, Without<Sora>, Without<Camera2d>)>,
-    // mut events: EventWriter<ReloadPlayerEvent>,
+    mut door_events: EventWriter<DoorEvent>,
     mut next_state: ResMut<NextState<HomeState>>,
  ) {
     if player_query.is_empty() || sora_query.is_empty() || fridge_query.is_empty() {
         // println!("empty1!");
         return;
     }
-    // let player_pos = player_query.single().translation;
     let (pos, player_state) = player_query.single();
     let player_pos = pos.translation;
 
@@ -338,6 +335,7 @@ fn check_state(
                     index: 0,
                 });
                 *fridge_state = FridgeState::Open;
+                door_events.send(DoorEvent(3));
             },
             FridgeState::Open => {
                 if keyboard_input.just_pressed(KeyCode::KeyE) && transition_query.is_empty() {
@@ -355,10 +353,6 @@ fn check_state(
                         // 下一状态设为InGame
                         *nextstate = GameState::Loading;                    
                     }
-
-                    //为了测试，先将状态转换到游戏中，游戏初始化状态之后再设置
-                    // next_state.set(GameState::InGame);
-                    // next_state.set(GameState::Loading);
                 }                                                                       
             }
             _ => {},
@@ -369,6 +363,7 @@ fn check_state(
         match *fridge_state {
             FridgeState::Open => {
                 *fridge_state = FridgeState::Close;
+                door_events.send(DoorEvent(4));
             }
             _ => {},
         }

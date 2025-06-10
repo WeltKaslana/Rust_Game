@@ -8,7 +8,7 @@ use crate::{
     }, configs::*, 
     enemy::BaseSetupEvent, 
     gamestate::{GameState, InGameState},
-    room::{Map, Progress}, 
+    room::{Map, Progress, RoomCleanEvent}, 
     GlobalCharacterTextureAtlas, 
     GlobalMenuTextureAtlas, 
     ScoreResource
@@ -62,6 +62,7 @@ impl Plugin for UIPlugin {
             handle_boss_ui_delete,
             handle_timer_ui_update,
             handle_timer_ui_delete,
+            setup_room_clear,
         ).run_if(in_state(InGameState::Running)))
         ;
     }
@@ -607,7 +608,7 @@ fn handle_boss_ui_update(
     trans.translation = Vec3::new(loc.x, loc.y, trans.translation.z) + BOSSUI_OFFSET;
 
     let mut xishu = score.boss_score as f32;
-    xishu = 1.0 + xishu / 100.0 * 0.5;
+    xishu = 1.0 + xishu * 0.5;
 
     let mut delta = bar.scale.x;
     let barwidth = 582.0; //582为血条宽度
@@ -744,5 +745,41 @@ fn handle_timer_ui_delete(
         for entity in ui_query.iter(){
             commands.entity(entity).despawn();
         }
+    }
+}
+
+fn setup_room_clear (
+    mut commands: Commands,
+    mut room_clear_event: EventReader<RoomCleanEvent>,
+    source: Res<GlobalMenuTextureAtlas>,
+) {
+    for _ in room_clear_event.read() {
+        commands.spawn((
+            ImageNode::new(source.room_clear.clone()),
+            Node {
+                width: Val::Percent(14.1),
+                height: Val::Percent(30.3),
+                top: Val::Percent(14.2),
+                left: Val::Percent(44.3),
+                ..default()
+            },
+            Player,
+            ZIndex(-1),
+        )).with_child((
+            Text::new("房间打扫完成!".to_string()),
+            TextFont {
+                    font: source.font_cn.clone(),
+                    font_size: 40.0,
+                    ..default()
+            },  
+            TextColor(Color::rgb(1.0, 1.0, 1.0)),
+            TextLayout::new_with_no_wrap(), 
+            Node {
+                top: Val::Percent(100.7),
+                left: Val::Percent(-1.6),
+                ..default()
+            },
+        ));
+        break;
     }
 }
