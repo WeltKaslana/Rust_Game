@@ -219,7 +219,7 @@ fn load_room1(
         ));
     }
     let boss_room_size = 2;
-    let boss_path = format!("boss房{}.tmx", rand::rng().random_range(2..boss_room_size + 1));
+    let boss_path = format!("boss房{}.tmx", rand::rng().random_range(1..boss_room_size + 1));
     // let boss_path = format!("boss房{}.tmx", rand::rng().random_range(2..3));
     // info!("boss_path:{}", &boss_path);
     mgr.add_map(MapInfos::new(

@@ -696,7 +696,7 @@ fn handle_player_skill2(
                                 .with_translation(Vec3::new(dloc.x, dloc.y, 40.0)),
                             MK1,
                             Player, 
-                            AnimationConfig::new(10),
+                            AnimationConfig::new(2),
                             SpawnInstant(Instant::now()),
                             Fire(0,Vec2::ZERO),
                         ));
@@ -823,13 +823,13 @@ fn handle_utaha_attack_damage (
         // 对敌方造成伤害
         for (mut health, etrans) in enemy_query.iter_mut() {
             if (etrans.translation.x - trans.x).abs() < 90.0 && (etrans.translation.y - trans.y).abs() < 130.0 {
-                health.0 -= damage * BULLET_DAMAGE * damage1;
+                health.0 -= damage * BULLET_DAMAGE * damage1 * 0.08;
             }
         }
         // 对boss造成伤害
         for (mut health, btrans) in boss_query.iter_mut() {
             if (btrans.translation.x - trans.x).abs() < 90.0 && (btrans.translation.y - trans.y).abs() < 130.0 {
-                health.0 -= damage * BULLET_DAMAGE * 0.2 * damage1;
+                health.0 -= damage * BULLET_DAMAGE * 0.16 * damage1;
             }
         }
     }
@@ -1591,7 +1591,7 @@ fn handle_mk1(
 
     for (mk1, mk1_transform, mk1_spawn_instant, mut fire) in mk1_query.iter_mut() {
         let elapsed = mk1_spawn_instant.0.elapsed();
-        if elapsed >= Duration::from_secs(15) {
+        if elapsed >= Duration::from_secs(10) {
             commands.entity(mk1).despawn();
             commands.spawn((
                 Sprite {
@@ -1607,7 +1607,7 @@ fn handle_mk1(
                     scale: Vec3::splat(5.0),
                     ..default()
                 },
-                AnimationConfig::new(15),
+                AnimationConfig::new(10),
                 BulletHit,
             ));
             continue;
