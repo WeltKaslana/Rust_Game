@@ -36,7 +36,7 @@ fn main() {
             }),
             ..default()
             })
-            .set(ImagePlugin::default_nearest())) // prevents blurry sprites
+            .set(ImagePlugin::default_nearest()))// prevents blurry sprites 
         // .add_plugins((
         //     LogDiagnosticsPlugin::default(),))
         .add_plugins(FramepacePlugin)

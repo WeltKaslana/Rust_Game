@@ -732,7 +732,6 @@ fn check_ifcomplete(
                 // 房间清空
                 clear_sound = true;
                 room_clean_events.send(RoomCleanEvent);
-                println!("I        send!");
             }   
         }
         let player_transform = player_query.single();

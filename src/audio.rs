@@ -2,12 +2,7 @@ use bevy::{
     audio::{AudioPlayer, AudioSource, PlaybackSettings, Volume}, dev_tools::states::*, prelude::*, state::commands
 };
 use crate::{
-    character::{Character, PlayerHurtEvent, PlayerJumpEvent, PlayerParryEvent, PlayerRunEvent, PlayerSkill2Event, PlayerSkill3Event, PlayerSkill4Event, PlayerTimer}, 
-    gamestate::GameState, 
-    gun::{PlayerFireEvent, PlayerSkill4FireEvent}, 
-    animation::{BossRoarEvent, DoorEvent, ChestOpenEvent},
-    room::{self, AssetsManager, RoomCleanEvent},
-    GlobalCharacterTextureAtlas, ROOMS
+    animation::{BossRoarEvent, ChestOpenEvent, DoorEvent}, character::{Character, PlayerHurtEvent, PlayerJumpEvent, PlayerParryEvent, PlayerRunEvent, PlayerSkill2Event, PlayerSkill3Event, PlayerSkill4Event, PlayerTimer}, gamestate::GameState, gun::{PlayerFireEvent, PlayerSkill4FireEvent}, room::{self, AssetsManager, RoomCleanEvent}, GlobalCharacterTextureAtlas, AUDIOVOLUME, ROOMS
 };
 use rand::Rng;
 pub struct GameAudioPlugin;
@@ -229,7 +224,7 @@ fn audio_play__MainMenu(
     }
     commands.spawn((
         AudioPlayer::new(asset_server.load("AudioClip/MainMenu - Takaramonogatari.wav")),
-        PlaybackSettings::LOOP.with_volume(Volume::new(0.3)),
+        PlaybackSettings::LOOP.with_volume(Volume::new(AUDIOVOLUME)),
     ));
 }
 
@@ -246,7 +241,7 @@ fn audio_play_Home(
     }
     commands.spawn((
         AudioPlayer::new(source.home_bgm.clone()),
-        PlaybackSettings::LOOP.with_volume(Volume::new(0.3)),
+        PlaybackSettings::LOOP.with_volume(Volume::new(AUDIOVOLUME)),
     ));
 
 }
@@ -268,7 +263,7 @@ fn audio_play_Ingame(
     if ifplay && bgm_query.is_empty() {
         commands.spawn((
             AudioPlayer::new(source.in_game_bgm.clone()),
-            PlaybackSettings::LOOP.with_volume(Volume::new(0.3)),
+            PlaybackSettings::LOOP.with_volume(Volume::new(AUDIOVOLUME)),
             InGameBGM,
         ));
         return;
@@ -279,7 +274,7 @@ fn audio_play_Ingame(
         }
         commands.spawn((
             AudioPlayer::new(source.boss_bgm.clone()),
-            PlaybackSettings::LOOP.with_volume(Volume::new(0.3)),
+            PlaybackSettings::LOOP.with_volume(Volume::new(AUDIOVOLUME)),
             InGameBGM,
         ));
         println!("BGM: BossInGameBGM");
@@ -291,7 +286,7 @@ fn audio_play_Ingame(
         }
         commands.spawn((
             AudioPlayer::new(source.in_game_bgm.clone()),
-            PlaybackSettings::LOOP.with_volume(Volume::new(0.3)),
+            PlaybackSettings::LOOP.with_volume(Volume::new(AUDIOVOLUME)),
             InGameBGM,
         ));
         println!("BGM: InGameBGM");
@@ -308,7 +303,7 @@ fn room_clean (
         println!("room clean audio");
         commands.spawn((
             AudioPlayer::new(source.room_clean.clone()),
-            PlaybackSettings::DESPAWN.with_volume(Volume::new(1.5)),
+            PlaybackSettings::DESPAWN.with_volume(Volume::new(AUDIOVOLUME * 1.5)),
         )); 
         break;
     }
@@ -336,7 +331,7 @@ fn audio_fire (
         };
         commands.spawn((
             AudioPlayer::new(audio),
-            PlaybackSettings::DESPAWN.with_volume(Volume::new(0.9)),
+            PlaybackSettings::DESPAWN.with_volume(Volume::new(AUDIOVOLUME)),
             FireAudio,
         ));
     }
@@ -366,7 +361,7 @@ fn player_run (
         timer.0.reset();
         commands.spawn((
             AudioPlayer::new(source.walk.clone()),
-            PlaybackSettings::DESPAWN.with_volume(Volume::new(0.9)),
+            PlaybackSettings::DESPAWN.with_volume(Volume::new(AUDIOVOLUME)),
             RunAudio,
         ));
     }
@@ -384,7 +379,7 @@ fn player_jump(
         }
         commands.spawn((
             AudioPlayer::new(source.jump.clone()),
-            PlaybackSettings::DESPAWN.with_volume(Volume::new(0.9)),
+            PlaybackSettings::DESPAWN.with_volume(Volume::new(AUDIOVOLUME)),
             JumpAudio,
         ));
     }
@@ -416,7 +411,7 @@ fn player_hurt(
         if possible>5 {
             commands.spawn((
                 AudioPlayer::new(audio[index].clone()),
-                PlaybackSettings::DESPAWN.with_volume(Volume::new(0.9)),
+                PlaybackSettings::DESPAWN.with_volume(Volume::new(AUDIOVOLUME)),
                 HurtAudio,
             ));
         }
@@ -438,25 +433,25 @@ fn player_skill2(
                 // shiroko
                 commands.spawn((
                     AudioPlayer::new(source.shiroko_shout[rand::rng().random_range(0..3)].clone()),
-                    PlaybackSettings::DESPAWN.with_volume(Volume::new(0.3)),
+                    PlaybackSettings::DESPAWN.with_volume(Volume::new(AUDIOVOLUME)),
                 ));
             },
             2 =>{
                 // arisu
                 commands.spawn((
                     AudioPlayer::new(source.arisu_skill_talk[1].clone()),
-                    PlaybackSettings::DESPAWN.with_volume(Volume::new(0.8)),
+                    PlaybackSettings::DESPAWN.with_volume(Volume::new(AUDIOVOLUME)),
                 ));
             },
             3 =>{
                 // utaha
                 commands.spawn((
                     AudioPlayer::new(source.utaha_skill_talk[0].clone()),
-                    PlaybackSettings::DESPAWN.with_volume(Volume::new(0.8)),
+                    PlaybackSettings::DESPAWN.with_volume(Volume::new(AUDIOVOLUME)),
                 ));
                 commands.spawn((
                     AudioPlayer::new(source.utaha_skill[0].clone()),
-                    PlaybackSettings::DESPAWN.with_volume(Volume::new(0.8)),
+                    PlaybackSettings::DESPAWN.with_volume(Volume::new(AUDIOVOLUME)),
                 ));
             },
             _ => {}
@@ -466,7 +461,7 @@ fn player_skill2(
         // arisu
         commands.spawn((
             AudioPlayer::new(source.arisu_gun_shieldblock.clone()),
-            PlaybackSettings::DESPAWN.with_volume(Volume::new(0.5)),
+            PlaybackSettings::DESPAWN.with_volume(Volume::new(AUDIOVOLUME)),
         ));
     }
 }
@@ -479,7 +474,7 @@ fn player_skill3(
     for _ in events.read() {
         commands.spawn((
             AudioPlayer::new(source.shiroko_skill[1].clone()),
-            PlaybackSettings::DESPAWN.with_volume(Volume::new(0.8)),
+            PlaybackSettings::DESPAWN.with_volume(Volume::new(AUDIOVOLUME)),
         ));
     }
 }
@@ -496,33 +491,33 @@ fn player_skill4(
                 // shiroko
                 commands.spawn((
                     AudioPlayer::new(source.shiroko_skill[2].clone()),
-                    PlaybackSettings::DESPAWN.with_volume(Volume::new(0.3)),
+                    PlaybackSettings::DESPAWN.with_volume(Volume::new(AUDIOVOLUME)),
                 ));
                 commands.spawn((
                     AudioPlayer::new(source.shiroko_skill_talk[2].clone()),
-                    PlaybackSettings::DESPAWN.with_volume(Volume::new(0.8)),
+                    PlaybackSettings::DESPAWN.with_volume(Volume::new(AUDIOVOLUME)),
                 ));
             },
             2 =>{
                 // arisu
                 commands.spawn((
                     AudioPlayer::new(source.arisu_skill_talk[0].clone()),
-                    PlaybackSettings::DESPAWN.with_volume(Volume::new(0.8)),
+                    PlaybackSettings::DESPAWN.with_volume(Volume::new(AUDIOVOLUME)),
                 ));
                 commands.spawn((
                     AudioPlayer::new(source.arisu_gun_fire_special[0].clone()),
-                    PlaybackSettings::DESPAWN.with_volume(Volume::new(0.5)),
+                    PlaybackSettings::DESPAWN.with_volume(Volume::new(AUDIOVOLUME)),
                 ));
             },
             3 =>{
                 // utaha
                 commands.spawn((
                     AudioPlayer::new(source.utaha_skill_talk[2].clone()),
-                    PlaybackSettings::DESPAWN.with_volume(Volume::new(0.8)),
+                    PlaybackSettings::DESPAWN.with_volume(Volume::new(AUDIOVOLUME)),
                 ));
                 commands.spawn((
                     AudioPlayer::new(source.utaha_skill[2].clone()),
-                    PlaybackSettings::DESPAWN.with_volume(Volume::new(0.8)),
+                    PlaybackSettings::DESPAWN.with_volume(Volume::new(AUDIOVOLUME)),
                 ));
             }
             _ => {}
@@ -535,7 +530,7 @@ fn player_skill4(
                 // arisu
                 commands.spawn((
                     AudioPlayer::new(source.arisu_gun_fire_special[1].clone()),
-                    PlaybackSettings::DESPAWN.with_volume(Volume::new(0.5)),
+                    PlaybackSettings::DESPAWN.with_volume(Volume::new(AUDIOVOLUME)),
                 ));
             }
             _ => {}
@@ -554,13 +549,13 @@ fn home_effect_audio (
             3 => {
                 commands.spawn((
                     AudioPlayer::new(source.fridge_open.clone()),
-                    PlaybackSettings::DESPAWN.with_volume(Volume::new(0.5)),
+                    PlaybackSettings::DESPAWN.with_volume(Volume::new(AUDIOVOLUME)),
                 ));
             },
             4 => {
                 commands.spawn((
                     AudioPlayer::new(source.fridge_close.clone()),
-                    PlaybackSettings::DESPAWN.with_volume(Volume::new(0.5)),
+                    PlaybackSettings::DESPAWN.with_volume(Volume::new(AUDIOVOLUME)),
                 ));
             },
             _ => {}
@@ -580,13 +575,13 @@ fn ingame_effect_audio  (
             1 => {
                 commands.spawn((
                     AudioPlayer::new(source.door_open.clone()),
-                    PlaybackSettings::DESPAWN.with_volume(Volume::new(0.5)),
+                    PlaybackSettings::DESPAWN.with_volume(Volume::new(AUDIOVOLUME)),
                 ));
             },
             2 => {
                 commands.spawn((
                     AudioPlayer::new(source.door_close.clone()),
-                    PlaybackSettings::DESPAWN.with_volume(Volume::new(0.5)),
+                    PlaybackSettings::DESPAWN.with_volume(Volume::new(AUDIOVOLUME)),
                 ));
             },
             _ => {}
@@ -595,13 +590,13 @@ fn ingame_effect_audio  (
     for _ in bossroar.read() {
         commands.spawn((
             AudioPlayer::new(source.boss_roar.clone()),
-            PlaybackSettings::DESPAWN.with_volume(Volume::new(0.5)),
+            PlaybackSettings::DESPAWN.with_volume(Volume::new(AUDIOVOLUME)),
         ));
     }
     for _ in chest.read() {
         commands.spawn((
             AudioPlayer::new(source.chest_open.clone()),
-            PlaybackSettings::DESPAWN.with_volume(Volume::new(0.5)),
+            PlaybackSettings::DESPAWN.with_volume(Volume::new(AUDIOVOLUME)),
         ));
     }
 }
