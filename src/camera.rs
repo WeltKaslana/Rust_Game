@@ -1,7 +1,10 @@
 use bevy::{math::vec3, prelude::*, dev_tools::states::*};
 use crate::{gamestate::GameState,
             character::Character,
-            gun::PlayerFireEvent, };
+            gun::PlayerFireEvent, 
+            room::EnemyBorn,
+            boss::BossComponent
+        };
 
 pub  struct FollowCameraPlugin;
 
@@ -71,6 +74,7 @@ fn camera_follow_player_game(
     mut events: EventReader<PlayerFireEvent>,
     player_query: Query<&Transform, With<Character>>,
     mut camera_query: Query<&mut Transform, (With<Camera2d>, Without<Character>)>,
+    boss_born_query: Query<&Transform, (With<EnemyBorn>, With<BossComponent>, Without<Camera2d>, Without<Character>,)>,
 ) {
     if camera_query.is_empty() || player_query.is_empty() {
         return;
@@ -78,15 +82,15 @@ fn camera_follow_player_game(
     let mut camera_transform = camera_query.single_mut();
     let player_transform = player_query.single().translation;
     let (mut x, mut y) = (player_transform.x, player_transform.y);
-    //摄像机限位
-    // let mut x = match x {
-    //     x if x < -50.0 => -50.0,
-    //     x if x > 50.0 => 50.0,
-    //     _ => x,
-    // };
+
     //镜头随开火抖动
     for _ in events.read() {
         x -= 30.0;
+    }
+    // 如果有Boss出生，则镜头跟随Boss
+    for transb in boss_born_query.iter() {
+        x = transb.translation.x;
+        y = transb.translation.y;
     }
     camera_transform.translation = camera_transform.translation.lerp(vec3(x, y + 100.0, 0.0), 0.1);
 }

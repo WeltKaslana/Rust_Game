@@ -1278,8 +1278,9 @@ fn handle_sweeper_hit(
                                                     PlayerState::Dodge => { },
                                                     _=> { 
                                                         *flag = Fireflag::Done;
-                                                        health.0 -=ENEMY_DAMAGE;
-                                                        events.send(PlayerHurtEvent);
+                                                        let health_update = 0.0 - ENEMY_DAMAGE;
+                                                        // health.0 -=ENEMY_DAMAGE;
+                                                        events.send(PlayerHurtEvent(health_update, 0));
                                                     },
                                                 }
                                             },
@@ -1294,8 +1295,9 @@ fn handle_sweeper_hit(
                                                     PlayerState::Dodge => { },
                                                     _=> { 
                                                         *flag = Fireflag::Done;
-                                                        health.0 -= ENEMY_DAMAGE;
-                                                        events.send(PlayerHurtEvent);
+                                                        let health_update = 0.0 - ENEMY_DAMAGE;
+                                                        // health.0 -= ENEMY_DAMAGE;
+                                                        events.send(PlayerHurtEvent(health_update, 0));
                                                     },
                                                 }
                                             },

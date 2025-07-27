@@ -1,4 +1,5 @@
 pub mod configs;
+pub mod components;
 pub mod character;
 pub mod gamestate;
 pub mod gun;
@@ -15,3 +16,4 @@ pub mod boss;
 
 pub use configs::*;
 pub use resources::*;
+pub use components::*;

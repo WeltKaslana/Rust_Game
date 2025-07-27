@@ -2,13 +2,40 @@ use bevy::{
     animation::transition, color::palettes::css::{BLUE, GREEN, RED}, dev_tools::states::*, ecs::{component::ComponentId, system::EntityCommands, world::DeferredWorld}, log::tracing_subscriber::fmt::time, math::{Vec3, VectorSpace}, prelude::*, time::Stopwatch, utils::info 
     };
 use bevy_ecs_tiled::{prelude::*,};
-// use bevy_ecs_tilemap::{map::TilemapSize, TilemapBundle};
 use std::time::Duration;
 use bevy_rapier2d::{prelude::*};
 use rand::Rng;
 
 use crate::{
-    boss::{self, Boss, BossComponent, BossDeathEvent, BossSetupEvent}, character::{AnimationConfig, Character, Health, Player}, configs::*, enemy::{BaseSetupEvent, Enemy, EnemyDeathEffect, EnemyDeathEvent, EnemybornPoint, Enemybornduration, Enemybornflag, Enemyterm}, gamestate::{GameState, InGameState}, gui::{test, Transition}, gun::Bullet, resources::*
+    boss::{
+        self, 
+        Boss, 
+        BossComponent, 
+        BossDeathEvent, 
+        BossSetupEvent
+    }, 
+    character::{
+        AnimationConfig, 
+        Character, 
+        Health, 
+        Player
+    }, 
+    configs::*, 
+    enemy::{
+        BaseSetupEvent, 
+        Enemy, 
+        EnemyDeathEffect, 
+        EnemyDeathEvent, 
+        EnemybornPoint, 
+        Enemybornduration, 
+        Enemybornflag, 
+        Enemyterm
+    }, 
+    gamestate::{GameState, InGameState}, 
+    gui::{test, Transition}, 
+    gun::Bullet, 
+    resources::*,
+    components::*,
 };
 pub struct RoomPlugin;
 
@@ -149,22 +176,20 @@ impl Plugin for RoomPlugin {
         app
             .add_event::<CollisionEvent>()
             .add_plugins(TiledMapPlugin::default())
-            // .add_plugins(TiledPhysicsPlugin::<MyCustomPhysicsBackend>::default())
             // Here we use the provided Rapier backend to automatically spawn colliders
             .add_plugins(TiledPhysicsPlugin::<TiledPhysicsRapierBackend>::default())
             // Rapier physics plugins to test and see the collider
             .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
-            // .add_plugins(RapierDebugRenderPlugin::default())
+            // 显示碰撞体边框
+            .add_plugins(RapierDebugRenderPlugin::default())
 
             .add_systems(Startup, load_room)
             .add_systems(OnEnter(GameState::Home), load_room1)
-            // .add_systems(Update, load_room2)
-            .add_systems(Update, (
-                // check_collision,
+            .add_systems(OnEnter(GameState::Loading),(
                 evt_object_created.before(load_room2),
                 evt_map_created.before(load_room2),
                 load_room2,
-                ).run_if(in_state(GameState::Loading)))
+                ))
             .add_systems(OnEnter(GameState::Loading),(
                 del_door_chest_base,
             ))
@@ -191,33 +216,53 @@ fn load_room1(
     mut mgr: ResMut<AssetsManager>,
 ) {
     mgr.clear(&mut commands);
-    // 普通房数量
-    let room_size = 8;
-    // 普通房长度
-    let len = ROOMS - 1;
-    for _ in 1..=len {
-        let path = format!("普通房{}.tmx", rand::rng().random_range(1..room_size + 1));
-        mgr.add_map(MapInfos::new(
-            &asset_server, 
-            &path, 
-            "A finite orthogonal map with only object colliders", 
-            |c| {
-                c.insert((
-                    TiledMapAnchor::Center,
-                    TiledPhysicsSettings::<TiledPhysicsRapierBackend> {
-                        objects_filter: TiledName::All,
-                        // objects_layer_filter: TiledName::Names(vec![String::from("1")]),
-                        // tiles_objects_filter: TiledName::Names(vec![String::from("platform1")]),
-                        //用来过滤图块层
-                        // tiles_layer_filter: TiledName::Names(vec![String::from("decoration")]),
-                        //用来过滤指定图块层中的图块，对象层同理
-                        tiles_objects_filter: TiledName::All,
-                        ..default()
-                    },
-                ));
-            },
-        ));
-    }
+    mgr.add_map(MapInfos::new(
+                &asset_server, 
+                "跑酷房1.tmx", 
+                "A finite orthogonal map with only object colliders", 
+                |c| {
+                    c.insert((
+                        TiledMapAnchor::Center,
+                        TiledPhysicsSettings::<TiledPhysicsRapierBackend> {
+                            objects_filter: TiledName::All,
+                            // objects_layer_filter: TiledName::Names(vec![String::from("1")]),
+                            // tiles_objects_filter: TiledName::Names(vec![String::from("platform1")]),
+                            //用来过滤图块层
+                            // tiles_layer_filter: TiledName::Names(vec![String::from("decoration")]),
+                            //用来过滤指定图块层中的图块，对象层同理
+                            tiles_objects_filter: TiledName::All,
+                            ..default()
+                        },
+                    ));
+    }));
+    // // 普通房数量
+    // let room_size = 8;
+    // // 普通房长度
+    // // let len = 1;
+    // let len = ROOMS - 1;
+    // for _ in 1..=len {
+    //     let path = format!("普通房{}.tmx", rand::rng().random_range(1..room_size + 1));
+    //     mgr.add_map(MapInfos::new(
+    //         &asset_server, 
+    //         &path, 
+    //         "A finite orthogonal map with only object colliders", 
+    //         |c| {
+    //             c.insert((
+    //                 TiledMapAnchor::Center,
+    //                 TiledPhysicsSettings::<TiledPhysicsRapierBackend> {
+    //                     objects_filter: TiledName::All,
+    //                     // objects_layer_filter: TiledName::Names(vec![String::from("1")]),
+    //                     // tiles_objects_filter: TiledName::Names(vec![String::from("platform1")]),
+    //                     //用来过滤图块层
+    //                     // tiles_layer_filter: TiledName::Names(vec![String::from("decoration")]),
+    //                     //用来过滤指定图块层中的图块，对象层同理
+    //                     tiles_objects_filter: TiledName::All,
+    //                     ..default()
+    //                 },
+    //             ));
+    //         },
+    //     ));
+    // }
     let boss_room_size = 2;
     let boss_path = format!("boss房{}.tmx", rand::rng().random_range(1..boss_room_size + 1));
     // let boss_path = format!("boss房{}.tmx", rand::rng().random_range(2..3));
@@ -305,15 +350,6 @@ fn load_room2(
     }
 }
 
-fn switch_map(
-    mut commands: Commands,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut mgr: ResMut<AssetsManager>,
-) {
-    if keyboard_input.just_pressed(KeyCode::KeyP) {
-        mgr.cycle_map(&mut commands);
-    }
-}
 
 fn check_collision(
     mut collision_events: EventReader<CollisionEvent>,
@@ -333,7 +369,6 @@ fn check_collision(
 
 fn evt_object_created(
     mut commands: Commands,
-    //敌人诞生动画还没加入到resources中，后续完善了就改用source2调用图片
     asset_server: Res<AssetServer>,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 
@@ -342,15 +377,13 @@ fn evt_object_created(
     mut player_query: Query<&mut Transform, (With<Character>, Without<TiledMapObject>)>,
     source: Res<AssetsManager>,
     maps: Res<Assets<TiledMap>>,
-    // source: Res<GlobalEnemyTextureAtlas>,
     source2: Res<GlobalEnemyTextureAtlas>,
-    // mut next_state: ResMut<NextState<GameState>>,
     source3: Res<GlobalRoomTextureAtlas>,
 
     mut events: EventWriter<BossSetupEvent>,
     mut events2: EventWriter<BaseSetupEvent>,
     
-    score: Res<ScoreResource>,
+    mut score: ResMut<ScoreResource>,
 ) {
     let mut size = Vec2::ZERO;
     let index = if source.map_index > 0 {source.map_index - 1} else {source.map_assets.len() - 1};
@@ -363,6 +396,8 @@ fn evt_object_created(
     size *= 8.0;
     let mut termrng = rand::rng();
     let term = termrng.random_range(1..=3);
+
+    let mut controller_m = false;
 
     for e in object_events.read() {
         let Ok((name, mut transform)) = object_query.get_mut(e.entity) else {
@@ -455,8 +490,8 @@ fn evt_object_created(
             info!("enemy created! ");
         }
         if name.as_str() == "Object(Boss)" {
-            // let layout_born = TextureAtlasLayout::from_grid(UVec2::splat(48),12,1,None,None);
             events.send(BossSetupEvent);
+            // boss诞生动画
             commands.spawn((
                 Sprite {
                     image: source2.image_bron.clone(),//后续改用source2
@@ -470,11 +505,29 @@ fn evt_object_created(
                     (transform .translation.x - size.x) * 3.0, 
                     (transform .translation.y - size.y) * 3.0, 
                     0.0)).with_scale(Vec3::splat(2.5)),
-                AnimationConfig::new(15),
+                AnimationConfig::new(10),
                 Map,
                 BossComponent,
                 EnemyBorn,
             ));
+            // boss诞生警告
+            // commands.spawn((
+            //     Sprite {
+            //         image: source2.image_boss_alert.clone(),
+            //         texture_atlas: Some(TextureAtlas {
+            //             layout: source2.layout_boss_alert.clone(),
+            //             index: 0,
+            //         }),
+            //         ..Default::default()
+            //     },
+            //     Transform::from_translation(Vec3::new(
+            //         (transform .translation.x - size.x) * 3.0, 
+            //         (transform .translation.y - size.y) * 3.0, 
+            //         0.0)).with_scale(Vec3::splat(2.5)),
+            //     AnimationConfig::new(10),
+            //     Map,
+            //     BossAlert,
+            // ));
             info!("boss created! ");
             // next_state.set(GameState::InGame);
         }
@@ -614,8 +667,13 @@ fn evt_object_created(
             }
             info!("chest created!");
         }
+        if name.as_str() == "Object(parkour)"  {
+            controller_m = true;
+        }
     }
-
+    // 检测是否为跑酷房
+    score.controller_mode = controller_m;
+    println!("controller mode: {}", controller_m);
 }
 
 fn evt_map_created (
@@ -726,9 +784,9 @@ fn check_ifcomplete(
         }
     }
 
-    if enemyclear_query1.is_empty() && enemyclear_query2.is_empty() && bossclear_query.is_empty() && flag == true {
+    if enemyclear_query1.is_empty() && enemyclear_query2.is_empty() && bossclear_query.is_empty() && flag == true{
         unsafe {
-            if !clear_sound {
+            if !clear_sound &&  !score.controller_mode {
                 // 房间清空
                 clear_sound = true;
                 room_clean_events.send(RoomCleanEvent);

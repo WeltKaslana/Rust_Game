@@ -98,10 +98,10 @@
   <object id="5" name="Player" x="190" y="334.333">
    <point/>
   </object>
-  <object id="8" name="Enemy1" x="189.632" y="125.999">
+  <object id="8" name="Enemy" x="189.632" y="125.999">
    <point/>
   </object>
-  <object id="9" name="base" x="95.6074" y="97.5069">
+  <object id="9" name="Boss" x="95.6074" y="97.5069">
    <point/>
   </object>
  </objectgroup>

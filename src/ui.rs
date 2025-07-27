@@ -510,8 +510,11 @@ fn hurtui(
         return;
     }
     let loc = loc_query.single().translation.truncate();
-    for _ in event.read() {
+    for PlayerHurtEvent(update, _) in event.read() {
         // println!("Hurt!");//test
+        if *update >= 0.0 {
+            continue; //不管回血
+        }
         commands.spawn((
             Sprite {
                 image: asset_server.load("UI_Hit.png"),

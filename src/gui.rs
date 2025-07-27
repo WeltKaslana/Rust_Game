@@ -2114,41 +2114,43 @@ fn handle_choosingbuffmenu (
                                     },
                                     2 => {
                                         let pos = rand::rng().random_range(0..99);
+                                        let mut health_update = 0.0;
                                         match name.as_str() {
                                             "0" => {
                                                 // %70回%10生命, %30回%40生命
-                                                health.0 += match pos {
+                                                health_update += match pos {
                                                     0..=69 => PLAYER_HEALTH * 0.1,
                                                     _ => PLAYER_HEALTH * 0.4,
                                                 };
-                                                if health.0 > PLAYER_HEALTH {
-                                                    health.0 = PLAYER_HEALTH;
-                                                }
+                                                // if health.0 > PLAYER_HEALTH {
+                                                //     health.0 = PLAYER_HEALTH;
+                                                // }
                                             },
                                             "1" => {
                                                 // 回%30生命
-                                                health.0 += PLAYER_HEALTH * 0.2;
-                                                if health.0 > PLAYER_HEALTH {
-                                                    health.0 = PLAYER_HEALTH;
-                                                }
+                                                health_update += PLAYER_HEALTH * 0.2;
+                                                // if health.0 > PLAYER_HEALTH {
+                                                //     health.0 = PLAYER_HEALTH;
+                                                // }
                                             },
                                             "2" => {
                                                 // %15回%80生命, %85扣%20生命
-                                                health.0 += match pos {
+                                                health_update += match pos {
                                                     0..=14 => PLAYER_HEALTH * 0.8,
                                                     _ => {
-                                                        hurt_events.send(PlayerHurtEvent);
+                                                        // hurt_events.send(PlayerHurtEvent);
                                                         PLAYER_HEALTH * (-0.2)
                                                     },
                                                 };
-                                                if health.0 > PLAYER_HEALTH {
-                                                    health.0 = PLAYER_HEALTH;
-                                                } else if health.0 < 0.0 { 
-                                                    health.0 = 0.0;
-                                                }
+                                                // if health.0 > PLAYER_HEALTH {
+                                                //     health.0 = PLAYER_HEALTH;
+                                                // } else if health.0 < 0.0 { 
+                                                //     health.0 = 0.0;
+                                                // }
                                             },
                                             _ => {}
                                         }
+                                        hurt_events.send(PlayerHurtEvent(health_update, 0));
                                     },
                                     _ => {}
                                 }
@@ -2201,7 +2203,7 @@ fn handle_choosingbuffmenu (
                                         left: Val::Percent(7.3),
                                         ..default()
                                     },
-                                    test,
+                                    // test,
                                 ));
                             },
                             Interaction::None => {

@@ -24,11 +24,11 @@ pub const ROOMS: i32 = 5;
 // Player
 pub const PLAYER_SPEED: f32 = 2.0 * 240.0 / fps as f32;
 pub const PLAYER_HEALTH: f32 = 100.0;
-// pub const PLAYER_JUMP_SPEED: f32 = 20.0;
-// pub const PLAYER_GRAVITY: f32 = 1.0;
-pub const PLAYER_JUMP_SPEED: f32 = 4.0;
-pub const PLAYER_GRAVITY: f32 = 0.2;
-pub const PLAYER_JUMP_COUNTS: usize = 3;
+pub const PLAYER_JUMP_COUNTS: u8 = 2;
+pub const PLAYER_JUMP_SPEED: f32 = 2.0;
+pub const PLAYER_GRAVITY: f32 = 0.1;
+// pub const PLAYER_JUMP_SPEED: f32 = 4.0;
+// pub const PLAYER_GRAVITY: f32 = 0.2;
 pub const GRENADE_BOOM_RANGE:f32 = 150.0;
 pub const MK2_NUM: usize = 2;
 pub const SKILL2_CD: f32 = 4.0;

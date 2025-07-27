@@ -1,5 +1,6 @@
 use bevy::math::vec3;
 use bevy::render::render_resource::encase::private::Length;
+use bevy::scene::ron::de;
 use bevy::transform;
 use bevy::{
     prelude::*, 
@@ -69,8 +70,6 @@ pub struct Grenade;
 #[derive(Component)]
 pub struct GrenadeHit;
 
-
-
 #[derive(Component)]
 pub struct State(pub i32);
 
@@ -79,6 +78,9 @@ pub struct Health(pub f32);
 
 #[derive(Component)]
 pub struct Velocity(pub f32);
+
+#[derive(Component)]
+pub struct Shiftdict(pub Vec2);
 
 #[derive(Component)]
 pub struct PlayerTimer(pub Stopwatch);
@@ -101,6 +103,12 @@ pub enum PlayerState {
     Jumpover,
     Dodge,
 }
+
+#[derive(Component)]
+pub struct Fire(pub i32, pub Vec2);
+
+#[derive(Component)]
+pub struct JumpCount(pub u8);
 
 #[derive(Component)]
 pub struct Buff(
@@ -142,13 +150,12 @@ pub struct PlayerEnemyCollisionEvent;
 #[derive(Event)]
 pub struct PlayerRunEvent;
 
-
-
 #[derive(Event)]
 pub struct PlayerJumpEvent;
 
 #[derive(Event)]
-pub struct PlayerHurtEvent;
+// 前者为对玩家血量的修改，后者为伤害来源
+pub struct PlayerHurtEvent(pub f32, pub u16);
 
 #[derive(Event)]
 pub struct PlayerParryEvent;
@@ -168,12 +175,10 @@ pub struct ReloadPlayerEvent(pub u8);
 #[derive(Event)]
 pub struct GameOverEvent;
 
-#[derive(Component)]
-pub struct Fire(pub i32, pub Vec2);
+
 
 //定义角色动画帧率
 #[derive(Component)]
-
 pub struct AnimationConfig {
     pub fps2p: u8,
     pub frame_timer: Timer,
@@ -216,13 +221,13 @@ impl Plugin for PlayerPlugin {
                     handle_shield_despawn,
                     handle_mk1,
                     handle_mk1_move,
-                    // handle_play_bullet_collision_events,
             ).run_if(in_state(HomeState::Running))
             )
             .add_systems(
                 Update,
                     (
                         handle_player_death,
+                        handle_player_move2,
                         handle_player_move3,
                         handle_player_skill2,
                         handle_utaha_attack_damage,
@@ -232,6 +237,7 @@ impl Plugin for PlayerPlugin {
                         handle_player_skill4,
                         handle_player_enemy_parry_events,
                         handle_player_bullet_collision_events,
+                        handle_player_hurt_events,
                         handle_play_bloodaddict,
                         handle_mk1,
                         handle_mk1_move,
@@ -246,58 +252,72 @@ fn setup_player(
     source: Res<GlobalCharacterTextureAtlas>,
     asset_server: Res<AssetServer>,
 ) {
+    // 这个bundle已经超上限了，再添加组件的话要用insert了
     let mut player = 
-    commands.spawn( (Sprite {
-        image: source.image_idle.clone(),
-        texture_atlas: Some(TextureAtlas {
-            layout: source.lay_out_idle.clone(),
-            index: 0,
-        }),
-        ..Default::default()
+    commands.spawn( (
+        Sprite {
+            image: source.image_idle.clone(),
+            texture_atlas: Some(TextureAtlas {
+                layout: source.lay_out_idle.clone(),
+                index: 0,
+                }),
+            ..Default::default()
         },
         Transform::from_scale(Vec3::splat(2.5)).with_translation(Vec3::new(-200.0, -200.0 + 5.0, 30.0)),
         AnimationConfig::new(13),
         PlayerState::default(),
         Character,
         Player,
-        // 血条
-        Health(PLAYER_HEALTH),
-        // //跳跃起始速度
-        Velocity(PLAYER_JUMP_SPEED),
         //音效播放间隔计时器
         PlayerTimer(Stopwatch::default()),
-        // 状态栏
-        Buff::default(),
-
-        Collider::cuboid(9.0, 16.5),
-
-        RigidBody::Fixed,
-        ColliderMassProperties::Mass(150.0),
-
-        ActiveEvents::COLLISION_EVENTS,
-        Sensor,//不加这个部件的话碰撞就会产生实际碰撞效果，否则只会发送碰撞事件而无效果
-        //后续可以为碰撞体分组
         ));
+        // 插入角色属性
+        player.insert((
+            // 血条
+            Health(PLAYER_HEALTH),
+            // 状态栏
+            Buff::default(),
+        ));
+        // 插入跳跃相关组件
+        player.insert((
+            //跳跃起始速度
+            Velocity(PLAYER_JUMP_SPEED),
+            // 跳跃次数
+            JumpCount(PLAYER_JUMP_COUNTS),
+        ));
+        // 插入物理特性组件
+        player.insert((
+            //碰撞相关组件
+            // Collider::cuboid(9.0, 16.5),
+            Collider::capsule(
+                Vec2::new(0.0,-5.5), 
+                Vec2::new(0.0,7.5), 
+                9.0),
 
-        // //尝试插入运动部件
+            RigidBody::Fixed,
+            ColliderMassProperties::Mass(150.0),
+            ActiveEvents::COLLISION_EVENTS,
+            Sensor,//不加这个部件的话碰撞就会产生实际碰撞效果，否则只会发送碰撞事件而无效果
+            //后续可以为碰撞体分组
+            ));
+        //插入运动部件
         player
             .insert(KinematicCharacterController {
+                autostep: Some(CharacterAutostep{
+                    max_height: CharacterLength::Absolute(9.0),
+                    ..default()
+                }),
                 ..Default::default()
             });
+        // 插入技能相关组件
         player.insert((
+            // 用于技能2闪避的方向
+            Shiftdict(Vec2::ZERO), 
+            // 插入技能计时器
             Skill2Timer(Stopwatch::default()),
             Skill3Timer(Stopwatch::default()),
             Skill4Timer(Stopwatch::default()),
         ));
-
-    //插入碰撞组件和移动控制组件
-    // player
-    //     .insert((
-    //         //碰撞
-    //         Collider::cuboid(9.0, 18.0),
-    //         RigidBody::Dynamic,
-    //         LockedAxes::ROTATION_LOCKED,//防止旋转
-    //     ));
     //白子的光环
     if source.id == 1 {
         player.with_child((Sprite {
@@ -362,230 +382,230 @@ fn reload_player(
 
     }
 }
-fn handle_player_move(
-    mut commands: Commands,
-    mut events: EventWriter<PlayerRunEvent>,
-    mut events2: EventWriter<PlayerJumpEvent>,
-    mut collision_events: EventReader<CollisionEvent>,
-    mut player_query: Query<(
-        &mut Sprite, 
-        &mut Transform, 
-        &mut PlayerState, 
-        &mut Velocity,
-        Entity,
-    ), With<Character>>,
-    transform_query: Query<&Transform, Without<Character>>,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    source: Res<GlobalCharacterTextureAtlas>,
-) {
-    if player_query.is_empty() {
-        return;
-    }
+// fn handle_player_move(
+//     mut commands: Commands,
+//     mut events: EventWriter<PlayerRunEvent>,
+//     mut events2: EventWriter<PlayerJumpEvent>,
+//     mut collision_events: EventReader<CollisionEvent>,
+//     mut player_query: Query<(
+//         &mut Sprite, 
+//         &mut Transform, 
+//         &mut PlayerState, 
+//         &mut Velocity,
+//         Entity,
+//     ), With<Character>>,
+//     transform_query: Query<&Transform, Without<Character>>,
+//     keyboard_input: Res<ButtonInput<KeyCode>>,
+//     source: Res<GlobalCharacterTextureAtlas>,
+// ) {
+//     if player_query.is_empty() {
+//         return;
+//     }
 
-    //之后可以改为自定义的键位，数据存到configs中
-    let (
-        mut player, 
-        mut transform, 
-        mut player_state, 
-        mut V, 
-        entity,
-    ) = player_query.single_mut();
-
-
-
-    match *player_state {
-        PlayerState::Dodge => {
-            if player.flip_x{
-                if  transform.translation.x - 10.0 > -520.0 {
-                    transform.translation.x -= 10.0;
-                }
-                else {
-                    transform.translation.x = -520.0;
-                }
-            }
-            else {
-                if  transform.translation.x + 10.0 < 520.0 {
-                    transform.translation.x += 10.0;
-                }
-                else {
-                    transform.translation.x = 520.0;
-                }
-            }
-            return;
-        },
-        _ => {},
-    }
+//     //之后可以改为自定义的键位，数据存到configs中
+//     let (
+//         mut player, 
+//         mut transform, 
+//         mut player_state, 
+//         mut V, 
+//         entity,
+//     ) = player_query.single_mut();
 
 
-    let jump = keyboard_input.pressed(KeyCode::KeyW) || keyboard_input.pressed(KeyCode::Space);
-    let left = keyboard_input.pressed(KeyCode::KeyA);
-    let down = keyboard_input.pressed(KeyCode::KeyS);
-    let right = keyboard_input.pressed(KeyCode::KeyD);
-    //到边界的检测缺
-    let mut delta = Vec2::ZERO;
-    let mut effect = 1.0;
-    if left {
-        // println!("left!");
-        delta.x -= 0.5;
-        if transform.translation.x + delta.x < -520.0 {
-            effect = 0.0;
-        }
-    }
-    if right {
-        // println!("right!");
-        delta.x += 0.5;
-        if transform.translation.x + delta.x > 520.0 {
-            effect = 0.0;
-        }
-    }
-    if down {
-        // println!("down");
-        match *player_state {
-            PlayerState::Jump => {},
-            _ => {
-                if transform.translation.y >-200.0 {
-                    player.image = source.image_jump.clone();
-                    player.texture_atlas = Some(TextureAtlas {
-                        layout: source.lay_out_jump.clone(),
-                        index: 0,
-                    });
-                    *player_state = PlayerState::Jump;
+
+//     match *player_state {
+//         PlayerState::Dodge => {
+//             if player.flip_x{
+//                 if  transform.translation.x - 10.0 > -520.0 {
+//                     transform.translation.x -= 10.0;
+//                 }
+//                 else {
+//                     transform.translation.x = -520.0;
+//                 }
+//             }
+//             else {
+//                 if  transform.translation.x + 10.0 < 520.0 {
+//                     transform.translation.x += 10.0;
+//                 }
+//                 else {
+//                     transform.translation.x = 520.0;
+//                 }
+//             }
+//             return;
+//         },
+//         _ => {},
+//     }
+
+
+//     let jump = keyboard_input.pressed(KeyCode::KeyW) || keyboard_input.pressed(KeyCode::Space);
+//     let left = keyboard_input.pressed(KeyCode::KeyA);
+//     let down = keyboard_input.pressed(KeyCode::KeyS);
+//     let right = keyboard_input.pressed(KeyCode::KeyD);
+//     //到边界的检测缺
+//     let mut delta = Vec2::ZERO;
+//     let mut effect = 1.0;
+//     if left {
+//         // println!("left!");
+//         delta.x -= 0.5;
+//         if transform.translation.x + delta.x < -520.0 {
+//             effect = 0.0;
+//         }
+//     }
+//     if right {
+//         // println!("right!");
+//         delta.x += 0.5;
+//         if transform.translation.x + delta.x > 520.0 {
+//             effect = 0.0;
+//         }
+//     }
+//     if down {
+//         // println!("down");
+//         match *player_state {
+//             PlayerState::Jump => {},
+//             _ => {
+//                 if transform.translation.y >-200.0 {
+//                     player.image = source.image_jump.clone();
+//                     player.texture_atlas = Some(TextureAtlas {
+//                         layout: source.lay_out_jump.clone(),
+//                         index: 0,
+//                     });
+//                     *player_state = PlayerState::Jump;
             
-                    transform.translation.y += V.0;
-                    V.0 -= PLAYER_GRAVITY;
-                }
-            },
-        };    
-    }
-    if jump {
-        // println!("jump!");
-        match *player_state {
-            PlayerState::Jump => {},
-            _=> {
-                player.image = source.image_jump.clone();
-                player.texture_atlas = Some(TextureAtlas {
-                    layout: source.lay_out_jump.clone(),
-                    index: 0,
-                });
-                *player_state = PlayerState::Jump;
-                events2.send(PlayerJumpEvent);
-                V.0 = PLAYER_JUMP_SPEED;
-                transform.translation.y += V.0;
-                V.0 -= PLAYER_GRAVITY;
-            },
-        };
-    }
-    delta = delta.normalize();
-    if delta.is_finite() && (jump || down || left || right) {
-        transform.translation += vec3(delta.x * effect, delta.y, 0.0) * PLAYER_SPEED;
-        //
-        transform.translation.z = 30.0;
-        //
-        match *player_state {
-            PlayerState::Move =>{},
-            PlayerState::Jump =>{},
-            _ => {
-                player.image = source.image_move.clone();
-                player.texture_atlas = Some(TextureAtlas {
-                    layout: source.lay_out_move.clone(),
-                    index: 1,
-                });
-                *player_state = PlayerState::Move;
-            },
-        };
-        events.send(PlayerRunEvent);
+//                     transform.translation.y += V.0;
+//                     V.0 -= PLAYER_GRAVITY;
+//                 }
+//             },
+//         };    
+//     }
+//     if jump {
+//         // println!("jump!");
+//         match *player_state {
+//             PlayerState::Jump => {},
+//             _=> {
+//                 player.image = source.image_jump.clone();
+//                 player.texture_atlas = Some(TextureAtlas {
+//                     layout: source.lay_out_jump.clone(),
+//                     index: 0,
+//                 });
+//                 *player_state = PlayerState::Jump;
+//                 events2.send(PlayerJumpEvent);
+//                 V.0 = PLAYER_JUMP_SPEED;
+//                 transform.translation.y += V.0;
+//                 V.0 -= PLAYER_GRAVITY;
+//             },
+//         };
+//     }
+//     delta = delta.normalize();
+//     if delta.is_finite() && (jump || down || left || right) {
+//         transform.translation += vec3(delta.x * effect, delta.y, 0.0) * PLAYER_SPEED;
+//         //
+//         transform.translation.z = 30.0;
+//         //
+//         match *player_state {
+//             PlayerState::Move =>{},
+//             PlayerState::Jump =>{},
+//             _ => {
+//                 player.image = source.image_move.clone();
+//                 player.texture_atlas = Some(TextureAtlas {
+//                     layout: source.lay_out_move.clone(),
+//                     index: 1,
+//                 });
+//                 *player_state = PlayerState::Move;
+//             },
+//         };
+//         events.send(PlayerRunEvent);
         
-    } else {
-        match *player_state {
-            PlayerState::Idle =>{},
-            PlayerState::Jump =>{},
-            _ => {
-                player.image = source.image_idle.clone();
-                player.texture_atlas = Some(TextureAtlas {
-                    layout: source.lay_out_idle.clone(),
-                    index: 1,
-                });
-                *player_state = PlayerState::Idle;
-            },
-        };
-    }
-    for collision_event in collision_events.read() {
-        match collision_event {
-            CollisionEvent::Started(entity1, entity2, _) => {
-                println!("Collision started between {:?} and {:?}", entity1, entity2);
-                if entity1.eq(&entity) || entity2.eq(&entity) {
-                    if V.0.abs()  >= 20.0 {
-                        transform.translation.y -= V.0;
-                        transform.translation.y -= 20.0;
-                    }
+//     } else {
+//         match *player_state {
+//             PlayerState::Idle =>{},
+//             PlayerState::Jump =>{},
+//             _ => {
+//                 player.image = source.image_idle.clone();
+//                 player.texture_atlas = Some(TextureAtlas {
+//                     layout: source.lay_out_idle.clone(),
+//                     index: 1,
+//                 });
+//                 *player_state = PlayerState::Idle;
+//             },
+//         };
+//     }
+//     for collision_event in collision_events.read() {
+//         match collision_event {
+//             CollisionEvent::Started(entity1, entity2, _) => {
+//                 println!("Collision started between {:?} and {:?}", entity1, entity2);
+//                 if entity1.eq(&entity) || entity2.eq(&entity) {
+//                     if V.0.abs()  >= 20.0 {
+//                         transform.translation.y -= V.0;
+//                         transform.translation.y -= 20.0;
+//                     }
 
-                    V.0 = 0.0;
-                    transform.translation.y += V.0;
-                    match *player_state {
-                        PlayerState::Jump => {*player_state = PlayerState::Jumpover;},
-                        _ => {},
-                    }                    
-                }
-                return;
-            }
-            CollisionEvent::Stopped(entity1, entity2, _) => {
-                println!("Collision stopped between {:?} and {:?}", entity1, entity2);
+//                     V.0 = 0.0;
+//                     transform.translation.y += V.0;
+//                     match *player_state {
+//                         PlayerState::Jump => {*player_state = PlayerState::Jumpover;},
+//                         _ => {},
+//                     }                    
+//                 }
+//                 return;
+//             }
+//             CollisionEvent::Stopped(entity1, entity2, _) => {
+//                 println!("Collision stopped between {:?} and {:?}", entity1, entity2);
                 
-                let mut y1 = 0.0;
-                let mut y2 = 0.0;
-                let mut tip = false;//用于判断碰撞事件是否跟自己有关
-                if entity1.eq(&entity) {
-                    y1 = transform.translation.y.clone();
-                    tip = true;
-                } else {
-                    if let Ok(trans) = transform_query.get(*entity1) {
-                        y1 = trans.translation.y.clone();
-                    } else {
-                        return;
-                    }
-                    // println!("y1={}", y1);
-                }
-                if entity2.eq(&entity) {
-                    y2 = transform.translation.y.clone();
-                    tip = true;
-                } else {
-                    if let Ok(trans) = transform_query.get(*entity2) {
-                        y2 = trans.translation.y.clone();
-                    } else {
-                        return;
-                    }
-                    // println!("y1 - y2={}", y1 - y2);
-                }
-                //说明不是横向产生的碰撞，需要下降
-                if tip && (y1 - y2).abs() > 50.0 {
-                    player.image = source.image_jump.clone();
-                    player.texture_atlas = Some(TextureAtlas {
-                        layout: source.lay_out_jump.clone(),
-                        index: 0,
-                    });
-                    *player_state = PlayerState::Jump;
+//                 let mut y1 = 0.0;
+//                 let mut y2 = 0.0;
+//                 let mut tip = false;//用于判断碰撞事件是否跟自己有关
+//                 if entity1.eq(&entity) {
+//                     y1 = transform.translation.y.clone();
+//                     tip = true;
+//                 } else {
+//                     if let Ok(trans) = transform_query.get(*entity1) {
+//                         y1 = trans.translation.y.clone();
+//                     } else {
+//                         return;
+//                     }
+//                     // println!("y1={}", y1);
+//                 }
+//                 if entity2.eq(&entity) {
+//                     y2 = transform.translation.y.clone();
+//                     tip = true;
+//                 } else {
+//                     if let Ok(trans) = transform_query.get(*entity2) {
+//                         y2 = trans.translation.y.clone();
+//                     } else {
+//                         return;
+//                     }
+//                     // println!("y1 - y2={}", y1 - y2);
+//                 }
+//                 //说明不是横向产生的碰撞，需要下降
+//                 if tip && (y1 - y2).abs() > 50.0 {
+//                     player.image = source.image_jump.clone();
+//                     player.texture_atlas = Some(TextureAtlas {
+//                         layout: source.lay_out_jump.clone(),
+//                         index: 0,
+//                     });
+//                     *player_state = PlayerState::Jump;
     
-                    transform.translation.y += V.0;
-                    V.0 -= PLAYER_GRAVITY;
-                    return;
-                }
+//                     transform.translation.y += V.0;
+//                     V.0 -= PLAYER_GRAVITY;
+//                     return;
+//                 }
 
-            }
-        }
-    }
-    match *player_state {
-        PlayerState::Jump => {
-            transform.translation.y += V.0;
-            V.0 -= PLAYER_GRAVITY;
-        },
-        _ => {},
-    }
-    if transform.translation.y <= -500.0 {
-        transform.translation.y = 600.0;
-        V.0 = 0.0;
-        //防止掉出界外
-    }
-} 
+//             }
+//         }
+//     }
+//     match *player_state {
+//         PlayerState::Jump => {
+//             transform.translation.y += V.0;
+//             V.0 -= PLAYER_GRAVITY;
+//         },
+//         _ => {},
+//     }
+//     if transform.translation.y <= -500.0 {
+//         transform.translation.y = 600.0;
+//         V.0 = 0.0;
+//         //防止掉出界外
+//     }
+// } 
 
 fn handle_player_enemy_parry_events(
     mut events: EventReader<PlayerParryEvent>,
@@ -613,59 +633,61 @@ fn handle_player_enemy_parry_events(
 }
 
 
-fn handle_player_skills1(
-    // mut commands: Commands,
-    mut player_query: Query<(
-        &mut Sprite, 
-        &mut PlayerState, 
-        &mut KinematicCharacterController,
-    ), With<Character>>,
-    // transform_query: Query<&Transform, Without<Character>>,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    source: Res<GlobalCharacterTextureAtlas>,
-) {
-    if player_query.is_empty() {
-        return;
-    }
-    if keyboard_input.just_pressed(KeyCode::ShiftLeft) {
-        for (mut player, mut player_state, mut controller) in player_query.iter_mut() {
-            match *player_state {
-                PlayerState::Jump => {},
-                PlayerState::Dodge => {},
-                _ => {
-                    *player_state = PlayerState::Dodge;
-                    //使得玩家不与敌人产生碰撞
-                    controller.filter_groups = Some(CollisionGroups::new(Group::GROUP_1, Group::GROUP_2));
+// fn handle_player_skills1(
+//     // mut commands: Commands,
+//     mut player_query: Query<(
+//         &mut Sprite, 
+//         &mut PlayerState, 
+//         &mut KinematicCharacterController,
+//     ), With<Character>>,
+//     // transform_query: Query<&Transform, Without<Character>>,
+//     keyboard_input: Res<ButtonInput<KeyCode>>,
+//     source: Res<GlobalCharacterTextureAtlas>,
+// ) {
+//     if player_query.is_empty() {
+//         return;
+//     }
+//     if keyboard_input.just_pressed(KeyCode::ShiftLeft) {
+//         for (mut player, mut player_state, mut controller) in player_query.iter_mut() {
+//             match *player_state {
+//                 PlayerState::Jump => {},
+//                 PlayerState::Dodge => {},
+//                 _ => {
+//                     *player_state = PlayerState::Dodge;
+//                     //使得玩家不与敌人产生碰撞
+//                     controller.filter_groups = Some(CollisionGroups::new(Group::GROUP_1, Group::GROUP_2));
 
-                    if let Some(image) = source.image_skill.clone() {
-                        player.image = image;
-                    } else {
-                        //Utaha skill
+//                     if let Some(image) = source.image_skill.clone() {
+//                         player.image = image;
+//                     } else {
+//                         //Utaha skill
 
-                    }
-                    if let Some(layout) = source.lay_out_skill.clone() {
-                        player.texture_atlas = Some(TextureAtlas {
-                            layout: layout,
-                            index: 0,
-                        });
-                    } else {
-                        //Utaha skill
+//                     }
+//                     if let Some(layout) = source.lay_out_skill.clone() {
+//                         player.texture_atlas = Some(TextureAtlas {
+//                             layout: layout,
+//                             index: 0,
+//                         });
+//                     } else {
+//                         //Utaha skill
 
-                    }
-                },
-            }
-        }
-    }
-}
+//                     }
+//                 },
+//             }
+//         }
+//     }
+// }
 fn handle_player_skill2(
     time: Res<Time>,
     mut commands: Commands,
     mut player_query: Query<(
         &mut Sprite, 
         &mut PlayerState,
+        &mut AnimationConfig,
         &mut Velocity,
         &mut KinematicCharacterController,
         &mut Skill2Timer,
+        &mut Shiftdict,
     ), (With<Character>, Without<Gun>)>,
     mut gun_query: Query<&mut Visibility, (With<Gun>, Without<Character>)>,
     mk1_query: Query<Entity, With<MK1>>,
@@ -678,7 +700,7 @@ fn handle_player_skill2(
         return;
     }
     
-    for (mut player, mut player_state, mut V, mut controller, mut timer) in player_query.iter_mut() {
+    for (mut player, mut player_state, mut config, mut V, mut controller, mut timer, mut shiftdict) in player_query.iter_mut() {
         for EnemyDeathEvent(dloc) in little_drone_events.read() {
             match *player_state {
                 PlayerState::Dodge if source.id ==3 => {
@@ -718,11 +740,28 @@ fn handle_player_skill2(
         }
         timer.0.reset();
 
+        let shiftx = if keyboard_input.pressed(KeyCode::KeyA) {
+            -1.0
+        } else if keyboard_input.pressed(KeyCode::KeyD) {
+            1.0
+        } else {
+            0.0
+        };
+        let shifty = if keyboard_input.pressed(KeyCode::KeyW) {
+            1.0
+        } else if keyboard_input.pressed(KeyCode::KeyS) {
+            -1.0
+        } else {
+            0.0
+        };
         match *player_state {
             PlayerState::Jump => {
                 V.0 = 0.0;
                 *player_state = PlayerState::Dodge;
-
+                if source.id != 2{
+                    // 调整闪避时的帧率，不然太慢了，但是爱丽丝不调，不然太快了
+                    *config = AnimationConfig::new(50);
+                }
                 if let Some(image) = source.image_skill.clone() {
                     player.image = image;
                 }
@@ -740,12 +779,16 @@ fn handle_player_skill2(
                 } else {
                     //使得玩家不与敌人产生碰撞，但arisu要盾反
                     controller.filter_groups = Some(CollisionGroups::new(Group::GROUP_1, Group::GROUP_2));
+                    shiftdict.0.x = shiftx;
+                    shiftdict.0.y = shifty;
                 }
                 events.send(PlayerSkill2Event);
             },
             PlayerState::Dodge => {},
             _ => {
                 *player_state = PlayerState::Dodge;
+                *config = AnimationConfig::new(50);
+                println!("config reset to 50!");
                 events.send(PlayerSkill2Event);
                 if let Some(image) = source.image_skill.clone() {
                     player.image = image;
@@ -764,6 +807,8 @@ fn handle_player_skill2(
                 } else {
                     //使得玩家不与敌人产生碰撞
                     controller.filter_groups = Some(CollisionGroups::new(Group::GROUP_1, Group::GROUP_2));
+                    shiftdict.0.x = shiftx;
+                    shiftdict.0.y = shifty;
                 }
             },
         }
@@ -1199,7 +1244,7 @@ fn handle_player_bullet_collision_events(
             CollisionEvent::Started(entity1, entity2, _) => {
                 if entity1.eq(&player) {
                     if let Ok(e) = enemy_query.get(*entity2) {
-                        
+                        let mut health_update = 0.0;
                         match state {
                             PlayerState::Dodge => {
                                 if source.id == 2 {
@@ -1209,19 +1254,19 @@ fn handle_player_bullet_collision_events(
                             },
                             _ => {
                                 if shield_query.is_empty() {
-                                    health.0 -= ENEMY_DAMAGE * 5.0 * resist;
+                                    health_update -= ENEMY_DAMAGE * 5.0 * resist;
+                                    events.send(PlayerHurtEvent(health_update, 0));
                                 }
                             },
                         }
                         if health.0 <= 0.0 {
                             health.0 = 0.0;
                         }
-                        events.send(PlayerHurtEvent); 
                     }                
                 }  
                 if entity2.eq(&player) {
                     if let Ok(e) = enemy_query.get(*entity1) {
-                        
+                        let mut health_update = 0.0;
                         match state {
                             PlayerState::Dodge => {
                                 if source.id == 2 {
@@ -1231,24 +1276,56 @@ fn handle_player_bullet_collision_events(
                             },
                             _ => {
                                 if shield_query.is_empty() {
-                                    health.0 -= ENEMY_DAMAGE * 5.0 * resist;
+                                    health_update -= ENEMY_DAMAGE * 5.0 * resist;
+                                    events.send(PlayerHurtEvent(health_update, 0));
                                 }
                             },
                         }
-                        events.send(PlayerHurtEvent);
                     }               
                 }       
             }
-            CollisionEvent::Stopped(entity1, entity2, _) => {
+            CollisionEvent::Stopped(_, _, _) => {
             }
         }
     }
 }
 
+fn handle_player_hurt_events(
+    mut hurt_events: EventReader<PlayerHurtEvent>,
+    mut player_query: Query<(&mut Health, &Buff), With<Character>>,
+    // enemy_query: Query<Entity, With<EnemyBullet>>,
+    // shield_query: Query<Entity, (With<Shield>)>,
+    // source: Res<GlobalCharacterTextureAtlas>,
+) {
+    // 后续修改扣血时还要加上护盾、抗性之类的
+    let mut resist = 0.0;
+    for (mut health, buff) in player_query.iter_mut() {
+        resist = 1.0 - (buff.7 - 1) as f32 * 0.05;
+        if resist < 0.05 {
+            resist = 0.05;
+        }
+        for PlayerHurtEvent(update, id) in hurt_events.read() {
+            if *update < 0.0 {
+                health.0 += *update * resist;
+            }
+            if *update > 0.0 {
+                health.0 += *update;
+            }
+        }
+        if health.0 <= 0.0 {
+            health.0 = 0.0;
+        } else if health.0 >= PLAYER_HEALTH {
+            health.0 = PLAYER_HEALTH;
+        }
+    }
+
+
+}
 fn handle_play_bloodaddict (
     mut player_query: Query<(&mut Health, &Buff), With<Character>>,
     mut enemydeath: EventReader<EnemyDeathEvent>,
     mut bossdeath: EventReader<BossDeathEvent>,
+    mut events: EventWriter<PlayerHurtEvent>,
 ) {
     if player_query.is_empty() {
         return;
@@ -1256,14 +1333,17 @@ fn handle_play_bloodaddict (
     for (mut health, buff) in player_query.iter_mut() {
         let add_health = (buff.6 - 1) as f32 * 0.01 * PLAYER_HEALTH;
         for _ in enemydeath.read() {
-            health.0 += add_health;
+            // health.0 += add_health;
+            events.send(PlayerHurtEvent(add_health, 0));
         }
         for _ in bossdeath.read() {
-            health.0 += add_health;
+            // health.0 += add_health;
+            events.send(PlayerHurtEvent(add_health, 0));
         }
-        if health.0 > PLAYER_HEALTH {
-            health.0 = PLAYER_HEALTH;
-        }
+        
+        // if health.0 > PLAYER_HEALTH {
+        //     health.0 = PLAYER_HEALTH;
+        // }
     }
 }
 
@@ -1302,15 +1382,17 @@ fn handle_player_move2(
     mut player_query: Query<(
         &mut Sprite, 
         &mut Transform,
-        &mut PlayerState, 
+        &mut PlayerState,
+        &mut JumpCount, 
         &mut Velocity,
         &mut KinematicCharacterController,
+        &mut Shiftdict,
         ), With<Character>>,
     flag_query: Query<&KinematicCharacterControllerOutput, With<Character>>,
     source: Res<GlobalCharacterTextureAtlas>,
-    
+    score: Res<ScoreResource>,
 ) {
-    if player_query.is_empty() {
+    if player_query.is_empty() || !score.controller_mode {
         return;
     }
     
@@ -1319,22 +1401,24 @@ fn handle_player_move2(
         mut player, 
         mut transform,
         mut player_state,
+        mut jump_count,
         mut V,
         mut controller,
+        mut shiftdict,
         ) = player_query.single_mut();
-    let jump = keyboard_input.pressed(KeyCode::KeyW) || keyboard_input.pressed(KeyCode::Space);
+    let jump = keyboard_input.just_pressed(KeyCode::KeyW) || keyboard_input.just_pressed(KeyCode::Space);
     let left = keyboard_input.pressed(KeyCode::KeyA);
     let down = keyboard_input.pressed(KeyCode::KeyS);
     let right = keyboard_input.pressed(KeyCode::KeyD);
 
     let mut ground = false;
-    let mut d = Vec2::ZERO;
-    let mut e = Vec2::ZERO;
+    // let mut d = Vec2::ZERO;
+    // let mut e = Vec2::ZERO;
     for flag in flag_query.iter() {
         //就角色一个插件
         ground = flag.grounded.clone();
-        d = flag.desired_translation.clone();
-        e = flag.effective_translation.clone();
+        // d = flag.desired_translation.clone();
+        // e = flag.effective_translation.clone();
     }
     //test if grounded
     // if ground {
@@ -1353,7 +1437,7 @@ fn handle_player_move2(
     //
     //test
     if down {
-        println!("down");
+        // println!("down");
         if ground && transform.translation.y >= -190.0 {
             transform.translation.y -= 15.0;
             player.image = source.image_jump.clone();
@@ -1362,15 +1446,18 @@ fn handle_player_move2(
                 index: 0,
             });
             *player_state = PlayerState::Jump;
-            // delta.y -= 0.5;
         } 
     }
     if jump {
         // println!("jump!");
         match *player_state {
-            PlayerState::Jump => {},
+            PlayerState::Jump if jump_count.0 < 1 => {
+                // 多段跳
+            },
             PlayerState::Dodge => {},
             _=> {
+                jump_count.0 -= 1;
+                println!("jump_count={}", jump_count.0);
                 player.image = source.image_jump.clone();
                 player.texture_atlas = Some(TextureAtlas {
                     layout: source.lay_out_jump.clone(),
@@ -1378,10 +1465,9 @@ fn handle_player_move2(
                 });
                 *player_state = PlayerState::Jump;
                 events2.send(PlayerJumpEvent);
+
                 V.0 = PLAYER_JUMP_SPEED;
                 delta.y = V.0;
-                // transform.translation.y += V.0;
-
                 V.0 -= PLAYER_GRAVITY;
             },
         };
@@ -1437,13 +1523,12 @@ fn handle_player_move2(
             }
         },
         PlayerState::Jump =>{
-            if ground {
+            if ground && !jump {
                 V.0 = 0.0;
                 *player_state = PlayerState::Jumpover;
+                jump_count.0 = PLAYER_JUMP_COUNTS;
             } else {
                 delta.y = V.0;
-                // transform.translation.y += V.0;
-                // println!("fall!!!,v={}",V.0);
                 V.0 -= PLAYER_GRAVITY;
             }
         },
@@ -1466,12 +1551,18 @@ fn handle_player_move2(
         },
         PlayerState::Dodge => {
             if source.id == 1 || source.id == 3 {
-                if player.flip_x {
-                    delta.x -= 2.0;
-                }
-                else {
-                    delta.x += 2.0;
-                }
+                // 朝固定方向闪避，否则按角色图像方向闪避
+                delta.x = if shiftdict.0.x > 0.0 {
+                    2.5
+                } else if shiftdict.0.x < 0.0 {
+                    -2.5
+                } else {
+                    if player.flip_x {
+                        -2.5
+                    } else {
+                        2.5
+                    }
+                };
                 delta.y = 0.0;
             }
         },
@@ -1488,14 +1579,16 @@ fn handle_player_move3(
         &mut PlayerState, 
         &mut KinematicCharacterController,
         &Buff,
+        &mut Shiftdict,
         ), (With<Character>, Without<Gun>)>,
     gun_query: Query<&Transform, (With<Gun>, Without<Character>)>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     source: Res<GlobalCharacterTextureAtlas>,
+    score: Res<ScoreResource>,
 
     // test: Query<&KinematicCharacterControllerOutput>,
 ) {
-    if player_query.is_empty() || gun_query.is_empty() {
+    if player_query.is_empty() || gun_query.is_empty()  || score.controller_mode {
         return;
     }
 
@@ -1505,6 +1598,7 @@ fn handle_player_move3(
         mut player_state,
         mut controller,
         buff,
+        mut shiftdict,
     ) = player_query.single_mut();
 
     let movefast = 1.0 + (buff.8 - 1) as f32 * 0.05;
@@ -1513,9 +1607,15 @@ fn handle_player_move3(
         PlayerState::Dodge => {
             if source.id == 1 || source.id == 3 {
                 let gun_transform = gun_query.single();
-                let direction = gun_transform.local_x();
-                controller.translation = Some(
-                    Vec2::new(direction.x, direction.y).normalize() * 10.0);
+                if shiftdict.0.x == 0.0 && shiftdict.0.y == 0.0 {
+                    let direction = gun_transform.local_x();
+                    controller.translation = Some(
+                        Vec2::new(direction.x, direction.y).normalize() * 15.0);
+                } else {
+                    controller.translation = Some(
+                        shiftdict.0.clone().normalize() * 15.0);
+                }
+
             }
             return;
         },

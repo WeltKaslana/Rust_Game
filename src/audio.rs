@@ -354,10 +354,10 @@ fn player_run (
             return;
         }
 
-        for e in query.iter_mut() {
-            // println!("despawn run audio");
-            commands.entity(e).despawn();
-        }
+        // for e in query.iter_mut() {
+        //     // println!("despawn run audio");
+        //     commands.entity(e).despawn();
+        // }
         timer.0.reset();
         commands.spawn((
             AudioPlayer::new(source.walk.clone()),
@@ -392,7 +392,11 @@ fn player_hurt(
     source:  Res<GameAudioSource>,
     player: Res<GlobalCharacterTextureAtlas>,
 ) {
-    for _ in events.read() {
+    for PlayerHurtEvent(update, _) in events.read() {
+        if *update >= 0.0 {
+            continue; // 不管回血
+            // 后续可以考虑加一个回血音效
+        }
         for e in query.iter() {
             // println!("despawn jump audio");
             commands.entity(e).despawn();

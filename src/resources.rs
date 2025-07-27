@@ -706,6 +706,9 @@ pub struct GlobalEnemyTextureAtlas {
     pub layout_born: Handle<TextureAtlasLayout>,
     pub image_bron: Handle<Image>,
 
+    pub layout_boss_alert: Handle<TextureAtlasLayout>,
+    pub image_boss_alert: Handle<Image>,
+
     pub layout_gun_hit: Handle<TextureAtlasLayout>,
     pub image_gun_hit: Handle<Image>,
 }
@@ -759,6 +762,9 @@ impl GlobalEnemyTextureAtlas {
         let layoutborn = TextureAtlasLayout::from_grid(UVec2::splat(48), 12, 1, None,None);
         let imagebeon = String::from("Entity_Spawn.png");
 
+        let layoutbossalert = TextureAtlasLayout::from_grid(UVec2::splat(64), 1, 1, None,None);
+        let imagebossalert = String::from("WarningSign.png");
+
         let layoutgunhit = TextureAtlasLayout::from_grid(UVec2::splat(32),6,1,None,None);
         let imagegunhit = String::from("Shiroko_Hit_Effect.png");
 
@@ -808,6 +814,9 @@ impl GlobalEnemyTextureAtlas {
             layout_born: texture_atlas_layouts.add(layoutborn),
             image_bron: asset_server.load(imagebeon),
 
+            layout_boss_alert: texture_atlas_layouts.add(layoutbossalert),
+            image_boss_alert: asset_server.load(imagebossalert),
+            
             layout_gun_hit: texture_atlas_layouts.add(layoutgunhit),
             image_gun_hit: asset_server.load(imagegunhit),
         }
@@ -997,10 +1006,11 @@ impl GlobalRoomTextureAtlas {
 }
 
 #[derive(Resource,Default)]
-pub struct ScoreResource { 
-    pub enemy_score: u8,
-    pub boss_score: u8,
-    pub map_index: u8,
+pub struct ScoreResource {
+    pub controller_mode: bool,
+    pub enemy_score: u32,
+    pub boss_score: u32,
+    pub map_index: u32,
     pub time_min:  u8,
     pub time_sec:  u8,
     pub timer: Stopwatch,
@@ -1009,6 +1019,7 @@ pub struct ScoreResource {
 impl ScoreResource {
     pub fn init() -> Self { 
         ScoreResource {
+            controller_mode: true,
             enemy_score: 0,
             boss_score: 0,
             map_index: 0,

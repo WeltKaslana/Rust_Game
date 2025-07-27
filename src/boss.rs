@@ -1077,6 +1077,7 @@ fn handle_boss_hurt(
                                 x if x == 30.0 => 3.0 * (1.0 + (buff.5 - 1) as f32 * 0.05),
                                 _ => 1.0
                             };
+                            // println!("boss health: {}", health.0);
                         }
                     }
                     if entity1.eq(&boss) {
@@ -1087,6 +1088,7 @@ fn handle_boss_hurt(
                                 x if x == 30.0 => 3.0 * (1.0 + (buff.5 - 1) as f32 * 0.05),
                                 _ => 1.0
                             };
+                            // println!("boss health: {}", health.0);
                         }
                     }
                 },
@@ -1115,8 +1117,9 @@ fn handle_boss_charge_hurt(
                 PlayerState::Dodge => { },
                 _=> {
                     if (dx * dx + dy * dy).sqrt() <= 100.0 {
-                        health.0 -= ENEMY_DAMAGE / 2.0;
-                        events.send(PlayerHurtEvent);
+                        let health_update = ENEMY_DAMAGE / -2.0;
+                        // health.0 -= ENEMY_DAMAGE / 2.0;
+                        events.send(PlayerHurtEvent(health_update, 0));
                     }
                 }
             }
