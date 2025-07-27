@@ -19,6 +19,7 @@ pub const WORLD_H: f32 = 2500.0;
 pub const fps: u8 = 60;
 
 pub const Survial_Time: f32 = 90.0;
+pub const ROOM_SIZE: usize = 9;
 pub const ROOMS: i32 = 5;
 
 // Player

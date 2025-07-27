@@ -740,20 +740,22 @@ fn handle_player_skill2(
         }
         timer.0.reset();
 
-        let shiftx = if keyboard_input.pressed(KeyCode::KeyA) {
-            -1.0
-        } else if keyboard_input.pressed(KeyCode::KeyD) {
-            1.0
-        } else {
-            0.0
-        };
-        let shifty = if keyboard_input.pressed(KeyCode::KeyW) {
-            1.0
-        } else if keyboard_input.pressed(KeyCode::KeyS) {
-            -1.0
-        } else {
-            0.0
-        };
+        // 处理技能2的闪避方向
+        let mut shiftx = 0.0;
+        if keyboard_input.pressed(KeyCode::KeyA) {
+            shiftx -= 1.0;
+        }
+        if keyboard_input.pressed(KeyCode::KeyD) {
+            shiftx += 1.0;
+        }
+        let mut shifty = 0.0;
+        if keyboard_input.pressed(KeyCode::KeyW) {
+            shifty += 1.0;
+        }
+        if keyboard_input.pressed(KeyCode::KeyS) {
+            shifty -= 1.0;
+        }
+        
         match *player_state {
             PlayerState::Jump => {
                 V.0 = 0.0;

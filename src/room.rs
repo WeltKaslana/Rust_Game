@@ -181,7 +181,7 @@ impl Plugin for RoomPlugin {
             // Rapier physics plugins to test and see the collider
             .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
             // 显示碰撞体边框
-            .add_plugins(RapierDebugRenderPlugin::default())
+            // .add_plugins(RapierDebugRenderPlugin::default())
 
             .add_systems(Startup, load_room)
             .add_systems(OnEnter(GameState::Home), load_room1)
@@ -216,53 +216,53 @@ fn load_room1(
     mut mgr: ResMut<AssetsManager>,
 ) {
     mgr.clear(&mut commands);
-    mgr.add_map(MapInfos::new(
-                &asset_server, 
-                "跑酷房1.tmx", 
-                "A finite orthogonal map with only object colliders", 
-                |c| {
-                    c.insert((
-                        TiledMapAnchor::Center,
-                        TiledPhysicsSettings::<TiledPhysicsRapierBackend> {
-                            objects_filter: TiledName::All,
-                            // objects_layer_filter: TiledName::Names(vec![String::from("1")]),
-                            // tiles_objects_filter: TiledName::Names(vec![String::from("platform1")]),
-                            //用来过滤图块层
-                            // tiles_layer_filter: TiledName::Names(vec![String::from("decoration")]),
-                            //用来过滤指定图块层中的图块，对象层同理
-                            tiles_objects_filter: TiledName::All,
-                            ..default()
-                        },
-                    ));
-    }));
-    // // 普通房数量
-    // let room_size = 8;
-    // // 普通房长度
-    // // let len = 1;
-    // let len = ROOMS - 1;
-    // for _ in 1..=len {
-    //     let path = format!("普通房{}.tmx", rand::rng().random_range(1..room_size + 1));
-    //     mgr.add_map(MapInfos::new(
-    //         &asset_server, 
-    //         &path, 
-    //         "A finite orthogonal map with only object colliders", 
-    //         |c| {
-    //             c.insert((
-    //                 TiledMapAnchor::Center,
-    //                 TiledPhysicsSettings::<TiledPhysicsRapierBackend> {
-    //                     objects_filter: TiledName::All,
-    //                     // objects_layer_filter: TiledName::Names(vec![String::from("1")]),
-    //                     // tiles_objects_filter: TiledName::Names(vec![String::from("platform1")]),
-    //                     //用来过滤图块层
-    //                     // tiles_layer_filter: TiledName::Names(vec![String::from("decoration")]),
-    //                     //用来过滤指定图块层中的图块，对象层同理
-    //                     tiles_objects_filter: TiledName::All,
-    //                     ..default()
-    //                 },
-    //             ));
-    //         },
-    //     ));
-    // }
+    // mgr.add_map(MapInfos::new(
+    //             &asset_server, 
+    //             "跑酷房1.tmx", 
+    //             "A finite orthogonal map with only object colliders", 
+    //             |c| {
+    //                 c.insert((
+    //                     TiledMapAnchor::Center,
+    //                     TiledPhysicsSettings::<TiledPhysicsRapierBackend> {
+    //                         objects_filter: TiledName::All,
+    //                         // objects_layer_filter: TiledName::Names(vec![String::from("1")]),
+    //                         // tiles_objects_filter: TiledName::Names(vec![String::from("platform1")]),
+    //                         //用来过滤图块层
+    //                         // tiles_layer_filter: TiledName::Names(vec![String::from("decoration")]),
+    //                         //用来过滤指定图块层中的图块，对象层同理
+    //                         tiles_objects_filter: TiledName::All,
+    //                         ..default()
+    //                     },
+    //                 ));
+    // }));
+    // 普通房数量
+    let room_size = ROOM_SIZE;
+    // 普通房长度
+    // let len = 1;
+    let len = ROOMS - 1;
+    for _ in 1..=len {
+        let path = format!("普通房{}.tmx", rand::rng().random_range(1..room_size + 1));
+        mgr.add_map(MapInfos::new(
+            &asset_server, 
+            &path, 
+            "A finite orthogonal map with only object colliders", 
+            |c| {
+                c.insert((
+                    TiledMapAnchor::Center,
+                    TiledPhysicsSettings::<TiledPhysicsRapierBackend> {
+                        objects_filter: TiledName::All,
+                        // objects_layer_filter: TiledName::Names(vec![String::from("1")]),
+                        // tiles_objects_filter: TiledName::Names(vec![String::from("platform1")]),
+                        //用来过滤图块层
+                        // tiles_layer_filter: TiledName::Names(vec![String::from("decoration")]),
+                        //用来过滤指定图块层中的图块，对象层同理
+                        tiles_objects_filter: TiledName::All,
+                        ..default()
+                    },
+                ));
+            },
+        ));
+    }
     let boss_room_size = 2;
     let boss_path = format!("boss房{}.tmx", rand::rng().random_range(1..boss_room_size + 1));
     // let boss_path = format!("boss房{}.tmx", rand::rng().random_range(2..3));
@@ -304,7 +304,7 @@ fn load_room2(
     mgr.clear(&mut commands);
     mgr.map_entity = map_now.clone();
     // 普通房数量
-    let room_size = 8;
+    let room_size = ROOM_SIZE;
     // 普通房长度
     let len = ROOMS - 1;
     for _ in 1..=len {
